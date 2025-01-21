@@ -41,7 +41,10 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     //envers
-    implementation 'org.hibernate:hibernate-envers'
+    implementation 'org.hibernate.orm:hibernate-envers:6.3.1.Final' // Hibernate 6.x 사용 예시
+
+    //mysql
+    implementation 'mysql:mysql-connector-java:8.0.33'
 
     //jwt
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
