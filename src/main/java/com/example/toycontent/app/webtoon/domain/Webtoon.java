@@ -5,12 +5,13 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import jakarta.persistence.EntityListeners;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Getter
-@Builder
+@SuperBuilder
 @DynamicInsert
 @DynamicUpdate
 @EntityListeners(AuditingEntityListener.class)
