@@ -2,6 +2,7 @@ package com.example.toycontent.app.file.domain;
 
 
 import com.example.toycontent.app.common.BaseEntity;
+import com.example.toycontent.app.common.enumuration.FileCode;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -33,7 +34,7 @@ public class AttachmentFile extends BaseEntity {
     @Column(length = 50)
     @Enumerated(EnumType.STRING)
     @Comment("파일 코드")
-    private String fileCode;
+    private FileCode fileCode;
 
     @Column(name = "org_file_nm")
     @Comment("원본 파일 명")
