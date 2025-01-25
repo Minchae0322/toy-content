@@ -13,3 +13,21 @@ spring:
         format_sql: true
   messages:
     basename: messages
+
+## 업로드 파일 설정
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 1GB
+      max-request-size: 1GB
+      file-size-threshold: 2KB
+
+spring-doc:
+  swagger-ui:
+    tags-sorter: alpha
+    operations-sorter: method
+    doc-expansion: none
+
+file:
+  upload:
+    path: uploads/ # 파일 업로드 기본 경로
