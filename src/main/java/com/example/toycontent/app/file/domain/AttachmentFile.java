@@ -20,7 +20,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "attch_file_tbl")
+@Table(name = "tb_attch_file")
 @EntityListeners(AuditingEntityListener.class)
 public class AttachmentFile extends BaseEntity {
 
