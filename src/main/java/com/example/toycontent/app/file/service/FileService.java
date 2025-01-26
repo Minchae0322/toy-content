@@ -6,10 +6,14 @@ import com.example.toycontent.app.file.repository.AttachmentFileRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
@@ -49,6 +53,33 @@ public class FileService {
                 .build());
 
         return UploadFileDto.of(attachmentFile);
+    }
+
+    public ResponseEntity<byte[]> downloadFileAsBytes(Long fileId) throws IOException {
+        // 데이터베이스에서 파일 정보 조회
+        AttachmentFile attachmentFile = attachmentFileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("파일을 찾을 수 없습니다."));
+
+        // 저장된 파일 경로 생성
+        Path filePath = Path.of(System.getProperty("user.dir"), uploadPath, attachmentFile.getStoreFileNm());
+
+        // 파일을 바이트 배열로 읽기
+        byte[] fileData;
+        try {
+            fileData = Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            throw new RuntimeException("파일을 읽는 중 오류가 발생했습니다.", e);
+        }
+
+        // HTTP 응답 생성
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachmentFile.getOrgFileNm() + "\"");
+        headers.add(HttpHeaders.CONTENT_TYPE, Files.probeContentType(filePath)); // 파일의 MIME 타입 설정
+        headers.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(fileData.length));
+        headers.setContentDispositionFormData("attachment", attachmentFile.getStoreFileNm());
+
+
+        return new ResponseEntity<>(fileData, headers, HttpStatus.OK);
     }
 
     private String extractExt(String originalFilename) {
