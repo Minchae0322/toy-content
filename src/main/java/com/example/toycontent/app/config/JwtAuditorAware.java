@@ -1,12 +1,15 @@
 package com.example.toycontent.app.config;
 
 import com.example.toycontent.app.common.JwtParser;
+import com.example.toycontent.app.common.constants.GlobalConstants;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+
+import static com.example.toycontent.app.common.constants.GlobalConstants.AUTHORIZATION_HEADER;
 
 @Component
 @RequiredArgsConstructor
@@ -19,7 +22,8 @@ public class JwtAuditorAware implements AuditorAware<Long> {
     @Override
     public Optional<Long> getCurrentAuditor() {
         // Authorization 헤더에서 JWT 토큰 추출
-        String token = httpServletRequest.getHeader("Authorization");
+        String token = httpServletRequest.getHeader(AUTHORIZATION_HEADER);
+
         if (token == null || !token.startsWith("Bearer ")) {
             return Optional.empty();
         }
@@ -28,7 +32,7 @@ public class JwtAuditorAware implements AuditorAware<Long> {
         token = token.substring(7);
 
         try {
-            return Optional.of(jwtParser.getUserId(token));
+            return Optional.of(null);
         } catch (Exception e) {
             return Optional.empty(); // 토큰이 유효하지 않을 경우
         }
