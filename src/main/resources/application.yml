@@ -31,3 +31,6 @@ spring-doc:
 file:
   upload:
     path: uploads\\ # 파일 업로드 기본 경로
+
+jwt:
+  secret: __REDACTED__
