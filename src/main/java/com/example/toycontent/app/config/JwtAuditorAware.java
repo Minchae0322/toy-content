@@ -1,7 +1,6 @@
 package com.example.toycontent.app.config;
 
-import com.example.toycontent.app.common.JwtParser;
-import com.example.toycontent.app.common.constants.GlobalConstants;
+import com.example.toycontent.app.auth.token.JwtParser;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.AuditorAware;
