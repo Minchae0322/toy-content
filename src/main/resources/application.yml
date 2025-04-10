@@ -7,7 +7,7 @@ spring:
   jpa:
     show-sql: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     properties:
       hibernate:
         format_sql: true
@@ -30,4 +30,7 @@ spring-doc:
 
 file:
   upload:
-    path: uploads/ # 파일 업로드 기본 경로
+    path: uploads\\ # 파일 업로드 기본 경로
+
+jwt:
+  secret: VlwEyVBsYt9V7zq57TejMnVUyzblYcfPQye08f7MGVA9XkHa
