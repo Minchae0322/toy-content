@@ -1,5 +1,6 @@
 package com.example.toycontent.app.Product.domain;
 
+import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -12,6 +13,7 @@ import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @SuperBuilder
@@ -38,12 +40,13 @@ public class Product extends BaseEntity {
     private String description;
 
     @Column(nullable = false)
-    @Comment("카테고리 (예: 음식, 전자기기, 캠핑 장비 등)")
-    private String category;
+    @Comment("판매자 아이디")
+    private Long sellerId;
 
-    @Column(nullable = false)
-    @Comment("단위당 가격 (예: 초콜릿 1알당 가격)")
-    private Double pricePerUnit;
+    @JoinColumn(name = "category_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @Comment("카테고리")
+    private Category category;
 
     @Column(nullable = false)
     @Comment("거래 단위 (예: piece, gram, hour 등)")
