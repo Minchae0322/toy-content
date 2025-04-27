@@ -12,6 +12,6 @@ public class OneMouthService {
     private final OneMouthRepository oneMouthRepository;
 
     public Long createOneMouth(OneMouthCreateDto oneMouthCreateDto) {
-
+        return null;
     }
 }
