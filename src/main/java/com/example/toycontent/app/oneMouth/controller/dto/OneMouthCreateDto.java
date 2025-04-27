@@ -2,8 +2,9 @@ package com.example.toycontent.app.oneMouth.controller.dto;
 
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.enumuration.Unit;
-import com.example.toycontent.app.oneMouth.domain.OneMouthPost;
+import com.example.toycontent.app.oneMouth.domain.OneMouth;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Data;
 
@@ -13,6 +14,8 @@ import java.time.LocalDateTime;
 @Builder
 @Schema(description = "게시글 생성 요청 DTO")
 public class OneMouthCreateDto {
+
+    @NotBlank(message = "제목은 필수 입력 항목입니다.")
     @Schema(title = "게시글 제목", description = "제품을 설명하는 제목", example = "중고 PS5 팝니다")
     private String title;
 
@@ -46,10 +49,10 @@ public class OneMouthCreateDto {
     @Schema(title = "제품 유형", description = "판매 또는 대여 구분 (예: sale, rental)", example = "sale")
     private String productType;
 
-    public OneMouthPost toEntity(Category category) {
+    public OneMouth toEntity(Category category) {
         LocalDateTime now = LocalDateTime.now();
 
-        return OneMouthPost.builder()
+        return OneMouth.builder()
                 .title(this.title)
                 .content(this.content)
                 .quantity(this.quantity)
