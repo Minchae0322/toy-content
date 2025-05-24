@@ -85,6 +85,17 @@ public class OneMouth extends BaseEntity {
     @Comment("제품 유형 (예: rental, sale)")
     private String productType;
 
+    @Column(nullable = false, name = "hits", columnDefinition = "Integer default 0")
+    @Comment("조회수")
+    private Integer hits;
+
+    @Column(nullable = false, name = "favorites", columnDefinition = "Integer default 0")
+    @Comment("관심")
+    private Integer favorites;
+
+    @Column(nullable = false, name = "is_draft", columnDefinition = "varchar(1) default 'N'")
+    private boolean isDraft;
+
     @OneToMany
     @JoinColumn(name = "one_mout_attachment_file_id")
     private List<OneMouthAttachmentFile> oneMouthAttachmentFiles;
