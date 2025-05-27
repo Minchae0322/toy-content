@@ -1,7 +1,8 @@
-package com.example.toycontent.app.Product.domain;
+package com.example.toycontent.app.oneMouth.domain;
 
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseEntity;
+import com.example.toycontent.app.common.enumuration.Unit;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,16 +21,32 @@ import java.util.List;
 @DynamicInsert
 @DynamicUpdate
 @Entity
-@Table(name = "tb_product")
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class Product extends BaseEntity {
+@Table(name = "TB_ONE_MOUTH_POST")
+public class OneMouth extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "item_id", nullable = false)
+    @Column(name = "id", updatable = false, nullable = false)
+    @Comment("게시글 기본 키 ID")
     private Long id;
+
+    @Column(name = "title", nullable = false, length = 200)
+    @Comment("게시글 제목")
+    private String title;
+
+    @Column(name = "content", columnDefinition = "CLOB", nullable = false)
+    @Comment("게시글 내용")
+    private String content;
+
+    @Comment("커스텀 설정 시, 사용자 설정 수량 값")
+    @Column(name = "quantity")
+    private String quantity;
+
+    @Enumerated(EnumType.STRING)
+    private Unit unit;
 
     @Column(nullable = false)
     @Comment("이름")
@@ -47,10 +64,6 @@ public class Product extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @Comment("카테고리")
     private Category category;
-
-    @Column(nullable = false)
-    @Comment("거래 단위 (예: piece, gram, hour 등)")
-    private String unitType;
 
     @Column(nullable = false)
     @Comment("남은 수량")
@@ -71,4 +84,19 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     @Comment("제품 유형 (예: rental, sale)")
     private String productType;
+
+    @Column(nullable = false, name = "hits", columnDefinition = "Integer default 0")
+    @Comment("조회수")
+    private Integer hits;
+
+    @Column(nullable = false, name = "favorites", columnDefinition = "Integer default 0")
+    @Comment("관심")
+    private Integer favorites;
+
+    @Column(nullable = false, name = "is_draft", columnDefinition = "varchar(1) default 'N'")
+    private boolean isDraft;
+
+    @OneToMany
+    @JoinColumn(name = "one_mout_attachment_file_id")
+    private List<OneMouthAttachmentFile> oneMouthAttachmentFiles;
 }
