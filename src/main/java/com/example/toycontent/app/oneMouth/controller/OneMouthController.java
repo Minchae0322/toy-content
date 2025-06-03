@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "OneMouthController", description = "한입만 API")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(value = "/one-mouth")
+@RequestMapping(value = "/one-mouths")
 public class OneMouthController {
 
     private final OneMouthService oneMouthService;
@@ -26,7 +26,7 @@ public class OneMouthController {
         return ResponseEntity.ok(oneMouthService.createOneMouth(createDto));
     }
 
-    @PostMapping("/")
+    @PostMapping("/draft")
     @Operation(summary = "한입만 게시물 임시저장", tags = "OneMouthController")
     public ResponseEntity<Long> createOneMouthDraft(
             @RequestBody @Valid OneMouthDraftCreateDto createDto

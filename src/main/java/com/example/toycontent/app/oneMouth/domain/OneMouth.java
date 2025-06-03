@@ -41,16 +41,13 @@ public class OneMouth extends BaseEntity {
     @Comment("게시글 내용")
     private String content;
 
-    @Comment("커스텀 설정 시, 사용자 설정 수량 값")
+    @Comment("사용자 설정 수량 값")
     @Column(name = "quantity")
     private String quantity;
 
+    @Comment("유닛 (개, 입, 그램, 커스텀)")
     @Enumerated(EnumType.STRING)
     private Unit unit;
-
-    @Column(nullable = false)
-    @Comment("이름")
-    private String name;
 
     @Column(length = 1000)
     @Comment("제품 상세 설명")
@@ -66,22 +63,18 @@ public class OneMouth extends BaseEntity {
     private Category category;
 
     @Column(nullable = false)
-    @Comment("남은 수량")
-    private Integer availableQuantity;
-
-    @Column(nullable = false)
-    @Comment("판매자 또는 거래 위치")
+    @Comment("판매자 거래 위치")
     private String location;
 
     @Column(nullable = false, updatable = false)
-    @Comment("레코드 생성 시간")
+    @Comment("생성 시간")
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
-    @Comment("레코드 수정 시간")
+    @Comment("수정 시간")
     private LocalDateTime updatedAt;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(10) default 'sale'")
     @Comment("제품 유형 (예: rental, sale)")
     private String productType;
 
@@ -89,12 +82,9 @@ public class OneMouth extends BaseEntity {
     @Comment("조회수")
     private Integer hits;
 
-    @Column(nullable = false, name = "favorites", columnDefinition = "Integer default 0")
+    @ManyToMany(mappedBy = "oneMouth")
     @Comment("관심")
-    private Integer favorites;
-
-    @Column(nullable = false, name = "is_draft", columnDefinition = "varchar(1) default 'N'")
-    private boolean isDraft;
+    private List<OneMouthFavorite> favorites;
 
     @OneToMany
     @JoinColumn(name = "one_mout_attachment_file_id")
