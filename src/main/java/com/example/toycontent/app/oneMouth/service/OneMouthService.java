@@ -21,6 +21,7 @@ public class OneMouthService {
     private final OneMouthDraftRepository draftRepository;
 
     public Long createOneMouth(OneMouthCreateDto createDto) {
+        draftRepository.findBySellerId(createDto.getSellerId()).ifPresent(draftRepository::delete);
         Category category = categoryRepository.findById(createDto.getCategoryId()).orElseThrow();
 
         return oneMouthRepository.save(createDto.toEntity(category)).getId();
