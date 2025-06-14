@@ -87,7 +87,7 @@ public class OneMouth extends BaseEntity {
     @Comment("조회수")
     private Integer hits;
 
-    @ManyToMany(mappedBy = "oneMouth")
+    @OneToMany(mappedBy = "oneMouth")
     @Comment("관심")
     private List<OneMouthFavorite> favorites;
 
