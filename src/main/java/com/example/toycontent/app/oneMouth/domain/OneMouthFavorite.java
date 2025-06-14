@@ -35,9 +35,9 @@ public class OneMouthFavorite {
     private Long userId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id", nullable = false)
+    @JoinColumn(name = "one_mouth_id", nullable = false)
     @Comment("관심 등록한 게시글")
-    private OneMouth post;
+    private OneMouth oneMouth;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)
