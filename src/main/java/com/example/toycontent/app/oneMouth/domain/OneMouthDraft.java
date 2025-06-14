@@ -49,6 +49,10 @@ public class OneMouthDraft {
     @Enumerated(EnumType.STRING)
     private Unit unit;
 
+    @Comment("가격")
+    @Column(name = "price")
+    private Long price;
+
     @JoinColumn(name = "category_id")
     @ManyToOne(fetch = FetchType.LAZY)
     @Comment("카테고리")
@@ -66,9 +70,9 @@ public class OneMouthDraft {
     @Comment("수정 시간")
     private LocalDateTime updatedAt;
 
-    @OneToMany
-    @JoinColumn(name = "one_mout_attachment_file_id")
-    private List<OneMouthAttachmentFile> oneMouthAttachmentFiles;
+    @OneToMany(orphanRemoval = true, cascade = CascadeType.ALL)
+    @JoinColumn(name = "one_mouth_draft_attachment_file_id")
+    private List<OneMouthDraftAttachmentFile> oneMouthDraftAttachmentFiles;
 
     public OneMouthDraft update() {
         return this;

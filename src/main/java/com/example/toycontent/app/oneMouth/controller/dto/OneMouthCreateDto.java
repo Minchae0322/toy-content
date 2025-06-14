@@ -1,6 +1,7 @@
 package com.example.toycontent.app.oneMouth.controller.dto;
 
 import com.example.toycontent.app.category.domain.Category;
+import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.Unit;
 import com.example.toycontent.app.oneMouth.domain.OneMouth;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,8 +22,8 @@ public class OneMouthCreateDto {
     @Schema(title = "게시글 제목", description = "제품을 설명하는 제목", example = "중고 PS5 팝니다")
     private String title;
 
-    @Schema(title = "게시글 내용", description = "상세 설명 및 거래 조건 등 게시글 본문", example = "직거래만 가능하며, 박스 있음")
-    private String content;
+    @Schema(title = "상품 설명", description = "상세 설명 및 거래 조건 등 게시글 본문", example = "직거래만 가능하며, 박스 있음")
+    private String description;
 
     @Schema(title = "사용자 입력 수량", description = "사용자 수량 입력 값", example = "한, 1")
     private String quantity;
@@ -42,7 +43,10 @@ public class OneMouthCreateDto {
     @Schema(title = "제품 유형", description = "판매 또는 대여 구분 (예: SALE, RENTAL)", example = "sale")
     private String productType;
 
-    private List<Long> photos = new ArrayList<>();
+    @Schema(title = "가격", description = "유닛 당 가격")
+    private Long price;
+
+    private List<Long> attachmentFileIds = new ArrayList<>();
 
     public OneMouth toEntity(Category category) {
 
@@ -50,7 +54,7 @@ public class OneMouthCreateDto {
 
         return OneMouth.builder()
                 .title(this.title)
-                .content(this.content)
+                .description(this.description)
                 .quantity(this.quantity)
                 .unit(this.unit)
                 .sellerId(this.sellerId)
@@ -59,6 +63,8 @@ public class OneMouthCreateDto {
                 .productType(this.productType)
                 .createdAt(now)
                 .updatedAt(now)
+                .productStatus(ProductStatus.FOR_SALE)
+                .price(this.price)
                 .build();
     }
 

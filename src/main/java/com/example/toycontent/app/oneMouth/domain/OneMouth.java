@@ -2,6 +2,7 @@ package com.example.toycontent.app.oneMouth.domain;
 
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseEntity;
+import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.Unit;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -37,10 +38,6 @@ public class OneMouth extends BaseEntity {
     @Comment("게시글 제목")
     private String title;
 
-    @Column(name = "content", columnDefinition = "CLOB", nullable = false)
-    @Comment("게시글 내용")
-    private String content;
-
     @Comment("사용자 설정 수량 값")
     @Column(name = "quantity")
     private String quantity;
@@ -49,7 +46,15 @@ public class OneMouth extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private Unit unit;
 
-    @Column(length = 1000)
+    @Comment("가격")
+    @Column(name = "price")
+    private Long price;
+
+    @Comment("판매 상태 (판매중, 품절, 예약중, 판매중단)")
+    @Enumerated(EnumType.STRING)
+    private ProductStatus productStatus;
+
+    @Column(length = 4000)
     @Comment("제품 상세 설명")
     private String description;
 

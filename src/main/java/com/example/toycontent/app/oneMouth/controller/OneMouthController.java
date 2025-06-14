@@ -1,12 +1,17 @@
 package com.example.toycontent.app.oneMouth.controller;
 
+import com.example.toycontent.app.Product.controller.dto.ProductResponse;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
 import com.example.toycontent.app.oneMouth.service.OneMouthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,5 +37,38 @@ public class OneMouthController {
             @RequestBody @Valid OneMouthDraftCreateDto createDto
     ) {
         return ResponseEntity.ok(oneMouthService.createOneMouthDraft(createDto));
+    }
+
+
+    @Operation(summary = "한입만 게시물 상세 조회", description = "한입만 게시물 ID로 게시물 상세정보를 조회합니다.")
+    @GetMapping("/{id}")
+    public ResponseEntity<OneMouthResponse.Get> getOneMouthDetail(
+            @PathVariable @Parameter(description = "게시물 ID") Long id) {
+        OneMouthResponse.Get product = oneMouthService.getOneMouthDetail(id);
+        return ResponseEntity.ok(product);
+    }
+
+    @Operation(summary = "한입만 게시물 목록 페이징 조회", description = "게시물 목록을 조회합니다.")
+    @GetMapping
+    public ResponseEntity<Page<OneMouthResponse>> getPagedOneMouthPosts() {
+        Page<OneMouthResponse> products = oneMouthService.getPagedOneMouthPosts();
+        return ResponseEntity.ok(products);
+    }
+
+    @Operation(summary = "한입만 게시물 수정", description = "한입만 게시물 ID에 해당하는 상품 정보를 수정합니다.")
+    @PutMapping("/{id}")
+    public ResponseEntity<OneMouthResponse.Get> updateOneMouth(
+            @PathVariable @Parameter(description = "게시물 ID") Long id,
+            @RequestBody @Parameter(description = "수정할 게시물 정보") OneMouthUpdateDto updateDto) {
+        OneMouthResponse.Get updated = oneMouthService.updateOneMouth(id, updateDto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @Operation(summary = "한입만 게시물 삭제", description = "한입만 게시물 ID에 해당하는 상품을 삭제합니다.")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOneMouth(
+            @PathVariable @Parameter(description = "게시물 ID") Long id) {
+        oneMouthService.deleteOneMouth(id);
+        return ResponseEntity.noContent().build();
     }
 }
