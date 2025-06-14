@@ -2,10 +2,8 @@ package com.example.toycontent.app.oneMouth.controller.dto;
 
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.enumuration.Unit;
-import com.example.toycontent.app.oneMouth.domain.OneMouth;
 import com.example.toycontent.app.oneMouth.domain.OneMouthDraft;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Data;
 
@@ -39,7 +37,11 @@ public class OneMouthDraftCreateDto {
     @Schema(title = "판매자 ID", description = "판매자의 고유 ID", example = "101")
     private Long sellerId;
 
-    private List<Long> photos = new ArrayList<>();
+
+    @Schema(title = "가격", description = "유닛 당 가격")
+    private Long price;
+
+    private List<Long> attachmentFileIds = new ArrayList<>();
 
     public OneMouthDraft toEntity(Category category) {
         LocalDateTime now = LocalDateTime.now();
@@ -53,6 +55,7 @@ public class OneMouthDraftCreateDto {
                 .category(category)
                 .createdAt(now)
                 .updatedAt(now)
+                .price(this.price)
                 .build();
     }
 }

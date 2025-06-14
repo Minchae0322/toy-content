@@ -5,6 +5,7 @@ import com.example.toycontent.app.Product.controller.dto.ProductRequest;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse;
 import com.example.toycontent.app.Product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,12 +22,15 @@ public class ProductService {
     }
 
     public ProductResponse getProduct(Long id) {
+        return null;
     }
 
-    public List<ProductResponse> getAllProducts() {
+    public Page<ProductResponse> getAllProducts() {
+        return null;
     }
 
     public ProductResponse updateProduct(Long id, ProductResponse productDto) {
+        return null;
     }
 
     public void deleteProduct(Long id) {
