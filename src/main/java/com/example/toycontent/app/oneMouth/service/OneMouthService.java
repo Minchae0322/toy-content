@@ -8,6 +8,7 @@ import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
+import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
 import com.example.toycontent.app.oneMouth.domain.OneMouth;
 import com.example.toycontent.app.oneMouth.domain.OneMouthAttachmentFile;
 import com.example.toycontent.app.oneMouth.domain.OneMouthDraft;
@@ -19,6 +20,8 @@ import com.example.toycontent.app.oneMouth.repository.OneMouthRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -115,8 +118,11 @@ public class OneMouthService {
         return null;
     }
 
-    public Page<OneMouthResponse> getPagedOneMouthPosts() {
-        return null;
+    public Page<OneMouthResponse> getPagedOneMouthPosts(Pageable pageable, OneMouthSearchCondition condition) {
+        List<OneMouthResponse> oneMouthResponses = oneMouthRepository.searchByCondition(condition, pageable);
+        long totalCount = oneMouthRepository.countByCondition(condition);
+
+        return new PageImpl<>(oneMouthResponses, pageable, totalCount);
     }
 
     public OneMouthResponse.Get updateOneMouth(Long id, OneMouthUpdateDto updateDto) {

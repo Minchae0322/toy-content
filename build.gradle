@@ -67,7 +67,16 @@ dependencies {
     //swagger
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0' // Springdoc OpenAPI
 
+    //queryDSL
+    implementation "com.querydsl:querydsl-core:5.0.0"
+    implementation "com.querydsl:querydsl-collections"
+    implementation("com.querydsl:querydsl-jpa:5.0.0:jakarta")
+    annotationProcessor("com.querydsl:querydsl-apt:${dependencyManagement.importedProperties['querydsl.version']}:jakarta")
+    annotationProcessor("jakarta.persistence:jakarta.persistence-api")
+    annotationProcessor("jakarta.annotation:jakarta.annotation-api")
+
 }
+
 
 tasks.named('test') {
     outputs.dir snippetsDir
@@ -78,3 +87,5 @@ tasks.named('asciidoctor') {
     inputs.dir snippetsDir
     dependsOn test
 }
+
+

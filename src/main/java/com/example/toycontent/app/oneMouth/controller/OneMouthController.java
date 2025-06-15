@@ -5,13 +5,18 @@ import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
+import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
 import com.example.toycontent.app.oneMouth.service.OneMouthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -50,8 +55,11 @@ public class OneMouthController {
 
     @Operation(summary = "한입만 게시물 목록 페이징 조회", description = "게시물 목록을 조회합니다.")
     @GetMapping
-    public ResponseEntity<Page<OneMouthResponse>> getPagedOneMouthPosts() {
-        Page<OneMouthResponse> products = oneMouthService.getPagedOneMouthPosts();
+    public ResponseEntity<Page<OneMouthResponse>> getPagedOneMouthPosts(
+            @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @ParameterObject OneMouthSearchCondition condition
+    ) {
+        Page<OneMouthResponse> products = oneMouthService.getPagedOneMouthPosts(pageable, condition);
         return ResponseEntity.ok(products);
     }
 
