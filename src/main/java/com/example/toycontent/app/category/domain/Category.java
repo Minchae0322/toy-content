@@ -30,7 +30,7 @@ public class Category {
     private Long id;
 
     @Column(nullable = false)
-    @Comment("이름")
+    @Comment("카테고리 명")
     private String name;
 
 
