@@ -1,3 +1,9 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /api
+
+
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -22,11 +28,11 @@ spring:
       max-request-size: 1GB
       file-size-threshold: 2KB
 
-spring-doc:
+springdoc:
+  api-docs:
+    enabled: true
   swagger-ui:
-    tags-sorter: alpha
-    operations-sorter: method
-    doc-expansion: none
+    path: /swagger-ui.html
 
 file:
   upload:
