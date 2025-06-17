@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.context.annotation.DependsOn;
 
 
 @Builder
@@ -16,6 +17,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "tb_one_mouth_draft_attachment_file", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"one_mouth_draft_id", "attachment_file_id"})
 })
+
 public class OneMouthDraftAttachmentFile {
 
     @Id

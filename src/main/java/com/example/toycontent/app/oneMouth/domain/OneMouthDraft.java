@@ -2,6 +2,7 @@ package com.example.toycontent.app.oneMouth.domain;
 
 
 import com.example.toycontent.app.category.domain.Category;
+import com.example.toycontent.app.common.BaseEntity;
 import com.example.toycontent.app.common.enumuration.Unit;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -24,12 +25,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "TB_ONE_MOUTH_DRAFT")
-public class OneMouthDraft {
+@Table(name = "tb_one_mouth_draft")
+public class OneMouthDraft extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", updatable = false, nullable = false)
+    @Column(name = "one_mouth_draft_id", updatable = false, nullable = false)
     @Comment("임시저장 게시글 기본 키 ID")
     private Long id;
 
@@ -37,9 +38,9 @@ public class OneMouthDraft {
     @Comment("게시글 제목")
     private String title;
 
-    @Column(name = "content", columnDefinition = "CLOB", nullable = false)
-    @Comment("게시글 내용")
-    private String content;
+    @Column(length = 4000)
+    @Comment("제품 상세 설명")
+    private String description;
 
     @Comment("사용자 설정 수량 값")
     @Column(name = "quantity")
@@ -70,8 +71,7 @@ public class OneMouthDraft {
     @Comment("수정 시간")
     private LocalDateTime updatedAt;
 
-    @OneToMany(orphanRemoval = true, cascade = CascadeType.ALL)
-    @JoinColumn(name = "one_mouth_draft_attachment_file_id")
+    @OneToMany(orphanRemoval = true, cascade = CascadeType.ALL, mappedBy = "oneMouthDraft")
     private List<OneMouthDraftAttachmentFile> oneMouthDraftAttachmentFiles;
 
     public OneMouthDraft update() {

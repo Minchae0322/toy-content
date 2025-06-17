@@ -8,6 +8,7 @@ import java.time.LocalDate;
 
 @Data
 @Schema(description = "한입만 게시물 검색 조건")
+
 public class OneMouthSearchCondition {
 
     @Schema(description = "검색 키워드", example = "딸기")

@@ -48,7 +48,7 @@ public class OneMouthDraftCreateDto {
 
         return OneMouthDraft.builder()
                 .title(this.title)
-                .content(this.content)
+                .description(this.content)
                 .quantity(this.quantity)
                 .unit(this.unit)
                 .sellerId(this.sellerId)
