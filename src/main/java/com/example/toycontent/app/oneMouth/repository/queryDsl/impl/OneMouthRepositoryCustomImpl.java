@@ -26,30 +26,28 @@ public class OneMouthRepositoryCustomImpl implements OneMouthRepositoryCustom {
 
         List<OneMouthResponse> content = queryFactory
                 .select(Projections.constructor(OneMouthResponse.class,
-                        oneMouth.id,
-                        oneMouth.title,
-                        oneMouth.quantity,
-                        oneMouth.unit,
-                        oneMouth.price,
-                        oneMouth.productStatus,
-                        oneMouth.description,
-                        oneMouth.sellerId,
-                        oneMouth.category.id,
-                        oneMouth.location,
-                        oneMouth.createdAt,
-                        oneMouth.updatedAt,
-                        oneMouth.productType,
-                        oneMouth.hits
+                        oneMouth.id,              // Long oneMouthId
+                        oneMouth.title,           // String title
+                        oneMouth.quantity,        // String quantity
+                        oneMouth.unit,            // Unit unit
+                        oneMouth.price,           // Long price
+                        oneMouth.productStatus,   // ProductStatus productStatus
+                        oneMouth.description,     // String description
+                        oneMouth.sellerId,        // Long sellerId
+                        oneMouth.category.id,     // Long categoryId (단순 ID만)
+                        oneMouth.location,        // String location
+                        oneMouth.createdAt,       // LocalDateTime createdAt
+                        oneMouth.updatedAt,       // LocalDateTime updatedAt
+                        oneMouth.productType,     // String productType
+                        oneMouth.hits             // Integer hits
                 ))
                 .from(oneMouth)
+                .leftJoin(oneMouth.category)  // Category 조인 추가
                 .where(where)
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .orderBy(oneMouth.createdAt.desc())
                 .fetch();
-
-        // 2. 게시글 ID 추출
-        List<Long> ids = content.stream().map(OneMouthResponse::getOneMouthId).toList();
 
         return content;
     }

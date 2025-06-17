@@ -6,13 +6,14 @@ import com.example.toycontent.app.common.enumuration.Unit;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.app.oneMouth.domain.OneMouth;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class OneMouthResponse {
 
@@ -64,6 +65,43 @@ public class OneMouthResponse {
     @Schema(title = "첨부파일 리스트")
     private List<AttachmentFileResponse> oneMouthAttachmentFiles;
 
+    public OneMouthResponse(
+            Long oneMouthId,        // oneMouth.id
+            String title,           // oneMouth.title
+            String quantity,        // oneMouth.quantity
+            Unit unit,              // oneMouth.unit
+            Long price,             // oneMouth.price
+            ProductStatus productStatus, // oneMouth.productStatus
+            String description,     // oneMouth.description
+            Long sellerId,          // oneMouth.sellerId
+            Long categoryId,        // oneMouth.category.id - 단순 ID만
+            String location,        // oneMouth.location
+            LocalDateTime createdAt, // oneMouth.createdAt
+            LocalDateTime updatedAt, // oneMouth.updatedAt
+            String productType,     // oneMouth.productType
+            Integer hits            // oneMouth.hits
+    ) {
+        this.oneMouthId = oneMouthId;
+        this.title = title;
+        this.quantity = quantity;
+        this.unit = unit;
+        this.price = price;
+        this.productStatus = productStatus;
+        this.description = description;
+        this.sellerId = sellerId;
+        this.location = location;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.productType = productType;
+        this.hits = hits;
+
+        // CategoryResponse는 나중에 별도로 설정
+        if (categoryId != null) {
+            this.category = CategoryResponse.builder()
+                    .categoryId(categoryId)
+                    .build();
+        }
+    }
     public static OneMouthResponse from(OneMouth oneMouth) {
         return OneMouthResponse.builder()
                 .oneMouthId(oneMouth.getId())

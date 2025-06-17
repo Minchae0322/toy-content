@@ -30,7 +30,7 @@ public class OneMouth extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", updatable = false, nullable = false)
+    @Column(name = "one_mouth_id", updatable = false, nullable = false)
     @Comment("게시글 기본 키 ID")
     private Long id;
 
@@ -91,7 +91,6 @@ public class OneMouth extends BaseEntity {
     @Comment("관심")
     private List<OneMouthFavorite> favorites;
 
-    @OneToMany
-    @JoinColumn(name = "one_mout_attachment_file_id")
+    @OneToMany(mappedBy = "oneMouth")
     private List<OneMouthAttachmentFile> oneMouthAttachmentFiles;
 }
