@@ -21,4 +21,9 @@ public enum ProductStatus {
 
     private String title;
     private String description;
+
+    public static ProductStatus getProductStatus(String title) {
+        return values()[Integer.parseInt(title.toUpperCase())];
+    }
+
 }

@@ -15,7 +15,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OneMouthResponse {
+public class OneMouthListView {
 
     @Schema(title = "게시글 기본 키 ID")
     private Long oneMouthId;
@@ -65,7 +65,7 @@ public class OneMouthResponse {
     @Schema(title = "첨부파일 리스트")
     private List<AttachmentFileResponse> oneMouthAttachmentFiles;
 
-    public OneMouthResponse(
+    public OneMouthListView(
             Long oneMouthId,        // oneMouth.id
             String title,           // oneMouth.title
             String quantity,        // oneMouth.quantity
@@ -102,8 +102,8 @@ public class OneMouthResponse {
                     .build();
         }
     }
-    public static OneMouthResponse from(OneMouth oneMouth) {
-        return OneMouthResponse.builder()
+    public static OneMouthListView from(OneMouth oneMouth) {
+        return OneMouthListView.builder()
                 .oneMouthId(oneMouth.getId())
                 .title(oneMouth.getTitle())
                 .quantity(oneMouth.getQuantity())
