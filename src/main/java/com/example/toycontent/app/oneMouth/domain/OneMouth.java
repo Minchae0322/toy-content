@@ -79,11 +79,11 @@ public class OneMouth extends BaseEntity {
     @Comment("수정 시간")
     private LocalDateTime updatedAt;
 
-    @Column(nullable = false, columnDefinition = "varchar(10) default 'sale'")
+    @Column(columnDefinition = "varchar(10) default 'sale'")
     @Comment("제품 유형 (예: rental, sale)")
     private String productType;
 
-    @Column(nullable = false, name = "hits", columnDefinition = "Integer default 0")
+    @Column(name = "hits", columnDefinition = "Integer default 0")
     @Comment("조회수")
     private Integer hits;
 

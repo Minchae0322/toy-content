@@ -6,7 +6,7 @@ import com.example.toycontent.app.file.domain.AttachmentFile;
 import com.example.toycontent.app.file.repository.AttachmentFileRepository;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
-import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
 import com.example.toycontent.app.oneMouth.domain.OneMouth;
@@ -42,7 +42,11 @@ public class OneMouthService {
     @Transactional
     public Long createOneMouth(OneMouthCreateDto createDto) {
         draftRepository.findBySellerId(createDto.getSellerId()).ifPresent(draftRepository::delete);
-        Category category = categoryRepository.findById(createDto.getCategoryId()).orElseThrow();
+
+        Category category = null;
+        if(createDto.getCategoryId() != null) {
+            category = categoryRepository.findById(createDto.getCategoryId()).orElseThrow();
+        }
 
         OneMouth createdOneMouth = oneMouthRepository.save(createDto.toEntity(category));
         createOneMouthAttachmentFiles(createdOneMouth, createDto.getAttachmentFileIds());
@@ -114,18 +118,18 @@ public class OneMouthService {
     }
 
 
-    public OneMouthResponse.Get getOneMouthDetail(Long id) {
+    public OneMouthListView.Get getOneMouthDetail(Long id) {
         return null;
     }
 
-    public Page<OneMouthResponse> getPagedOneMouthPosts(Pageable pageable, OneMouthSearchCondition condition) {
-        List<OneMouthResponse> oneMouthResponses = oneMouthRepository.searchByCondition(condition, pageable);
+    public Page<OneMouthListView> getPagedOneMouthPosts(Pageable pageable, OneMouthSearchCondition condition) {
+        List<OneMouthListView> oneMouthRespons = oneMouthRepository.searchByCondition(condition, pageable);
         long totalCount = oneMouthRepository.countByCondition(condition);
 
-        return new PageImpl<>(oneMouthResponses, pageable, totalCount);
+        return new PageImpl<>(oneMouthRespons, pageable, totalCount);
     }
 
-    public OneMouthResponse.Get updateOneMouth(Long id, OneMouthUpdateDto updateDto) {
+    public OneMouthListView.Get updateOneMouth(Long id, OneMouthUpdateDto updateDto) {
         return null;
     }
 

@@ -1,6 +1,6 @@
 package com.example.toycontent.app.oneMouth.repository.queryDsl.impl;
 
-import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView;
 import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
 import com.example.toycontent.app.oneMouth.repository.queryDsl.OneMouthRepositoryCustom;
 import com.querydsl.core.BooleanBuilder;
@@ -21,11 +21,11 @@ public class OneMouthRepositoryCustomImpl implements OneMouthRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<OneMouthResponse> searchByCondition(OneMouthSearchCondition condition, Pageable pageable) {
+    public List<OneMouthListView> searchByCondition(OneMouthSearchCondition condition, Pageable pageable) {
         BooleanBuilder where = where(condition);
 
-        List<OneMouthResponse> content = queryFactory
-                .select(Projections.constructor(OneMouthResponse.class,
+        List<OneMouthListView> content = queryFactory
+                .select(Projections.constructor(OneMouthListView.class,
                         oneMouth.id,              // Long oneMouthId
                         oneMouth.title,           // String title
                         oneMouth.quantity,        // String quantity
