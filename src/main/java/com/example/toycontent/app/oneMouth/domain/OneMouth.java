@@ -1,7 +1,7 @@
 package com.example.toycontent.app.oneMouth.domain;
 
 import com.example.toycontent.app.category.domain.Category;
-import com.example.toycontent.app.common.BaseEntity;
+import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.Unit;
 import jakarta.persistence.*;
@@ -26,7 +26,7 @@ import java.util.List;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "TB_ONE_MOUTH_POST")
-public class OneMouth extends BaseEntity {
+public class OneMouth extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
