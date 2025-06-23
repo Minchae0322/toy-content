@@ -2,7 +2,7 @@ package com.example.toycontent.app.oneMouth.domain;
 
 
 import com.example.toycontent.app.category.domain.Category;
-import com.example.toycontent.app.common.BaseEntity;
+import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.Unit;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -26,7 +26,7 @@ import java.util.List;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "tb_one_mouth_draft")
-public class OneMouthDraft extends BaseEntity {
+public class OneMouthDraft extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
