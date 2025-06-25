@@ -11,4 +11,6 @@ public interface CategoryCustomRepository {
     List<Category> findCategoriesWithSearchCondition(Pageable pageable, CategorySearchCondition condition);
 
     Long countCategoriesWithSearchCondition(CategorySearchCondition condition);
+
+    List<Category> findCategoriesWithSearchCondition(CategorySearchCondition condition);
 }

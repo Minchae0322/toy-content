@@ -5,6 +5,8 @@ import ch.qos.logback.core.util.StringUtil;
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.category.contoller.dto.CategoryRequest;
 import com.example.toycontent.app.common.BaseTimeEntity;
+import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -24,7 +26,7 @@ import java.util.stream.Collectors;
 @Entity
 @Table(name = "categories")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor
 @AllArgsConstructor
 @DynamicInsert
 @DynamicUpdate
@@ -71,10 +73,6 @@ public class Category extends BaseTimeEntity {
         }
     }
 
-    public void toggleStatus() {
-        this.isActive = !this.isActive;
-    }
-
     public static String convertKeywordsToString(List<String> keywordList) {
         if (keywordList == null || keywordList.isEmpty()) {
             return null;
@@ -84,5 +82,18 @@ public class Category extends BaseTimeEntity {
                 .map(String::trim)
                 .collect(Collectors.joining(","));
     }
+
+    public void toggleStatus() {
+        this.isActive = !this.isActive;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        if (sortOrder != null && sortOrder < 1) {
+            throw new RestApiException(CategoryErrorCode.INVALID_SORT_ORDER);
+        }
+        this.sortOrder = sortOrder;
+    }
+
+
 }
 

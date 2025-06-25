@@ -6,6 +6,7 @@ import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.Unit;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -18,7 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
-@SuperBuilder
+@Builder
 @DynamicInsert
 @DynamicUpdate
 @Entity

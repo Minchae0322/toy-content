@@ -16,8 +16,7 @@ import static com.example.toycontent.app.category.domain.Category.convertKeyword
 
 @Getter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
+
 public class CategoryRequest {
 
     @Getter
@@ -82,5 +81,15 @@ public class CategoryRequest {
     }
 
 
+    @Getter
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor
+    public static class Reorder {
+
+        @Schema(title = "목표 위치", example = "3", description = "카테고리를 이동할 목표 위치 (1부터 시작)")
+        @NotNull(message = "목표 위치는 필수입니다.")
+        @Min(value = 1, message = "목표 위치는 1 이상이어야 합니다.")
+        private Integer targetPosition;
+    }
 
 }
