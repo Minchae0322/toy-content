@@ -42,7 +42,7 @@ public class OneMouthListView {
     private Long sellerId;
 
     @Schema(title = "카테고리")
-    private CategoryResponse category;
+    private CategoryResponse.Detail category;
 
     @Schema(title = "판매자 거래 위치")
     private String location;
@@ -97,7 +97,7 @@ public class OneMouthListView {
 
         // CategoryResponse는 나중에 별도로 설정
         if (categoryId != null) {
-            this.category = CategoryResponse.builder()
+            this.category = CategoryResponse.Detail.builder()
                     .categoryId(categoryId)
                     .build();
         }
@@ -112,7 +112,7 @@ public class OneMouthListView {
                 .productStatus(oneMouth.getProductStatus())
                 .description(oneMouth.getDescription())
                 .sellerId(oneMouth.getSellerId())
-                .category(CategoryResponse.from(oneMouth.getCategory()))
+                .category(CategoryResponse.Detail.from(oneMouth.getCategory()))
                 .oneMouthAttachmentFiles(oneMouth.getOneMouthAttachmentFiles().stream()
                         .map(oneMouthAttachmentFile ->
                                 AttachmentFileResponse.from(oneMouthAttachmentFile.getAttachmentFile()))

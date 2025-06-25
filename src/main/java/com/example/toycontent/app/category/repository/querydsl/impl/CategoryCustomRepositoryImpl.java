@@ -45,6 +45,19 @@ public class CategoryCustomRepositoryImpl implements CategoryCustomRepository {
                 .fetchOne();
     }
 
+    @Override
+    public List<Category> findCategoriesWithSearchCondition(CategorySearchCondition condition) {
+        BooleanBuilder builder = createSearchCondition(condition);
+
+        return queryFactory
+                .selectFrom(category)
+                .where(builder)
+                .orderBy(getDefaultOrderSpecifiers())
+                .fetch();
+    }
+
+
+
     private BooleanBuilder createSearchCondition(CategorySearchCondition condition) {
         BooleanBuilder builder = new BooleanBuilder();
 
@@ -58,7 +71,7 @@ public class CategoryCustomRepositoryImpl implements CategoryCustomRepository {
 
     private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {
         if (sort.isEmpty()) {
-            return new OrderSpecifier[]{category.sortOrder.asc(), category.id.desc()};
+            return getDefaultOrderSpecifiers();
         }
 
         return sort.stream()
@@ -72,5 +85,12 @@ public class CategoryCustomRepositoryImpl implements CategoryCustomRepository {
                     };
                 })
                 .toArray(OrderSpecifier[]::new);
+    }
+
+    private OrderSpecifier<?>[] getDefaultOrderSpecifiers() {
+        return new OrderSpecifier[]{
+                category.sortOrder.asc(),
+                category.name.asc()
+        };
     }
 }
