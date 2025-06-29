@@ -6,4 +6,6 @@ import lombok.Data;
 public class CategorySearchCondition {
 
     private String keyword;
+    private Boolean isActive;
+
 }

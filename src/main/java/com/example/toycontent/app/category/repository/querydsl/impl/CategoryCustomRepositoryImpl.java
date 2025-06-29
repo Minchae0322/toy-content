@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.example.toycontent.app.category.domain.QCategory.category;
 
@@ -65,6 +66,8 @@ public class CategoryCustomRepositoryImpl implements CategoryCustomRepository {
             return builder;
         }
 
+        Optional.ofNullable(condition.getIsActive())
+                .ifPresent(status -> builder.and(category.isActive.eq(status)));
 
         return builder;
     }
