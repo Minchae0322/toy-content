@@ -3,6 +3,7 @@ package com.example.toycontent.app.oneMouth.controller;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView.Detail;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
 import com.example.toycontent.app.oneMouth.service.OneMouthService;
@@ -46,9 +47,9 @@ public class OneMouthController {
 
     @Operation(summary = "한입만 게시물 상세 조회", description = "한입만 게시물 ID로 게시물 상세정보를 조회합니다.")
     @GetMapping("/{id}")
-    public ResponseEntity<OneMouthListView.Get> getOneMouthDetail(
+    public ResponseEntity<Detail> getOneMouthDetail(
             @PathVariable @Parameter(description = "게시물 ID") Long id) {
-        OneMouthListView.Get product = oneMouthService.getOneMouthDetail(id);
+        Detail product = oneMouthService.getOneMouthDetail(id);
         return ResponseEntity.ok(product);
     }
 
@@ -64,10 +65,10 @@ public class OneMouthController {
 
     @Operation(summary = "한입만 게시물 수정", description = "한입만 게시물 ID에 해당하는 상품 정보를 수정합니다.")
     @PutMapping("/{id}")
-    public ResponseEntity<OneMouthListView.Get> updateOneMouth(
+    public ResponseEntity<Detail> updateOneMouth(
             @PathVariable @Parameter(description = "게시물 ID") Long id,
             @RequestBody @Parameter(description = "수정할 게시물 정보") OneMouthUpdateDto updateDto) {
-        OneMouthListView.Get updated = oneMouthService.updateOneMouth(id, updateDto);
+        Detail updated = oneMouthService.updateOneMouth(id, updateDto);
         return ResponseEntity.ok(updated);
     }
 

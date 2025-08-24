@@ -2,11 +2,16 @@ package com.example.toycontent.app.oneMouth.service;
 
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
+import com.example.toycontent.app.common.exception.ErrorCode;
+import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.common.exception.impl.CommonErrorCode;
+import com.example.toycontent.app.common.exception.impl.OneMouthErrorCode;
 import com.example.toycontent.app.file.domain.AttachmentFile;
 import com.example.toycontent.app.file.repository.AttachmentFileRepository;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView.Detail;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
 import com.example.toycontent.app.oneMouth.domain.OneMouth;
@@ -118,8 +123,11 @@ public class OneMouthService {
     }
 
 
-    public OneMouthListView.Get getOneMouthDetail(Long id) {
-        return null;
+    public Detail getOneMouthDetail(Long id) {
+      OneMouth oneMouth = oneMouthRepository.findById(id).orElseThrow(
+          () -> new RestApiException(OneMouthErrorCode.ONE_MOUTH_NOT_FOUND));
+
+      return OneMouthListView.Detail.from(oneMouth);
     }
 
     public Page<OneMouthListView> getPagedOneMouthPosts(Pageable pageable, OneMouthSearchCondition condition) {
@@ -129,7 +137,7 @@ public class OneMouthService {
         return new PageImpl<>(oneMouthRespons, pageable, totalCount);
     }
 
-    public OneMouthListView.Get updateOneMouth(Long id, OneMouthUpdateDto updateDto) {
+    public Detail updateOneMouth(Long id, OneMouthUpdateDto updateDto) {
         return null;
     }
 
