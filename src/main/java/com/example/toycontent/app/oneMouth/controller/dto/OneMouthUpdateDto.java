@@ -1,4 +1,4 @@
 package com.example.toycontent.app.oneMouth.controller.dto;
 
-public class OneMouthResponse {
+public class OneMouthUpdateDto {
 }

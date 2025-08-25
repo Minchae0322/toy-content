@@ -1,0 +1,194 @@
+package com.example.toycontent.app.oneMouth.controller.dto;
+
+import com.example.toycontent.app.category.contoller.dto.CategoryResponse;
+import com.example.toycontent.app.common.enumuration.ProductStatus;
+import com.example.toycontent.app.common.enumuration.Unit;
+import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
+import com.example.toycontent.app.oneMouth.domain.OneMouth;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class OneMouthListView {
+
+    @Schema(title = "게시글 기본 키 ID")
+    private Long oneMouthId;
+
+    @Schema(title = "게시글 제목")
+    private String title;
+
+    @Schema(title = "사용자 설정 수량 값")
+    private String quantity;
+
+    @Schema(title = "유닛 (개, 입, 그램, 커스텀)")
+    private Unit unit;
+
+    @Schema(title = "가격")
+    private Long price;
+
+    @Schema(title = "판매 상태 (판매중, 품절, 예약중, 판매중단)")
+    private ProductStatus productStatus;
+
+    @Schema(title = "제품 상세 설명")
+    private String description;
+
+    @Schema(title = "판매자 아이디")
+    private Long sellerId;
+
+    @Schema(title = "카테고리")
+    private CategoryResponse.Detail category;
+
+    @Schema(title = "판매자 거래 위치")
+    private String location;
+
+    @Schema(title = "생성 시간")
+    private LocalDateTime createdAt;
+
+    @Schema(title = "수정 시간")
+    private LocalDateTime updatedAt;
+
+    @Schema(title = "제품 유형 (예: rental, sale)")
+    private String productType;
+
+    @Schema(title = "조회수")
+    private Integer hits;
+
+    @Schema(title = "관심수")
+    private Integer favoritesCount;
+
+    @Schema(title = "첨부파일 리스트")
+    private List<AttachmentFileResponse> oneMouthAttachmentFiles;
+
+    public OneMouthListView(
+            Long oneMouthId,        // oneMouth.id
+            String title,           // oneMouth.title
+            String quantity,        // oneMouth.quantity
+            Unit unit,              // oneMouth.unit
+            Long price,             // oneMouth.price
+            ProductStatus productStatus, // oneMouth.productStatus
+            String description,     // oneMouth.description
+            Long sellerId,          // oneMouth.sellerId
+            Long categoryId,        // oneMouth.category.id - 단순 ID만
+            String location,        // oneMouth.location
+            LocalDateTime createdAt, // oneMouth.createdAt
+            LocalDateTime updatedAt, // oneMouth.updatedAt
+            String productType,     // oneMouth.productType
+            Integer hits            // oneMouth.hits
+    ) {
+        this.oneMouthId = oneMouthId;
+        this.title = title;
+        this.quantity = quantity;
+        this.unit = unit;
+        this.price = price;
+        this.productStatus = productStatus;
+        this.description = description;
+        this.sellerId = sellerId;
+        this.location = location;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.productType = productType;
+        this.hits = hits;
+
+        // CategoryResponse는 나중에 별도로 설정
+        if (categoryId != null) {
+            this.category = CategoryResponse.Detail.builder()
+                    .categoryId(categoryId)
+                    .build();
+        }
+    }
+
+
+    @Data
+    @Builder
+    public static class Detail {
+        @Schema(title = "게시글 기본 키 ID", description = "게시글의 고유 식별자", example = "1")
+        private Long oneMouthId;
+
+        @Schema(title = "게시글 제목", description = "사용자가 작성한 게시글 제목", example = "맛있는 초콜릿 한입거리")
+        private String title;
+
+        @Schema(title = "사용자 설정 수량 값", description = "판매자가 설정한 수량", example = "5")
+        private String quantity;
+
+        @Schema(title = "유닛 (개, 입, 그램, 커스텀)", description = "수량의 단위", example = "PIECE")
+        private Unit unit;
+
+        @Schema(title = "가격", description = "상품 가격 (원 단위)", example = "3000")
+        private Long price;
+
+        @Schema(title = "판매 상태", description = "현재 상품의 판매 상태", example = "FOR_SALE")
+        private ProductStatus productStatus;
+
+        @Schema(title = "제품 상세 설명", description = "상품에 대한 자세한 설명")
+        private String description;
+
+        @Schema(title = "판매자 아이디", description = "상품을 등록한 판매자의 ID", example = "123")
+        private Long sellerId;
+
+
+        @Schema(title = "판매자 거래 위치", description = "거래 희망 위치", example = "강남구 역삼동")
+        private String location;
+
+        @Schema(title = "생성 시간", description = "게시글 작성 시간")
+        private LocalDateTime createdAt;
+
+        @Schema(title = "수정 시간", description = "게시글 마지막 수정 시간")
+        private LocalDateTime updatedAt;
+
+        @Schema(title = "제품 유형", description = "상품 거래 유형", example = "sale")
+        private String productType;
+
+        @Schema(title = "조회수", description = "게시글 조회 횟수", example = "150")
+        private Integer hits;
+
+        @Schema(title = "관심수", description = "사용자들이 관심 표시한 횟수", example = "25")
+        private Integer favoritesCount;
+
+        @Schema(title = "첨부파일 리스트", description = "상품 이미지 및 첨부파일 목록")
+        private List<AttachmentFileResponse> oneMouthAttachmentFiles;
+
+        @Schema(title = "썸네일 이미지 URL", description = "대표 이미지 URL")
+        private String thumbnailUrl;
+
+        @Schema(title = "판매 완료 여부", description = "상품이 판매 완료되었는지 여부")
+        private Boolean isSoldOut;
+
+        @Schema(title = "인기 상품 여부", description = "조회수나 관심수가 높은 인기 상품인지 여부")
+        private Boolean isTrending;
+
+        @Schema(title = "한정 상품 여부", description = "수량이 제한적인 상품인지 여부")
+        private Boolean isLimited;
+
+        @Schema(title = "현재 사용자 관심 여부", description = "로그인한 사용자가 이 상품에 관심을 표시했는지 여부")
+        private Boolean isUserFavorited;
+
+        @Schema(title = "평점", description = "상품 평균 평점 (1.0 ~ 5.0)")
+        private Double rating;
+
+        @Schema(title = "리뷰 개수", description = "상품에 등록된 리뷰 개수")
+        private Integer reviewCount;
+
+        public static Detail from(OneMouth oneMouth) {
+            return Detail.builder()
+                .oneMouthId(oneMouth.getId())
+                .title(oneMouth.getTitle())
+                .quantity(oneMouth.getQuantity())
+                .unit(oneMouth.getUnit())
+                .price(oneMouth.getPrice())
+                .productStatus(oneMouth.getProductStatus())
+                .description(oneMouth.getDescription())
+                .sellerId(oneMouth.getSellerId())
+                .oneMouthAttachmentFiles(oneMouth.getOneMouthAttachmentFiles().stream()
+                    .map(oneMouthAttachmentFile ->
+                        AttachmentFileResponse.from(oneMouthAttachmentFile.getAttachmentFile()))
+                    .toList())
+                .build();
+        }
+    }
+}

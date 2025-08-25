@@ -1,13 +1,19 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /api
+
+
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/playground?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    url: jdbc:mysql://localhost:3306/content?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: root
     password: __REDACTED__
   jpa:
     show-sql: false
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
@@ -22,11 +28,11 @@ spring:
       max-request-size: 1GB
       file-size-threshold: 2KB
 
-spring-doc:
+springdoc:
+  api-docs:
+    enabled: true
   swagger-ui:
-    tags-sorter: alpha
-    operations-sorter: method
-    doc-expansion: none
+    path: /swagger-ui.html
 
 file:
   upload:

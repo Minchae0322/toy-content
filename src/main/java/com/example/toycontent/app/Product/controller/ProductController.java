@@ -46,12 +46,12 @@ public class ProductController {
         return ResponseEntity.ok(product);
     }
 
-    @Operation(summary = "상품 전체 조회", description = "모든 상품을 조회합니다.")
+ /*   @Operation(summary = "상품 전체 조회", description = "모든 상품을 조회합니다.")
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getAllProducts() {
         List<ProductResponse> products = productService.getAllProducts();
         return ResponseEntity.ok(products);
-    }
+    }*/
 
     @Operation(summary = "상품 수정", description = "상품 ID에 해당하는 상품 정보를 수정합니다.")
     @PutMapping("/{id}")

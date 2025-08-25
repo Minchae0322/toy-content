@@ -1,21 +1,21 @@
 package com.example.toycontent.app.file.domain;
 
 
-import com.example.toycontent.app.common.BaseEntity;
+import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.FileCode;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Getter
-@SuperBuilder
+@Builder
 @DynamicInsert
 @DynamicUpdate
 @AllArgsConstructor
@@ -23,7 +23,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Entity
 @Table(name = "tb_attch_file")
 @EntityListeners(AuditingEntityListener.class)
-public class AttachmentFile extends BaseEntity {
+public class AttachmentFile extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
