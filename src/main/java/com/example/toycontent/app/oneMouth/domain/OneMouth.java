@@ -14,6 +14,7 @@ import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @SuperBuilder
@@ -24,7 +25,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "TB_ONE_MOUTH_POST")
-public class OneMouthPost extends BaseEntity {
+public class OneMouth extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -83,4 +84,19 @@ public class OneMouthPost extends BaseEntity {
     @Column(nullable = false)
     @Comment("제품 유형 (예: rental, sale)")
     private String productType;
+
+    @Column(nullable = false, name = "hits", columnDefinition = "Integer default 0")
+    @Comment("조회수")
+    private Integer hits;
+
+    @Column(nullable = false, name = "favorites", columnDefinition = "Integer default 0")
+    @Comment("관심")
+    private Integer favorites;
+
+    @Column(nullable = false, name = "is_draft", columnDefinition = "varchar(1) default 'N'")
+    private boolean isDraft;
+
+    @OneToMany
+    @JoinColumn(name = "one_mout_attachment_file_id")
+    private List<OneMouthAttachmentFile> oneMouthAttachmentFiles;
 }

@@ -9,15 +9,12 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Data
 @Builder
-@Schema(description = "게시글 생성 요청 DTO")
-public class OneMouthCreateDto {
+@Schema(description = "게시글 임시 저장 요청 DTO")
+public class OneMouthDraftCreateDto {
 
-    @NotBlank(message = "제목은 필수 입력 항목입니다.")
     @Schema(title = "게시글 제목", description = "제품을 설명하는 제목", example = "중고 PS5 팝니다")
     private String title;
 
@@ -54,10 +51,7 @@ public class OneMouthCreateDto {
     @Schema(title = "임시저장 여부", description = "임시저장일 경우 = true, 아닐 경우 = false")
     private boolean isDraft;
 
-    private List<Long> photos = new ArrayList<>();
-
     public OneMouth toEntity(Category category) {
-
         LocalDateTime now = LocalDateTime.now();
 
         return OneMouth.builder()
@@ -74,9 +68,7 @@ public class OneMouthCreateDto {
                 .productType(this.productType)
                 .createdAt(now)
                 .updatedAt(now)
-                .isDraft(false)
+                .isDraft(true)
                 .build();
     }
-
-
 }
