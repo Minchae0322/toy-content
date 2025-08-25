@@ -13,8 +13,14 @@ import java.util.Arrays;
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum Unit {
 
-    CUSTOM("커스텀", "사용자 설정"),
 
+
+    //select
+    EA("개", "개수"),
+    MOUTH("입", "입"),
+    GRAM("그램", "그램"),
+
+    CUSTOM("커스텀", "사용자 설정"),
     // 개수 단위
     EA_1("1개", "1개의 단일 물건"),
     EA_2("2개", "2개의 물건"),
