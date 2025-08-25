@@ -3,6 +3,7 @@ package com.example.toycontent.app.category.contoller;
 
 import com.example.toycontent.app.category.contoller.dto.CategoryRequest;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse;
+import com.example.toycontent.app.category.contoller.dto.CategoryResponse.ListView;
 import com.example.toycontent.app.category.contoller.dto.CategorySearchCondition;
 import com.example.toycontent.app.category.service.CategoryService;
 import com.example.toycontent.app.common.response.ApiResponse;
@@ -29,20 +30,20 @@ public class CategoryController {
 
     @Operation(summary = "카테고리 목록 조회 (페이징)", description = "카테고리 목록을 페이징 처리하여 조회합니다.", hidden = true)
     @GetMapping
-    public ApiResponse<Page<CategoryResponse.List>> getCategoriesPages(
+    public ApiResponse<Page<ListView>> getCategoriesPages(
             @PageableDefault(size = 20) Pageable pageable,
             @ParameterObject CategorySearchCondition condition) {
 
-        Page<CategoryResponse.List> categories = categoryService.getCategoriesPages(pageable, condition);
+        Page<ListView> categories = categoryService.getCategoriesPages(pageable, condition);
         return ApiResponse.success(categories);
     }
 
     @Operation(summary = "카테고리 전체 목록 조회", description = "카테고리 전체 목록을 조회합니다.")
     @GetMapping("list")
-    public ApiResponse<List<CategoryResponse.List>> getCategories(
+    public ApiResponse<List<ListView>> getCategories(
             @ParameterObject CategorySearchCondition condition) {
 
-        List<CategoryResponse.List> categories = categoryService.getCategories(condition);
+        List<ListView> categories = categoryService.getCategories(condition);
         return ApiResponse.success(categories);
     }
 

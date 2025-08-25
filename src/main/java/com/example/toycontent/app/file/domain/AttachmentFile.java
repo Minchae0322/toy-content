@@ -3,6 +3,7 @@ package com.example.toycontent.app.file.domain;
 
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.FileCode;
+import com.example.toycontent.app.common.enumuration.FileStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -54,5 +55,8 @@ public class AttachmentFile extends BaseTimeEntity {
     @Column(name = "file_explain", length = 2000)
     @Comment("파일 설명")
     private String fileExplain;
+
+    @Comment("파일 상태")
+    private FileStatus fileStatus;
 
 }

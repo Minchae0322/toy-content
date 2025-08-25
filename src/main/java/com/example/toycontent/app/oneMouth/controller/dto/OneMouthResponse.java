@@ -11,97 +11,70 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+
+
+@RequiredArgsConstructor
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class OneMouthListView {
+public abstract class OneMouthResponse {
 
-    @Schema(title = "게시글 기본 키 ID")
-    private Long oneMouthId;
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ListView {
+        @Schema(title = "게시글 기본 키 ID")
+        private Long oneMouthId;
 
-    @Schema(title = "게시글 제목")
-    private String title;
+        @Schema(title = "게시글 제목")
+        private String title;
 
-    @Schema(title = "사용자 설정 수량 값")
-    private String quantity;
+        @Schema(title = "사용자 설정 수량 값")
+        private String quantity;
 
-    @Schema(title = "유닛 (개, 입, 그램, 커스텀)")
-    private Unit unit;
+        @Schema(title = "유닛 (개, 입, 그램, 커스텀)")
+        private Unit unit;
 
-    @Schema(title = "가격")
-    private Long price;
+        @Schema(title = "가격")
+        private Long price;
 
-    @Schema(title = "판매 상태 (판매중, 품절, 예약중, 판매중단)")
-    private ProductStatus productStatus;
+        @Schema(title = "판매 상태 (판매중, 품절, 예약중, 판매중단)")
+        private ProductStatus productStatus;
 
-    @Schema(title = "제품 상세 설명")
-    private String description;
+        @Schema(title = "제품 상세 설명")
+        private String description;
 
-    @Schema(title = "판매자 아이디")
-    private Long sellerId;
+        @Schema(title = "판매자 아이디")
+        private Long sellerId;
 
-    @Schema(title = "카테고리")
-    private CategoryResponse.Detail category;
+        @Schema(title = "카테고리 아이디")
+        private Long categoryId;
 
-    @Schema(title = "판매자 거래 위치")
-    private String location;
+        @Schema(title = "카테고리명")
+        private String categoryName;
 
-    @Schema(title = "생성 시간")
-    private LocalDateTime createdAt;
+        @Schema(title = "판매자 거래 위치")
+        private String location;
 
-    @Schema(title = "수정 시간")
-    private LocalDateTime updatedAt;
+        @Schema(title = "생성 시간")
+        private LocalDateTime createdAt;
 
-    @Schema(title = "제품 유형 (예: rental, sale)")
-    private String productType;
+        @Schema(title = "수정 시간")
+        private LocalDateTime updatedAt;
 
-    @Schema(title = "조회수")
-    private Integer hits;
+        @Schema(title = "제품 유형 (예: rental, sale)")
+        private String productType;
 
-    @Schema(title = "관심수")
-    private Integer favoritesCount;
+        @Schema(title = "조회수")
+        private Integer hits;
 
-    @Schema(title = "첨부파일 리스트")
-    private List<AttachmentFileResponse> oneMouthAttachmentFiles;
+        @Schema(title = "관심수")
+        private Integer favoritesCount;
 
-    public OneMouthListView(
-            Long oneMouthId,        // oneMouth.id
-            String title,           // oneMouth.title
-            String quantity,        // oneMouth.quantity
-            Unit unit,              // oneMouth.unit
-            Long price,             // oneMouth.price
-            ProductStatus productStatus, // oneMouth.productStatus
-            String description,     // oneMouth.description
-            Long sellerId,          // oneMouth.sellerId
-            Long categoryId,        // oneMouth.category.id - 단순 ID만
-            String location,        // oneMouth.location
-            LocalDateTime createdAt, // oneMouth.createdAt
-            LocalDateTime updatedAt, // oneMouth.updatedAt
-            String productType,     // oneMouth.productType
-            Integer hits            // oneMouth.hits
-    ) {
-        this.oneMouthId = oneMouthId;
-        this.title = title;
-        this.quantity = quantity;
-        this.unit = unit;
-        this.price = price;
-        this.productStatus = productStatus;
-        this.description = description;
-        this.sellerId = sellerId;
-        this.location = location;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.productType = productType;
-        this.hits = hits;
-
-        // CategoryResponse는 나중에 별도로 설정
-        if (categoryId != null) {
-            this.category = CategoryResponse.Detail.builder()
-                    .categoryId(categoryId)
-                    .build();
-        }
+        @Schema(title = "썸네일 URL")
+        private String thumbnailUrl;
     }
+
+
 
 
     @Data
@@ -184,10 +157,6 @@ public class OneMouthListView {
                 .productStatus(oneMouth.getProductStatus())
                 .description(oneMouth.getDescription())
                 .sellerId(oneMouth.getSellerId())
-                .oneMouthAttachmentFiles(oneMouth.getOneMouthAttachmentFiles().stream()
-                    .map(oneMouthAttachmentFile ->
-                        AttachmentFileResponse.from(oneMouthAttachmentFile.getAttachmentFile()))
-                    .toList())
                 .build();
         }
     }
