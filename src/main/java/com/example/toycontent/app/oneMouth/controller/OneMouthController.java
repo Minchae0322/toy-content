@@ -2,8 +2,9 @@ package com.example.toycontent.app.oneMouth.controller;
 
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
-import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView;
-import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView.Detail;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.Detail;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.ListView;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
 import com.example.toycontent.app.oneMouth.service.OneMouthService;
@@ -55,11 +56,11 @@ public class OneMouthController {
 
     @Operation(summary = "한입만 게시물 목록 페이징 조회", description = "게시물 목록을 조회합니다.")
     @GetMapping
-    public ResponseEntity<Page<OneMouthListView>> getPagedOneMouthPosts(
+    public ResponseEntity<Page<ListView>> getPagedOneMouthPosts(
             @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             @ParameterObject OneMouthSearchCondition condition
     ) {
-        Page<OneMouthListView> products = oneMouthService.getPagedOneMouthPosts(pageable, condition);
+        Page<ListView> products = oneMouthService.getPagedOneMouthPosts(pageable, condition);
         return ResponseEntity.ok(products);
     }
 

@@ -3,6 +3,7 @@ package com.example.toycontent.app.category.contoller.dto;
 import com.example.toycontent.app.category.domain.Category;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,7 +20,7 @@ public class CategoryResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class List {
+    public static class ListView {
         @Schema(title = "카테고리 아이디")
         private Long categoryId;
 
@@ -46,8 +47,8 @@ public class CategoryResponse {
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime updatedAt;
 
-        public static List from(Category category) {
-            return List.builder()
+        public static ListView from(Category category) {
+            return ListView.builder()
                     .categoryId(category.getId())
                     .categoryName(category.getName())
                     .description(category.getDescription())
@@ -78,7 +79,7 @@ public class CategoryResponse {
         private String categoryCode;
 
         @Schema(title = "키워드 목록")
-        private java.util.List<String> keywords;
+        private List<String> keywords;
 
         @Schema(title = "아이콘 URL")
         private String iconUrl;

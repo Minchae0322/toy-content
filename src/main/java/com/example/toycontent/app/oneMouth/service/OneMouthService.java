@@ -2,16 +2,16 @@ package com.example.toycontent.app.oneMouth.service;
 
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
-import com.example.toycontent.app.common.exception.ErrorCode;
 import com.example.toycontent.app.common.exception.RestApiException;
-import com.example.toycontent.app.common.exception.impl.CommonErrorCode;
 import com.example.toycontent.app.common.exception.impl.OneMouthErrorCode;
+import com.example.toycontent.app.file.controller.dto.AttachmentFileRequest.SimpleDto;
 import com.example.toycontent.app.file.domain.AttachmentFile;
 import com.example.toycontent.app.file.repository.AttachmentFileRepository;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
-import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView;
-import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView.Detail;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.Detail;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.ListView;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
 import com.example.toycontent.app.oneMouth.domain.OneMouth;
@@ -54,7 +54,7 @@ public class OneMouthService {
         }
 
         OneMouth createdOneMouth = oneMouthRepository.save(createDto.toEntity(category));
-        createOneMouthAttachmentFiles(createdOneMouth, createDto.getAttachmentFileIds());
+        createOneMouthAttachmentFiles(createdOneMouth, createDto.getAttachmentFileSimpleDtos());
 
         return createdOneMouth.getId();
     }
@@ -84,18 +84,20 @@ public class OneMouthService {
     }
 
 
-    private void createOneMouthAttachmentFiles(OneMouth oneMouth, List<Long> attachmentFileIds) {
-        IntStream.range(0, attachmentFileIds.size())
+    private void createOneMouthAttachmentFiles(OneMouth oneMouth, List<SimpleDto> simpleDtos) {
+        IntStream.range(0, simpleDtos.size())
                 .forEach(i -> {
-                    Long attachmentFileId = attachmentFileIds.get(i);
-                    AttachmentFile attachmentFile = attachmentFileRepository.findById(attachmentFileId)
-                            .orElseThrow(() -> new IllegalArgumentException("첨부파일 ID가 존재하지 않습니다: " + attachmentFileId));
+                    SimpleDto simpleDto = simpleDtos.get(i);
 
-                    OneMouthAttachmentFile fileMapping = OneMouthAttachmentFile.builder()
-                            .oneMouth(oneMouth)
-                            .attachmentFile(attachmentFile)
-                            .sortOrder(i)
-                            .build();
+                  OneMouthAttachmentFile fileMapping = OneMouthAttachmentFile.builder()
+                      .oneMouth(oneMouth)
+                      .attachFileId(simpleDto.getAttachFileId())
+                      .fileExplain(simpleDto.getFileExplain())
+                      .fileSize(simpleDto.getFileSize())
+                      .fileUrl(simpleDto.getFileUrl())
+                      .orgFileNm(simpleDto.getOrgFileNm())
+                      .sortOrder(i)
+                      .build();
 
                     oneMouthAttachmentFileRepository.save(fileMapping);
                 });
@@ -127,11 +129,11 @@ public class OneMouthService {
       OneMouth oneMouth = oneMouthRepository.findById(id).orElseThrow(
           () -> new RestApiException(OneMouthErrorCode.ONE_MOUTH_NOT_FOUND));
 
-      return OneMouthListView.Detail.from(oneMouth);
+      return OneMouthResponse.Detail.from(oneMouth);
     }
 
-    public Page<OneMouthListView> getPagedOneMouthPosts(Pageable pageable, OneMouthSearchCondition condition) {
-        List<OneMouthListView> oneMouthRespons = oneMouthRepository.searchByCondition(condition, pageable);
+    public Page<ListView> getPagedOneMouthPosts(Pageable pageable, OneMouthSearchCondition condition) {
+        List<ListView> oneMouthRespons = oneMouthRepository.searchByCondition(condition, pageable);
         long totalCount = oneMouthRepository.countByCondition(condition);
 
         return new PageImpl<>(oneMouthRespons, pageable, totalCount);

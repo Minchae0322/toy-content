@@ -3,6 +3,7 @@ package com.example.toycontent.app.oneMouth.controller.dto;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.Unit;
+import com.example.toycontent.app.file.controller.dto.AttachmentFileRequest;
 import com.example.toycontent.app.oneMouth.domain.OneMouth;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -46,7 +47,7 @@ public class OneMouthCreateDto {
     @Schema(title = "가격", description = "유닛 당 가격")
     private Long price;
 
-    private List<Long> attachmentFileIds = new ArrayList<>();
+    private List<AttachmentFileRequest.SimpleDto> attachmentFileSimpleDtos = new ArrayList<>();
 
     public OneMouth toEntity(Category category) {
 

@@ -1,10 +1,14 @@
 package com.example.toycontent.app.oneMouth.repository.queryDsl.impl;
 
-import com.example.toycontent.app.oneMouth.controller.dto.OneMouthListView;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.ListView;
 import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
+import com.example.toycontent.app.oneMouth.domain.QOneMouthFavorite;
 import com.example.toycontent.app.oneMouth.repository.queryDsl.OneMouthRepositoryCustom;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.example.toycontent.app.oneMouth.domain.QOneMouth.oneMouth;
+import static com.example.toycontent.app.oneMouth.domain.QOneMouthFavorite.oneMouthFavorite;
 
 @Repository
 @RequiredArgsConstructor
@@ -21,33 +26,44 @@ public class OneMouthRepositoryCustomImpl implements OneMouthRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<OneMouthListView> searchByCondition(OneMouthSearchCondition condition, Pageable pageable) {
+    public List<ListView> searchByCondition(OneMouthSearchCondition condition, Pageable pageable) {
         BooleanBuilder where = where(condition);
 
-        List<OneMouthListView> content = queryFactory
-                .select(Projections.constructor(OneMouthListView.class,
-                        oneMouth.id,              // Long oneMouthId
-                        oneMouth.title,           // String title
-                        oneMouth.quantity,        // String quantity
-                        oneMouth.unit,            // Unit unit
-                        oneMouth.price,           // Long price
-                        oneMouth.productStatus,   // ProductStatus productStatus
-                        oneMouth.description,     // String description
-                        oneMouth.sellerId,        // Long sellerId
-                        oneMouth.category.id,     // Long categoryId (단순 ID만)
-                        oneMouth.location,        // String location
-                        oneMouth.createdAt,       // LocalDateTime createdAt
-                        oneMouth.updatedAt,       // LocalDateTime updatedAt
-                        oneMouth.productType,     // String productType
-                        oneMouth.hits             // Integer hits
-                ))
-                .from(oneMouth)
-                .leftJoin(oneMouth.category)  // Category 조인 추가
-                .where(where)
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
-                .orderBy(oneMouth.createdAt.desc())
-                .fetch();
+        List<ListView> content = queryFactory
+            .select(Projections.fields(ListView.class,
+                oneMouth.id.as("oneMouthId"),
+                oneMouth.title,
+                oneMouth.quantity,
+                oneMouth.unit,
+                oneMouth.price,
+                oneMouth.category.id.as("categoryId"),
+                oneMouth.category.name.as("categoryName"),
+                oneMouth.productStatus,
+                oneMouth.description,
+                oneMouth.sellerId,
+                oneMouth.location,
+                oneMouth.createdAt,
+                oneMouth.updatedAt,
+                oneMouth.productType,
+                oneMouth.hits,
+                oneMouth.thumbnailUrl,
+
+                //관심 수
+                Expressions.as(
+                    JPAExpressions
+                        .select(oneMouthFavorite.count().intValue())
+                        .from(oneMouthFavorite)
+                        .where(oneMouthFavorite.oneMouth.id.eq(oneMouth.id)),
+                    "favoritesCount"
+                )
+            ))
+            .from(oneMouth)
+            .leftJoin(oneMouth.category)
+            .where(where)
+            .offset(pageable.getOffset())
+            .limit(pageable.getPageSize())
+            .orderBy(oneMouth.createdAt.desc())
+            .fetch();
 
         return content;
     }

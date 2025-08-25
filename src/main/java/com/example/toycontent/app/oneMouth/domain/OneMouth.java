@@ -88,10 +88,18 @@ public class OneMouth extends BaseTimeEntity {
     @Comment("조회수")
     private Integer hits;
 
-    @OneToMany(mappedBy = "oneMouth")
+    @Column(name = "thumbnail_url", length = 2000)
+    @Comment("대표 이미지 (썸네일) URL")
+    private String thumbnailUrl;
+
+    @Column(name = "thumbnail_file_id")
+    @Comment("대표 이미지 파일 ID (파일서비스 참조)")
+    private Long thumbnailFileId;
+
+    @OneToMany(mappedBy = "oneMouth", fetch = FetchType.LAZY)
     @Comment("관심")
     private List<OneMouthFavorite> favorites;
 
-    @OneToMany(mappedBy = "oneMouth")
+    @OneToMany(mappedBy = "oneMouth", fetch = FetchType.LAZY)
     private List<OneMouthAttachmentFile> oneMouthAttachmentFiles;
 }

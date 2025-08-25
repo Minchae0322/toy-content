@@ -2,6 +2,7 @@ package com.example.toycontent.app.category.service;
 
 import com.example.toycontent.app.category.contoller.dto.CategoryRequest;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse;
+import com.example.toycontent.app.category.contoller.dto.CategoryResponse.ListView;
 import com.example.toycontent.app.category.contoller.dto.CategorySearchCondition;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
@@ -15,7 +16,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,23 +24,23 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
-    public Page<CategoryResponse.List> getCategoriesPages(Pageable pageable, CategorySearchCondition condition) {
+    public Page<ListView> getCategoriesPages(Pageable pageable, CategorySearchCondition condition) {
         List<Category> categories = categoryRepository.findCategoriesWithSearchCondition(pageable, condition);
         Long totalCount = categoryRepository.countCategoriesWithSearchCondition(condition);
 
         return new PageImpl<>(
                 categories.stream()
-                        .map(CategoryResponse.List::from)
+                        .map(ListView::from)
                         .toList(),
                 pageable, totalCount);
     }
 
 
-    public List<CategoryResponse.List> getCategories(CategorySearchCondition condition) {
+    public List<ListView> getCategories(CategorySearchCondition condition) {
         List<Category> categories = categoryRepository.findCategoriesWithSearchCondition(condition);
 
         return categories.stream()
-                .map(CategoryResponse.List::from)
+                .map(ListView::from)
                 .toList();
     }
 
