@@ -1,6 +1,7 @@
 package com.example.toycontent.app.file.controller.dto;
 
 import com.example.toycontent.app.file.domain.AttachmentFile;
+import com.example.toycontent.app.oneMouth.domain.OneMouthAttachmentFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -35,5 +36,15 @@ public class AttachmentFileResponse {
                 .fileSize(entity.getFileSize())
                 .fileExplain(entity.getFileExplain())
                 .build();
+    }
+
+    public static AttachmentFileResponse from(OneMouthAttachmentFile entity) {
+        return AttachmentFileResponse.builder()
+            .id(entity.getId())
+            .orgFileNm(entity.getOrgFileNm())
+            .fileUrl(entity.getFileUrl())
+            .fileSize(entity.getFileSize())
+            .fileExplain(entity.getFileExplain())
+            .build();
     }
 }
