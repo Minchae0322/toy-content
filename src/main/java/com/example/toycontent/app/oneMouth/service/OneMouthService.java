@@ -21,6 +21,7 @@ import com.example.toycontent.app.oneMouth.domain.OneMouthDraftAttachmentFile;
 import com.example.toycontent.app.oneMouth.repository.OneMouthAttachmentFileRepository;
 import com.example.toycontent.app.oneMouth.repository.OneMouthDraftAttachmentFileRepository;
 import com.example.toycontent.app.oneMouth.repository.OneMouthDraftRepository;
+import com.example.toycontent.app.oneMouth.repository.OneMouthFavoriteRepository;
 import com.example.toycontent.app.oneMouth.repository.OneMouthRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ public class OneMouthService {
     private final AttachmentFileRepository attachmentFileRepository;
     private final OneMouthAttachmentFileRepository oneMouthAttachmentFileRepository;
     private final OneMouthDraftAttachmentFileRepository oneMouthDraftAttachmentFileRepository;
+    private final OneMouthFavoriteRepository oneMouthFavoriteRepository;
 
     @Transactional
     public Long createOneMouth(OneMouthCreateDto createDto) {
@@ -125,11 +127,13 @@ public class OneMouthService {
     }
 
 
-    public Detail getOneMouthDetail(Long id) {
+    public Detail getOneMouthDetail(Long id, Long viewerId) {
       OneMouth oneMouth = oneMouthRepository.findById(id).orElseThrow(
           () -> new RestApiException(OneMouthErrorCode.ONE_MOUTH_NOT_FOUND));
 
-      return OneMouthResponse.Detail.from(oneMouth);
+      boolean isFavorite = oneMouthFavoriteRepository.existsByUserId(viewerId);
+
+      return OneMouthResponse.Detail.from(oneMouth, isFavorite);
     }
 
     public Page<ListView> getPagedOneMouthPosts(Pageable pageable, OneMouthSearchCondition condition) {

@@ -1,60 +1,44 @@
 package com.example.toycontent.app.common.resolver;
 
-import com.example.toycontent.app.auth.token.JwtParser;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
-import io.jsonwebtoken.Claims;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import java.util.Objects;
-
 @Component
 @RequiredArgsConstructor
 public class CurrentUserIdArgumentResolver implements HandlerMethodArgumentResolver {
 
-    private final JwtParser jwtParser;  // 직접 만든 JwtParser 주입
-
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
         return parameter.hasParameterAnnotation(CurrentUserId.class)
-                && parameter.getParameterType().equals(Long.class);
+            && parameter.getParameterType().equals(Long.class);
     }
 
     @Override
     public Object resolveArgument(MethodParameter parameter,
-                                  ModelAndViewContainer mavContainer,
-                                  NativeWebRequest webRequest,
-                                  WebDataBinderFactory binderFactory) {
+        ModelAndViewContainer mavContainer,
+        NativeWebRequest webRequest,
+        WebDataBinderFactory binderFactory) {
 
-        HttpServletRequest request = (HttpServletRequest) webRequest.getNativeRequest();
-        String token = jwtParser.resolveAccessToken(request);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (!StringUtils.hasText(token) || !jwtParser.validateToken(token)) {
-            throw new IllegalStateException("유효하지 않은 JWT 토큰입니다.");
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalStateException("인증되지 않은 사용자입니다.");
         }
 
-        // 어노테이션에서 클레임 키 이름 추출 (예: "userId", "memberId" 등)
-        String claimName = Objects.requireNonNull(parameter.getParameterAnnotation(CurrentUserId.class)).value();
-        Claims claims = jwtParser.parseClaims(token);
+        Object principal = authentication.getPrincipal();
 
-        Object claim = claims.get(claimName);
-
-        if (claim instanceof Integer i) {
-            return i.longValue();
-        } else if (claim instanceof Long l) {
-            return l;
-        } else {
-            throw new IllegalStateException("클레임 '" + claimName + "'은 Long 형식이 아닙니다.");
+        if (principal instanceof Long) {
+            return (Long) principal;
         }
+
+        throw new IllegalStateException("인증 정보에서 사용자 ID를 찾을 수 없습니다.");
     }
 }
-

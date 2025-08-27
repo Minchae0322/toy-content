@@ -1,5 +1,6 @@
 package com.example.toycontent.app.oneMouth.controller;
 
+import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse;
@@ -49,8 +50,10 @@ public class OneMouthController {
     @Operation(summary = "한입만 게시물 상세 조회", description = "한입만 게시물 ID로 게시물 상세정보를 조회합니다.")
     @GetMapping("/{id}")
     public ResponseEntity<Detail> getOneMouthDetail(
-            @PathVariable @Parameter(description = "게시물 ID") Long id) {
-        Detail product = oneMouthService.getOneMouthDetail(id);
+        @PathVariable @Parameter(description = "게시물 ID") Long id,
+        @CurrentUserId Long userId) {
+
+        Detail product = oneMouthService.getOneMouthDetail(id, userId);
         return ResponseEntity.ok(product);
     }
 

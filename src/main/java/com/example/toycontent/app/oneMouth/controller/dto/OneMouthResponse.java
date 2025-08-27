@@ -132,7 +132,7 @@ public abstract class OneMouthResponse {
         @Schema(title = "첨부파일 리스트", description = "상품 이미지 및 첨부파일 목록")
         private List<AttachmentFileResponse> oneMouthAttachmentFiles;
 
-        public static Detail from(OneMouth oneMouth) {
+        public static Detail from(OneMouth oneMouth, Boolean isUserFavorited) {
             return Detail.builder()
                 .oneMouthId(oneMouth.getId())
                 .title(oneMouth.getTitle())
@@ -149,6 +149,7 @@ public abstract class OneMouthResponse {
                 .hits(oneMouth.getHits())
                 .favoritesCount(oneMouth.getFavorites().size())
                 .thumbnailUrl(oneMouth.getThumbnailUrl())
+                .isUserFavorited(isUserFavorited)
                 .oneMouthAttachmentFiles(
                     oneMouth.getOneMouthAttachmentFiles().stream()
                         .map(AttachmentFileResponse::from)
