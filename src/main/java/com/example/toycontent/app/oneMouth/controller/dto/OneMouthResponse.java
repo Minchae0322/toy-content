@@ -104,7 +104,6 @@ public abstract class OneMouthResponse {
         @Schema(title = "판매자 아이디", description = "상품을 등록한 판매자의 ID", example = "123")
         private Long sellerId;
 
-
         @Schema(title = "판매자 거래 위치", description = "거래 희망 위치", example = "강남구 역삼동")
         private String location;
 
@@ -123,29 +122,15 @@ public abstract class OneMouthResponse {
         @Schema(title = "관심수", description = "사용자들이 관심 표시한 횟수", example = "25")
         private Integer favoritesCount;
 
-        @Schema(title = "첨부파일 리스트", description = "상품 이미지 및 첨부파일 목록")
-        private List<AttachmentFileResponse> oneMouthAttachmentFiles;
-
         @Schema(title = "썸네일 이미지 URL", description = "대표 이미지 URL")
         private String thumbnailUrl;
-
-        @Schema(title = "판매 완료 여부", description = "상품이 판매 완료되었는지 여부")
-        private Boolean isSoldOut;
-
-        @Schema(title = "인기 상품 여부", description = "조회수나 관심수가 높은 인기 상품인지 여부")
-        private Boolean isTrending;
-
-        @Schema(title = "한정 상품 여부", description = "수량이 제한적인 상품인지 여부")
-        private Boolean isLimited;
 
         @Schema(title = "현재 사용자 관심 여부", description = "로그인한 사용자가 이 상품에 관심을 표시했는지 여부")
         private Boolean isUserFavorited;
 
-        @Schema(title = "평점", description = "상품 평균 평점 (1.0 ~ 5.0)")
-        private Double rating;
 
-        @Schema(title = "리뷰 개수", description = "상품에 등록된 리뷰 개수")
-        private Integer reviewCount;
+        @Schema(title = "첨부파일 리스트", description = "상품 이미지 및 첨부파일 목록")
+        private List<AttachmentFileResponse> oneMouthAttachmentFiles;
 
         public static Detail from(OneMouth oneMouth) {
             return Detail.builder()
@@ -157,7 +142,20 @@ public abstract class OneMouthResponse {
                 .productStatus(oneMouth.getProductStatus())
                 .description(oneMouth.getDescription())
                 .sellerId(oneMouth.getSellerId())
+                .location(oneMouth.getLocation())
+                .createdAt(oneMouth.getCreatedAt())
+                .updatedAt(oneMouth.getUpdatedAt())
+                .productType(oneMouth.getProductType())
+                .hits(oneMouth.getHits())
+                .favoritesCount(oneMouth.getFavorites().size())
+                .thumbnailUrl(oneMouth.getThumbnailUrl())
+                .oneMouthAttachmentFiles(
+                    oneMouth.getOneMouthAttachmentFiles().stream()
+                        .map(AttachmentFileResponse::from)
+                        .toList()
+                )
                 .build();
         }
+
     }
 }
