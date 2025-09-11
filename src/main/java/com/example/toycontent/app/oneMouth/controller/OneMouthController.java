@@ -3,7 +3,6 @@ package com.example.toycontent.app.oneMouth.controller;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
-import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.Detail;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.ListView;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
@@ -20,7 +19,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "OneMouthController", description = "한입만 API")
 @RestController
