@@ -3,9 +3,11 @@ package com.example.toycontent.app.Product.service;
 
 import com.example.toycontent.app.Product.controller.dto.ProductRequest;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse;
+import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,7 +27,10 @@ public class ProductService {
         return null;
     }
 
-    public Page<ProductResponse> getAllProducts() {
+    public Page<ProductResponse> getAllProducts(ProductSearchCondition searchCondition,
+        Pageable pageable) {
+
+
         return null;
     }
 
