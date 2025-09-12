@@ -7,6 +7,7 @@ import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.common.utils.RatingUtil;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.querydsl.core.annotations.QueryProjection;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -78,7 +79,7 @@ public abstract class ProductResponse {
                 .price(product.getPrice())
                 .viewCount(product.getViewCount())
                 .likeCount(product.getLikeCount())
-                .averageRating(RatingUtil.calculateAverage()) //TODO: 리뷰에서 받아서 
+                .averageRating(product.getAvgRating())
                 .reviewCount(product.getProductReviews().size())
                 .categoryName(product.getCategory().getName())
                 .productType(product.getProductType())

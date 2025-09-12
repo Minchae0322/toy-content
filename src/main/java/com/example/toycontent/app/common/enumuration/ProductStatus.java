@@ -14,6 +14,8 @@ import java.util.Arrays;
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum ProductStatus {
 
+
+    APPROVED("APPROVED", "승인"),
     FOR_SALE("FOR_SALE", "판매중"),
     SOLD_OUT("SOLD_OUT", "품절"),
     RESERVED("RESERVED", "예약중"),
