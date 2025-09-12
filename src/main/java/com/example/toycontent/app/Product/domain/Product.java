@@ -75,6 +75,11 @@ public class Product extends BaseTimeEntity {
     @Comment("제품 태그 (세미콜론 구분, 예: '신제품;최신;유행;한정판')")
     private String tags;
 
+    @Column()
+    @ColumnDefault("0.0")
+    @Comment("평균 평점")
+    private Double avgRating;
+
     @Comment("조회수 (상세 페이지 방문 횟수)")
     @ColumnDefault("0")
     private Integer viewCount;

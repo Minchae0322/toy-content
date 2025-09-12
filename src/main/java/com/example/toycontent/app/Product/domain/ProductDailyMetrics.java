@@ -69,9 +69,10 @@ public class ProductDailyMetrics {
   @Comment("당일 리뷰 수")
   private Integer dailyReviews;
 
-  @Column(precision = 3, scale = 2)
+  @Column()
+  @ColumnDefault("0.0")
   @Comment("당일 평균 평점")
-  private BigDecimal dailyAvgRating;
+  private Double dailyAvgRating;
 
   @Column(nullable = false)
   @Comment("마지막 업데이트 시간")
