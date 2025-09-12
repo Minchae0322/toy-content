@@ -83,6 +83,11 @@ public class Product extends BaseTimeEntity {
     @ColumnDefault("0")
     private Integer likeCount;
 
+    @Column
+    @ColumnDefault("0")
+    @Comment("총 공유 횟수 (SNS, 링크 공유)")
+    private Integer shareCount;
+
     @Comment("제품 등록자 ID (User 테이블 참조)")
     private Long creatorId;
 
