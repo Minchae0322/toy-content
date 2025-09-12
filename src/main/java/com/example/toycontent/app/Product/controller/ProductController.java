@@ -2,6 +2,7 @@ package com.example.toycontent.app.Product.controller;
 
 import com.example.toycontent.app.Product.controller.dto.ProductRequest;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse;
+import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.service.ProductService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,6 +10,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -46,12 +52,17 @@ public class ProductController {
         return ResponseEntity.ok(product);
     }
 
- /*   @Operation(summary = "상품 전체 조회", description = "모든 상품을 조회합니다.")
+    @Operation(summary = "상품 전체 조회", description = "모든 상품을 조회합니다.")
     @GetMapping
-    public ResponseEntity<List<ProductResponse>> getAllProducts() {
-        List<ProductResponse> products = productService.getAllProducts();
+    public ResponseEntity<Page<ProductResponse>> getAllProducts(
+        @ParameterObject @Valid ProductSearchCondition condition,
+        @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+
+        Page<ProductResponse> products = productService.getAllProducts(condition, pageable);
+
         return ResponseEntity.ok(products);
-    }*/
+    }
 
     @Operation(summary = "상품 수정", description = "상품 ID에 해당하는 상품 정보를 수정합니다.")
     @PutMapping("/{id}")

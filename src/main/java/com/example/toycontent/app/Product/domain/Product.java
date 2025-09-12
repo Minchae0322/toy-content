@@ -38,7 +38,7 @@ public class Product extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "item_id", nullable = false)
+    @Column(name = "product_id", nullable = false)
     @Comment("제품 고유 ID")
     private Long id;
 
@@ -110,5 +110,8 @@ public class Product extends BaseTimeEntity {
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     @Comment("제품 첨부 파일 목록 (이미지, 문서 등)")
     private List<ProductAttachmentFile> productAttachmentFiles;
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+    private List<ProductReview> productReviews;
 
 }
