@@ -2,8 +2,6 @@ package com.example.toycontent.app.Product.controller.dto;
 
 import com.example.toycontent.app.common.enumuration.ProductStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.Builder;
 import lombok.Data;
 
