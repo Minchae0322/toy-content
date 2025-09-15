@@ -1,5 +1,7 @@
 package com.example.toycontent.app.Product.controller.dto;
 
+import static com.example.toycontent.app.common.utils.TagParsingUtil.parseToList;
+
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
@@ -152,7 +154,7 @@ public abstract class ProductResponse {
         private LocalDateTime updatedAt;
 
         @Schema(description = "카테고리 정보")
-        private CategoryResponse category;
+        private CategoryResponse.Detail category;
 
         @Schema(description = "상품 유형", example = "SALE")
         private String productType;
@@ -168,6 +170,34 @@ public abstract class ProductResponse {
 
         @Schema(description = "사용자의 리뷰 작성 여부", example = "false")
         private Boolean hasUserReview;
+
+        public static ProductDetail of(Product product) {
+            return ProductDetail.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .brand(product.getBrand())
+                .status(product.getStatus())
+                .description(product.getDescription())
+                .distributor(product.getDistributor())
+                .price(product.getPrice())
+                .feature(product.getFeature())
+                .tags(parseToList(product.getTags()))
+                .viewCount(product.getViewCount())
+                .likeCount(product.getLikeCount())
+                .averageRating(product.getAvgRating())
+                .reviewCount(product.getProductReviews().size())
+                .creatorId(product.getCreatorId())
+                .releaseDate(product.getReleaseDate())
+                .createdAt(product.getCreatedAt())
+                .updatedAt(product.getUpdatedAt())
+                .category(CategoryResponse.Detail.from(product.getCategory()))
+                .productType(product.getProductType())
+                .attachmentFiles(null)//TODO: 추가
+                .recentReviews(null)//TODO: 추가
+                .isLiked(null)//TODO: 추가
+                .hasUserReview(null)//TODO: 추가
+                .build();
+        }
     }
 
 
