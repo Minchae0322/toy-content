@@ -58,6 +58,12 @@ public class ProductReview extends BaseTimeEntity {
   @NotNull
   private Long creatorId;
 
+  @Column(name = "creator_id", nullable = false)
+  @Comment("리뷰 작성자 명")
+  @NotNull
+  private String creatorName;
+
+
   @Column(name = "rating", nullable = false)
   @Comment("평점 (1-5)")
   @NotNull

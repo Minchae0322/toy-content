@@ -6,14 +6,19 @@ import com.example.toycontent.app.Product.controller.dto.ProductRequest;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse.ProductDetail;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse.ProductList;
+import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.Product.domain.ProductReaction;
+import com.example.toycontent.app.Product.domain.ProductReview;
 import com.example.toycontent.app.Product.repository.ProductReactionRepository;
 import com.example.toycontent.app.Product.repository.ProductRepository;
+import com.example.toycontent.app.Product.repository.ProductReviewRepository;
 import com.example.toycontent.app.Product.repository.querydsl.impl.ProductRepositoryCustomImpl;
+import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
+import java.util.ArrayList;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +34,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductReactionRepository productReactionRepository;
+    private final ProductReviewRepository productReviewRepository;
 
     public ProductResponse createProduct(ProductRequest productDto, Long userId) {
         return null;
@@ -44,7 +50,10 @@ public class ProductService {
             .map(ProductUserReaction::of)
             .orElse(ProductUserReaction.createDefault());
 
-        return ProductDetail.of(product, productUserReaction);
+        List<ProductReviewResponse.ReviewList> productReviewResponses = productReviewRepository.findByProduct_IdAndStatus(
+            product.getId(), ReviewStatus.ACTIVE);
+
+        return ProductDetail.of(product, productUserReaction, productReviewResponses);
     }
 
     public Page<ProductResponse.ProductList> getAllProducts(ProductSearchCondition searchCondition,
