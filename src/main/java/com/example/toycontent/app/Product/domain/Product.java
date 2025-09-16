@@ -42,17 +42,18 @@ public class Product extends BaseTimeEntity {
     @Comment("제품 고유 ID")
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100)
     @Comment("제품명")
     private String name;
 
-    @Column(length = 100)
+    @Column(name = "brand", length = 100)
     @Comment("브랜드명 (예: 스타벅스, 맥도날드, CU)")
     private String brand;
 
     @Comment("제품 승인 상태 (PENDING: 승인대기, APPROVED: 승인완료, REJECTED: 승인거부)")
     @Enumerated(EnumType.STRING)
     @ColumnDefault("'PENDING'")
+    @Column(name = "status")
     private ProductStatus status;
 
     @Column(length = 1000)
