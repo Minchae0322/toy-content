@@ -3,6 +3,7 @@ package com.example.toycontent.app.Product.controller.dto;
 import static com.example.toycontent.app.common.utils.TagParsingUtil.parseToList;
 
 import com.example.toycontent.app.Product.domain.Product;
+import com.example.toycontent.app.Product.domain.ProductReaction;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
@@ -72,7 +73,7 @@ public abstract class ProductResponse {
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime createdAt;
 
-        public static ProductList of(Product product) {
+        public static ProductList of(Product product, ProductReactionResponse.ProductUserReaction userReaction) {
             return ProductList.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -165,13 +166,13 @@ public abstract class ProductResponse {
         @Schema(description = "최근 리뷰 목록")
         private List<ProductReviewResponse> recentReviews;
 
-        @Schema(description = "사용자의 찜하기 여부", example = "true")
-        private Boolean isLiked;
+        @Schema(description = "사용자의 반응 목록", example = "false")
+        private ProductReactionResponse.ProductUserReaction userReaction;
 
         @Schema(description = "사용자의 리뷰 작성 여부", example = "false")
         private Boolean hasUserReview;
 
-        public static ProductDetail of(Product product) {
+        public static ProductDetail of(Product product, ProductReactionResponse.ProductUserReaction userReaction) {
             return ProductDetail.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -194,7 +195,7 @@ public abstract class ProductResponse {
                 .productType(product.getProductType())
                 .attachmentFiles(null)//TODO: 추가
                 .recentReviews(null)//TODO: 추가
-                .isLiked(null)//TODO: 추가
+                .userReaction(userReaction)
                 .hasUserReview(null)//TODO: 추가
                 .build();
         }

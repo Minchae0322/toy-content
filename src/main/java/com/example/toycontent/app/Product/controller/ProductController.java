@@ -49,8 +49,9 @@ public class ProductController {
     @Operation(summary = "상품 단건 조회", description = "상품 ID로 상품을 조회합니다.")
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse.ProductDetail> getProduct(
-            @PathVariable @Parameter(description = "상품 ID") Long id) {
-        ProductResponse.ProductDetail product = productService.getProduct(id);
+            @PathVariable @Parameter(description = "상품 ID") Long id,
+        @CurrentUserId Long userId) {
+        ProductResponse.ProductDetail product = productService.getProduct(id, userId);
         return ResponseEntity.ok(product);
     }
 

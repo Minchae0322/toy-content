@@ -34,12 +34,12 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
 
 
   @Override
-  public Page<ProductList> findBySearchCondition(ProductSearchCondition searchCondition,
+  public List<ProductList> findBySearchCondition(ProductSearchCondition searchCondition,
       Pageable pageable) {
 
     BooleanBuilder whereClause = getWhereClauseWithSearchCondition(searchCondition);
 
-    List<ProductList> content = queryFactory
+    return queryFactory
         .select(Projections.fields(ProductList.class,
             product.id,
             product.name,
@@ -65,15 +65,19 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize())
         .fetch();
+  }
 
-    Long total = queryFactory
-        .select(product.countDistinct()) // DISTINCT 사용
+  public Long countBySearchCondition(ProductSearchCondition searchCondition) {
+    BooleanBuilder whereClause = getWhereClauseWithSearchCondition(searchCondition);
+
+    Long count = queryFactory
+        .select(product.countDistinct())
         .from(product)
         .leftJoin(product.category, category)
         .where(whereClause)
         .fetchOne();
 
-    return new PageImpl<>(content, pageable, total != null ? total : 0L);
+    return count == null ? 0 : count;
   }
 
   private BooleanBuilder getWhereClauseWithSearchCondition(ProductSearchCondition searchCondition) {
