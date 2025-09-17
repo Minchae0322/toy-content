@@ -5,6 +5,7 @@ import com.example.toycontent.app.Product.controller.dto.ProductResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.service.ProductService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
+import com.example.toycontent.app.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -40,7 +41,7 @@ public class ProductController {
     )
     @PostMapping
     public ResponseEntity<ProductResponse> createProduct(
-            @RequestBody @Valid ProductRequest productDto,
+            @RequestBody @Valid ProductRequest.ProductCreate productDto,
             @CurrentUserId Long userId) {
         ProductResponse created = productService.createProduct(productDto, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);

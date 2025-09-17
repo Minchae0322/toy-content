@@ -3,22 +3,32 @@ package com.example.toycontent.app.Product.domain;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
-import com.example.toycontent.app.oneMouth.domain.OneMouthAttachmentFile;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
 
 @Getter
 @Builder
@@ -53,8 +63,9 @@ public class Product extends BaseTimeEntity {
     @Comment("제품 승인 상태 (PENDING: 승인대기, APPROVED: 승인완료, REJECTED: 승인거부)")
     @Enumerated(EnumType.STRING)
     @ColumnDefault("'PENDING'")
+    @Builder.Default
     @Column(name = "status")
-    private ProductStatus status;
+    private ProductStatus status = ProductStatus.PENDING;
 
     @Column(length = 1000)
     @Comment("제품 상세 설명 (맛, 특징, 용량 등)")
@@ -114,10 +125,6 @@ public class Product extends BaseTimeEntity {
     @Comment("제품 카테고리 (음료, 스낵, 베이커리 등)")
     private Category category;
 
-    @Column(nullable = false, length = 50)
-    @Comment("제품 유형 (SALE: 판매용, RENTAL: 대여용, INFO: 정보제공용)")
-    private String productType;
-
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     @Comment("제품 첨부 파일 목록 (이미지, 문서 등)")
     private List<ProductAttachmentFile> productAttachmentFiles;
@@ -126,3 +133,5 @@ public class Product extends BaseTimeEntity {
     private List<ProductReview> productReviews;
 
 }
+
+
