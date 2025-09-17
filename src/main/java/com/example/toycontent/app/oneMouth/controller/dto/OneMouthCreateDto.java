@@ -64,7 +64,7 @@ public class OneMouthCreateDto {
                 .productType(this.productType)
                 .createdAt(now)
                 .updatedAt(now)
-                .productStatus(ProductStatus.FOR_SALE)
+                .productStatus(ProductStatus.APPROVED)
                 .price(this.price)
                 .build();
     }

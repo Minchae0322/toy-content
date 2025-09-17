@@ -36,7 +36,7 @@ public class ProductService {
     private final ProductReactionRepository productReactionRepository;
     private final ProductReviewRepository productReviewRepository;
 
-    public ProductResponse createProduct(ProductRequest productDto, Long userId) {
+    public ProductResponse createProduct(ProductRequest.ProductCreate productDto, Long userId) {
         return null;
     }
 

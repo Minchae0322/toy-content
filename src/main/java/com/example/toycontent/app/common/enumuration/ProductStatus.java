@@ -16,10 +16,9 @@ public enum ProductStatus {
 
 
     APPROVED("APPROVED", "승인"),
-    FOR_SALE("FOR_SALE", "판매중"),
-    SOLD_OUT("SOLD_OUT", "품절"),
-    RESERVED("RESERVED", "예약중"),
-    DISCONTINUED("DISCONTINUED", "판매중단");
+    PENDING("PENDING", "대기중"),
+    REJECTED("REJECTED", "거절됨"),
+    ;
 
     private String title;
     private String description;
