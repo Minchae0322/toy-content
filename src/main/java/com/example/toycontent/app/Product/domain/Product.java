@@ -84,7 +84,7 @@ public class Product extends BaseTimeEntity {
     private String feature;
 
     @Column(length = 1000)
-    @Comment("제품 태그 (세미콜론 구분, 예: '신제품;최신;유행;한정판')")
+    @Comment("제품 태그 (세미콜론 구분)")
     private String tags;
 
     @Column()
@@ -108,13 +108,6 @@ public class Product extends BaseTimeEntity {
     @Comment("제품 등록자 ID (User 테이블 참조)")
     private Long creatorId;
 
-    @Column(nullable = false, updatable = false)
-    @Comment("제품 등록 일시")
-    private LocalDateTime createdAt;
-
-    @Column(nullable = false)
-    @Comment("제품 정보 수정 일시")
-    private LocalDateTime updatedAt;
 
     @Column
     @Comment("제품 출시일 (브랜드 공식 출시일)")

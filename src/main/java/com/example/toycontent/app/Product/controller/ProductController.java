@@ -27,7 +27,7 @@ import java.util.List;
 @Tag(name = "ProductController", description = "상품 API")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping
+@RequestMapping("/products")
 public class ProductController {
 
     private final ProductService productService;
@@ -56,7 +56,7 @@ public class ProductController {
         return ResponseEntity.ok(product);
     }
 
-    @GetMapping
+    @GetMapping("")
     @Operation(summary = "제품 목록 조회", description = "제품 목록을 페이징과 정렬 옵션으로 조회합니다.")
     @Parameters({
         @Parameter(name = "page", description = "페이지 번호 (0부터 시작)", example = "0"),

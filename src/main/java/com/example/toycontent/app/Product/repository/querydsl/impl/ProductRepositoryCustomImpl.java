@@ -46,7 +46,6 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             product.avgRating.as("averageRating"),
             productReview.count().intValue().as("reviewCount"),
             product.category.name.as("categoryName"),
-            product.productType,
             product.releaseDate,
             product.createdAt
         ))

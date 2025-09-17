@@ -86,7 +86,6 @@ public abstract class ProductResponse {
                 .averageRating(product.getAvgRating())
                 .reviewCount(product.getProductReviews().size())
                 .categoryName(product.getCategory().getName())
-                .productType(product.getProductType())
                 .thumbnailUrl("")//TODO: 대표이미지 설정 필요
                 .releaseDate(product.getReleaseDate())
                 .createdAt(product.getCreatedAt())
@@ -192,7 +191,6 @@ public abstract class ProductResponse {
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .category(CategoryResponse.Detail.from(product.getCategory()))
-                .productType(product.getProductType())
                 .attachmentFiles(null)//TODO: 추가
                 .recentReviews(recentReviews)
                 .userReaction(userReaction)
