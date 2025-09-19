@@ -40,10 +40,10 @@ public class ProductController {
                     required = true)
     )
     @PostMapping
-    public ResponseEntity<ProductResponse> createProduct(
+    public ResponseEntity<ProductResponse.ProductCreate> createProduct(
             @RequestBody @Valid ProductRequest.ProductCreate productDto,
             @CurrentUserId Long userId) {
-        ProductResponse created = productService.createProduct(productDto, userId);
+        ProductResponse.ProductCreate created = productService.createProduct(productDto, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 

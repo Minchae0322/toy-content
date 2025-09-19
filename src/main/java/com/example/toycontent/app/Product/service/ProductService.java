@@ -4,6 +4,7 @@ package com.example.toycontent.app.Product.service;
 import com.example.toycontent.app.Product.controller.dto.ProductReactionResponse.ProductUserReaction;
 import com.example.toycontent.app.Product.controller.dto.ProductRequest;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse;
+import com.example.toycontent.app.Product.controller.dto.ProductResponse.ProductCreate;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse.ProductDetail;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse.ProductList;
 import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse;
@@ -15,8 +16,11 @@ import com.example.toycontent.app.Product.repository.ProductReactionRepository;
 import com.example.toycontent.app.Product.repository.ProductRepository;
 import com.example.toycontent.app.Product.repository.ProductReviewRepository;
 import com.example.toycontent.app.Product.repository.querydsl.impl.ProductRepositoryCustomImpl;
+import com.example.toycontent.app.category.domain.Category;
+import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -35,9 +39,13 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductReactionRepository productReactionRepository;
     private final ProductReviewRepository productReviewRepository;
+    private final CategoryRepository categoryRepository;
 
-    public ProductResponse createProduct(ProductRequest.ProductCreate productDto, Long userId) {
-        return null;
+    public ProductResponse.ProductCreate createProduct(ProductRequest.ProductCreate productDto, Long userId) {
+        Category category = categoryRepository.findById(productDto.getCategoryId()).orElseThrow(() -> new RestApiException(CategoryErrorCode.CATEGORY_NOT_FOUND));
+
+        Product newProduct = productRepository.save(productDto.toEntity(category, null));
+        return ProductCreate.of(newProduct);
     }
 
     public ProductResponse.ProductDetail getProduct(Long id, Long currentUserId) {
