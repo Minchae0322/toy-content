@@ -1,6 +1,7 @@
 package com.example.toycontent.app.oneMouth.controller.dto;
 
 import com.example.toycontent.app.category.domain.Category;
+import com.example.toycontent.app.common.enumuration.OneMouthStatus;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.Unit;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileRequest;
@@ -35,8 +36,6 @@ public class OneMouthCreateDto {
     @Schema(title = "판매자 ID", description = "판매자의 고유 ID", example = "101")
     private Long sellerId;
 
-    @Schema(title = "카테고리 ID", description = "등록할 카테고리의 ID", example = "3")
-    private Long categoryId;
 
     @Schema(title = "거래 위치", description = "직거래 혹은 배송을 위한 지역 정보", example = "서울시 강남구")
     private String location;
@@ -49,24 +48,22 @@ public class OneMouthCreateDto {
 
     private List<AttachmentFileRequest.SimpleDto> attachmentFileSimpleDtos = new ArrayList<>();
 
-    public OneMouth toEntity(Category category) {
+    public OneMouth toEntity() {
 
         LocalDateTime now = LocalDateTime.now();
 
         return OneMouth.builder()
-                .title(this.title)
-                .description(this.description)
-                .quantity(this.quantity)
-                .unit(this.unit)
-                .sellerId(this.sellerId)
-                .category(category)
-                .location(this.location)
-                .productType(this.productType)
-                .createdAt(now)
-                .updatedAt(now)
-                .productStatus(ProductStatus.APPROVED)
-                .price(this.price)
-                .build();
+            .title(this.title)
+            .description(this.description)
+            .quantity(this.quantity)
+            .unit(this.unit)
+            .sellerId(this.sellerId)
+            .location(this.location)
+            .createdAt(now)
+            .updatedAt(now)
+            .oneMouthStatus(OneMouthStatus.ON_SALE)
+            .price(this.price)
+            .build();
     }
 
 

@@ -50,12 +50,7 @@ public class OneMouthService {
     public Long createOneMouth(OneMouthCreateDto createDto) {
         draftRepository.findBySellerId(createDto.getSellerId()).ifPresent(draftRepository::delete);
 
-        Category category = null;
-        if(createDto.getCategoryId() != null) {
-            category = categoryRepository.findById(createDto.getCategoryId()).orElseThrow();
-        }
-
-        OneMouth createdOneMouth = oneMouthRepository.save(createDto.toEntity(category));
+        OneMouth createdOneMouth = oneMouthRepository.save(createDto.toEntity());
         createOneMouthAttachmentFiles(createdOneMouth, createDto.getAttachmentFileSimpleDtos());
 
         return createdOneMouth.getId();
