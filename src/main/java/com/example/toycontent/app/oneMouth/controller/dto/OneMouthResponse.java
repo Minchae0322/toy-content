@@ -1,6 +1,6 @@
 package com.example.toycontent.app.oneMouth.controller.dto;
 
-import com.example.toycontent.app.category.contoller.dto.CategoryResponse;
+import com.example.toycontent.app.common.enumuration.OneMouthStatus;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.Unit;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
@@ -96,7 +96,7 @@ public abstract class OneMouthResponse {
         private Long price;
 
         @Schema(title = "판매 상태", description = "현재 상품의 판매 상태", example = "FOR_SALE")
-        private ProductStatus productStatus;
+        private OneMouthStatus oneMouthStatus;
 
         @Schema(title = "제품 상세 설명", description = "상품에 대한 자세한 설명")
         private String description;
@@ -139,13 +139,12 @@ public abstract class OneMouthResponse {
                 .quantity(oneMouth.getQuantity())
                 .unit(oneMouth.getUnit())
                 .price(oneMouth.getPrice())
-                .productStatus(oneMouth.getProductStatus())
+                .oneMouthStatus(oneMouth.getOneMouthStatus())
                 .description(oneMouth.getDescription())
                 .sellerId(oneMouth.getSellerId())
                 .location(oneMouth.getLocation())
                 .createdAt(oneMouth.getCreatedAt())
                 .updatedAt(oneMouth.getUpdatedAt())
-                .productType(oneMouth.getProductType())
                 .hits(oneMouth.getHits())
                 .favoritesCount(oneMouth.getFavorites().size())
                 .thumbnailUrl(oneMouth.getThumbnailUrl())

@@ -2,14 +2,13 @@ package com.example.toycontent.app.oneMouth.domain;
 
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseTimeEntity;
-import com.example.toycontent.app.common.enumuration.ProductStatus;
+import com.example.toycontent.app.common.enumuration.OneMouthStatus;
 import com.example.toycontent.app.common.enumuration.Unit;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
@@ -53,7 +52,7 @@ public class OneMouth extends BaseTimeEntity {
 
     @Comment("판매 상태 (판매중, 품절, 예약중, 판매중단)")
     @Enumerated(EnumType.STRING)
-    private ProductStatus productStatus;
+    private OneMouthStatus oneMouthStatus;
 
     @Column(length = 4000)
     @Comment("제품 상세 설명")
@@ -62,11 +61,6 @@ public class OneMouth extends BaseTimeEntity {
     @Column(nullable = false)
     @Comment("판매자 아이디")
     private Long sellerId;
-
-    @JoinColumn(name = "category_id")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @Comment("카테고리")
-    private Category category;
 
     @Column(nullable = false)
     @Comment("판매자 거래 위치")
@@ -79,10 +73,6 @@ public class OneMouth extends BaseTimeEntity {
     @Column(nullable = false)
     @Comment("수정 시간")
     private LocalDateTime updatedAt;
-
-    @Column(columnDefinition = "varchar(10) default 'sale'")
-    @Comment("제품 유형 (예: rental, sale)")
-    private String productType;
 
     @Column(name = "hits", columnDefinition = "Integer default 0")
     @Comment("조회수")
