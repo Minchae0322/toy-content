@@ -220,6 +220,16 @@ public abstract class ProductResponse {
 
         @Schema(description = "생성 성공 메시지", example = "상품이 성공적으로 등록되었습니다. 관리자 승인 후 노출됩니다.")
         private String message;
+
+        public static ProductCreate of(Product product) {
+            return ProductCreate.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .status(product.getStatus())
+                .createdAt(product.getCreatedAt())
+                .message("success")
+                .build();
+        }
     }
 
     @Data
