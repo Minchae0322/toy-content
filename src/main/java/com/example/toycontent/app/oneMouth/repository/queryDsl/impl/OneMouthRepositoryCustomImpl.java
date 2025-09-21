@@ -36,15 +36,11 @@ public class OneMouthRepositoryCustomImpl implements OneMouthRepositoryCustom {
                 oneMouth.quantity,
                 oneMouth.unit,
                 oneMouth.price,
-                oneMouth.category.id.as("categoryId"),
-                oneMouth.category.name.as("categoryName"),
-                oneMouth.productStatus,
                 oneMouth.description,
                 oneMouth.sellerId,
                 oneMouth.location,
                 oneMouth.createdAt,
                 oneMouth.updatedAt,
-                oneMouth.productType,
                 oneMouth.hits,
                 oneMouth.thumbnailUrl,
 
@@ -58,7 +54,6 @@ public class OneMouthRepositoryCustomImpl implements OneMouthRepositoryCustom {
                 )
             ))
             .from(oneMouth)
-            .leftJoin(oneMouth.category)
             .where(where)
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
