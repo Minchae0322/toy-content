@@ -1,6 +1,7 @@
 package com.example.toycontent.app.Product.controller.dto;
 
 import com.example.toycontent.app.common.enumuration.ProductStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -19,10 +20,12 @@ public class ProductSearchCondition {
   @Schema(description = "브랜드명", example = "스타벅스")
   private String brand;
 
-  @Schema(description = "제품 상태", example = "APPROVED")
-  private ProductStatus status = ProductStatus.APPROVED;
-
   @Schema(description = "제품 유형", example = "SALE")
   private String productType;
+
+  @JsonIgnore
+  @Schema(description = "제품 상태", example = "APPROVED", hidden = true)
+  private ProductStatus status;
+
 
 }
