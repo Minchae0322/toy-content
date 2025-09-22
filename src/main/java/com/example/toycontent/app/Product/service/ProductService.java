@@ -18,10 +18,12 @@ import com.example.toycontent.app.Product.repository.ProductReviewRepository;
 import com.example.toycontent.app.Product.repository.querydsl.impl.ProductRepositoryCustomImpl;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
+import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
+import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -64,13 +66,14 @@ public class ProductService {
         return ProductDetail.of(product, productUserReaction, productReviewResponses);
     }
 
-    public Page<ProductResponse.ProductList> getAllProducts(ProductSearchCondition searchCondition,
-        Pageable pageable) {
-        // 검색 조건에 맞는 제품 목록 조회
-        List<ProductList> productLists = productRepository.findBySearchCondition(searchCondition,
-            pageable);
+    public Page<ProductResponse.ProductList> getAllProducts(
+        ProductSearchCondition searchCondition, Pageable pageable, boolean isAdmin) {
 
-        // 전체 개수 조회
+        if (!isAdmin) {
+            searchCondition.setStatus(ProductStatus.APPROVED);
+        }
+
+        List<ProductList> productLists = productRepository.findBySearchCondition(searchCondition, pageable);
         Long totalCount = productRepository.countBySearchCondition(searchCondition);
 
         return new PageImpl<>(productLists, pageable, totalCount);
@@ -82,4 +85,6 @@ public class ProductService {
 
     public void deleteProduct(Long id) {
     }
+
+
 }

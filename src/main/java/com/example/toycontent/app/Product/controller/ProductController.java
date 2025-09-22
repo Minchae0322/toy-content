@@ -4,6 +4,7 @@ import com.example.toycontent.app.Product.controller.dto.ProductRequest;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.service.ProductService;
+import com.example.toycontent.app.common.annotation.CheckAdmin;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -95,8 +96,22 @@ public class ProductController {
         @ParameterObject @PageableDefault(size = 10, sort = "releaseDate", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         Page<ProductResponse.ProductList> products = productService.getAllProducts(condition,
-            pageable);
+            pageable, false);
 
+        return ResponseEntity.ok(products);
+    }
+
+
+    @GetMapping("/admin/all")
+    @CheckAdmin
+    @Operation(summary = "전체 제품 목록 조회 (관리자)", description = "승인 대기중인 제품 포함 전체 목록을 조회합니다.")
+    public ResponseEntity<Page<ProductResponse.ProductList>> getAllProductsForAdmin(
+        @ParameterObject @Valid ProductSearchCondition condition,
+        @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        // 모든 제품 조회 (승인 대기중 포함)
+        Page<ProductResponse.ProductList> products = productService.getAllProducts(condition,
+            pageable, true);
         return ResponseEntity.ok(products);
     }
 
