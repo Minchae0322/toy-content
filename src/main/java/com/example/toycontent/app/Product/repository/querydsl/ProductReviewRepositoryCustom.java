@@ -6,8 +6,6 @@ import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import java.util.List;
 
 public interface ProductReviewRepositoryCustom {
-
-
-  List<ProductReviewResponse.ReviewList> findByProduct_IdAndStatus(Long id,
+  List<ProductReviewResponse.ReviewList> searchProductReviews(Long id,
       ReviewStatus reviewStatus);
 }

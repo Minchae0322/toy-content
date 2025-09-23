@@ -60,7 +60,7 @@ public class ProductService {
             .map(ProductUserReaction::of)
             .orElse(ProductUserReaction.createDefault());
 
-        List<ProductReviewResponse.ReviewList> productReviewResponses = productReviewRepository.findByProduct_IdAndStatus(
+        List<ProductReviewResponse.ReviewList> productReviewResponses = productReviewRepository.searchProductReviews(
             product.getId(), ReviewStatus.ACTIVE);
 
         return ProductDetail.of(product, productUserReaction, productReviewResponses);
