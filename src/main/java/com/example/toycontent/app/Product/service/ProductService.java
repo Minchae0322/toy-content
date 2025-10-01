@@ -10,8 +10,10 @@ import com.example.toycontent.app.Product.controller.dto.ProductResponse.Product
 import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.domain.Product;
+import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
 import com.example.toycontent.app.Product.domain.ProductReaction;
 import com.example.toycontent.app.Product.domain.ProductReview;
+import com.example.toycontent.app.Product.repository.ProductAttachmentFileRepository;
 import com.example.toycontent.app.Product.repository.ProductReactionRepository;
 import com.example.toycontent.app.Product.repository.ProductRepository;
 import com.example.toycontent.app.Product.repository.ProductReviewRepository;
@@ -23,9 +25,13 @@ import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
+import com.example.toycontent.app.file.domain.AttachmentFile;
+import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
+import com.example.toycontent.app.file.repository.AttachmentFileRepository;
 import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -33,6 +39,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -42,12 +49,25 @@ public class ProductService {
     private final ProductReactionRepository productReactionRepository;
     private final ProductReviewRepository productReviewRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductAttachmentFileRepository productAttachmentFileRepository;
 
+    @Transactional
     public ProductResponse.ProductCreate createProduct(ProductRequest.ProductCreate productDto, Long userId) {
         Category category = categoryRepository.findById(productDto.getCategoryId()).orElseThrow(() -> new RestApiException(CategoryErrorCode.CATEGORY_NOT_FOUND));
 
-        Product newProduct = productRepository.save(productDto.toEntity(category, null));
+        Product newProduct = productRepository.save(productDto.toEntity(category));
+        createProductAttachmentFiles(productDto.getAttachmentFileInfos(), newProduct);
+
         return ProductCreate.of(newProduct);
+    }
+
+    private void createProductAttachmentFiles(List<AttachmentInfo> attachmentInfos, Product product) {
+        List<ProductAttachmentFile> attachmentFiles = attachmentInfos.stream()
+            .map(attachmentInfo -> attachmentInfo.toEntity(product))
+            .toList();
+
+        productAttachmentFileRepository.saveAll(attachmentFiles);
+
     }
 
     public ProductResponse.ProductDetail getProduct(Long id, Long currentUserId) {
