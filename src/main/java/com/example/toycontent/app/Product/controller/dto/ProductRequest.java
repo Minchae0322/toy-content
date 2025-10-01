@@ -3,35 +3,23 @@ package com.example.toycontent.app.Product.controller.dto;
 
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
-import com.example.toycontent.app.Product.domain.ProductReview;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.utils.TagParsingUtil;
-import com.example.toycontent.app.file.domain.AttachmentFile;
+import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.Column;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.Builder;
 import lombok.Data;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.Comment;
 
 public abstract class ProductRequest {
 
@@ -82,9 +70,11 @@ public abstract class ProductRequest {
         @Schema(description = "제품 카테고리 ID", example = "1")
         private Long categoryId;
 
-        private List<Long> attachmentIds;
+        @NotEmpty(message = "최소 1개 이상의 첨부파일이 필요합니다.")
+        @Schema(description = "첨부파일 정보 목록")
+        private List<AttachmentInfo> attachmentFileInfos = new ArrayList<>();
 
-        public Product toEntity(Category category, List<ProductAttachmentFile> attachmentFiles) {
+        public Product toEntity(Category category) {
             return Product.builder()
                 .name(name)
                 .brand(brand)
@@ -96,7 +86,6 @@ public abstract class ProductRequest {
                 .tags(TagParsingUtil.listToString(tags))
                 .releaseDate(releaseDate)
                 .category(category)
-                .productAttachmentFiles(attachmentFiles)
                 .build();
         }
 
