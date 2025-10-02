@@ -108,7 +108,6 @@ public class Product extends BaseTimeEntity {
     @Comment("제품 등록자 ID (User 테이블 참조)")
     private Long creatorId;
 
-
     @Column
     @Comment("제품 출시일 (브랜드 공식 출시일)")
     private LocalDate releaseDate;

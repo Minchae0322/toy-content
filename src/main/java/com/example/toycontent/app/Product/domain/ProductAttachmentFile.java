@@ -49,4 +49,6 @@ public class ProductAttachmentFile {
   private Integer sortOrder;
 
   private String fileExplain;
+
+  private Boolean isPrimary;
 }

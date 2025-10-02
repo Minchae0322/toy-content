@@ -12,6 +12,9 @@ public class AttachmentFileResponse {
     @Schema(description = "첨부 파일 ID", example = "123")
     private Long id;
 
+    @Schema(description = "파일 서버 첨부 파일 ID", example = "123")
+    private Long attachFileId;
+
     @Schema(description = "파일 코드 (예: THUMBNAIL, DOCUMENT 등)", example = "THUMBNAIL")
     private String fileCode;
 
