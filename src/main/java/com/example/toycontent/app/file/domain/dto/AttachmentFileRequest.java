@@ -38,10 +38,8 @@ public abstract class AttachmentFileRequest {
     @Schema(description = "파일 설명", example = "제품 대표 이미지")
     private String fileExplain;
 
-    @Schema(description = "정렬 순서", example = "1")
-    private Integer sortOrder;
 
-    public ProductAttachmentFile toEntity(Product product) {
+    public ProductAttachmentFile toEntity(Product product, int ord, boolean isPrimary) {
       return ProductAttachmentFile.builder()
           .product(product)
           .attachFileId(this.fileId)
@@ -50,7 +48,7 @@ public abstract class AttachmentFileRequest {
           .fileSize(this.fileSize)
           .contentType(this.contentType)
           .fileExplain(this.fileExplain)
-          .sortOrder(this.sortOrder)
+          .sortOrder(ord)
           .build();
     }
   }

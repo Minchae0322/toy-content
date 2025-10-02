@@ -10,6 +10,7 @@ import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.common.utils.RatingUtil;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
+import com.example.toycontent.app.file.domain.dto.AttachmentFileDto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.querydsl.core.annotations.QueryProjection;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -63,8 +64,8 @@ public abstract class ProductResponse {
         @Schema(description = "상품 유형", example = "SALE")
         private String productType;
 
-        @Schema(description = "대표 이미지 URL", example = "https://example.com/images/product1.jpg")
-        private String thumbnailUrl;
+        @Schema(description = "대표 이미지")
+        private AttachmentFileDto thumbnailDto;
 
         @Schema(description = "상품 출시일", example = "2024-01-15")
         @JsonFormat(pattern = "yyyy-MM-dd")
@@ -86,7 +87,6 @@ public abstract class ProductResponse {
                 .averageRating(product.getAvgRating())
                 .reviewCount(product.getProductReviews().size())
                 .categoryName(product.getCategory().getName())
-                .thumbnailUrl("")//TODO: 대표이미지 설정 필요
                 .releaseDate(product.getReleaseDate())
                 .createdAt(product.getCreatedAt())
                 .build();
@@ -161,7 +161,7 @@ public abstract class ProductResponse {
         private String productType;
 
         @Schema(description = "상품 첨부파일 목록")
-        private List<AttachmentFileResponse> attachmentFiles;
+        private List<AttachmentFileDto> attachmentFiles;
 
         @Schema(description = "최근 리뷰 목록")
         private List<ProductReviewResponse.ReviewList> recentReviews;
@@ -191,11 +191,15 @@ public abstract class ProductResponse {
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .category(CategoryResponse.Detail.from(product.getCategory()))
-                .attachmentFiles(null)//TODO: 추가
+                .attachmentFiles(product.getProductAttachmentFiles()
+                    .stream()
+                    .map(AttachmentFileDto::of)
+                    .toList())
                 .recentReviews(recentReviews)
                 .userReaction(userReaction)
                 .build();
         }
+
     }
 
 

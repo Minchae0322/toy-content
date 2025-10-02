@@ -32,6 +32,8 @@ import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -56,18 +58,27 @@ public class ProductService {
         Category category = categoryRepository.findById(productDto.getCategoryId()).orElseThrow(() -> new RestApiException(CategoryErrorCode.CATEGORY_NOT_FOUND));
 
         Product newProduct = productRepository.save(productDto.toEntity(category));
-        createProductAttachmentFiles(productDto.getAttachmentFileInfos(), newProduct);
+        createProductAttachmentFiles(productDto.getThumbnailAttachmentInfo(),
+            productDto.getAttachmentFileInfos(), newProduct);
 
         return ProductCreate.of(newProduct);
     }
 
-    private void createProductAttachmentFiles(List<AttachmentInfo> attachmentInfos, Product product) {
-        List<ProductAttachmentFile> attachmentFiles = attachmentInfos.stream()
-            .map(attachmentInfo -> attachmentInfo.toEntity(product))
+    private void createProductAttachmentFiles(AttachmentInfo thumbnailAttachmentInfo, List<AttachmentInfo> attachmentInfos, Product product) {
+        ProductAttachmentFile primaryImage = createAttachmentFile(thumbnailAttachmentInfo, product, 0, true);
+
+        List<ProductAttachmentFile> detailFiles = IntStream.range(0, attachmentInfos.size())
+            .mapToObj(i -> createAttachmentFile(attachmentInfos.get(i), product, i + 1, false))
             .toList();
 
-        productAttachmentFileRepository.saveAll(attachmentFiles);
+        productAttachmentFileRepository.saveAll(
+            Stream.concat(Stream.of(primaryImage), detailFiles.stream()).toList()
+        );
 
+    }
+
+    private ProductAttachmentFile createAttachmentFile(AttachmentInfo info, Product product, int order, boolean isPrimary) {
+        return info.toEntity(product, order, isPrimary);
     }
 
     public ProductResponse.ProductDetail getProduct(Long id, Long currentUserId) {

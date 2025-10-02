@@ -70,7 +70,10 @@ public abstract class ProductRequest {
         @Schema(description = "제품 카테고리 ID", example = "1")
         private Long categoryId;
 
-        @NotEmpty(message = "최소 1개 이상의 첨부파일이 필요합니다.")
+        @NotNull(message = "대표이미지는 필수 입니다.")
+        @Schema(description = "대표이미지")
+        private AttachmentInfo thumbnailAttachmentInfo;
+
         @Schema(description = "첨부파일 정보 목록")
         private List<AttachmentInfo> attachmentFileInfos = new ArrayList<>();
 

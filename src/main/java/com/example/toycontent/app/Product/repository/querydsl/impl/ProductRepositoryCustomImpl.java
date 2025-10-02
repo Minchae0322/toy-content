@@ -1,13 +1,17 @@
 package com.example.toycontent.app.Product.repository.querydsl.impl;
 
 import static com.example.toycontent.app.Product.domain.QProduct.product;
+import static com.example.toycontent.app.Product.domain.QProductAttachmentFile.productAttachmentFile;
 import static com.example.toycontent.app.Product.domain.QProductReview.productReview;
 import static com.example.toycontent.app.category.domain.QCategory.category;
+import static com.example.toycontent.app.file.domain.QAttachmentFile.attachmentFile;
 
 import com.example.toycontent.app.Product.controller.dto.ProductResponse.ProductList;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
+import com.example.toycontent.app.Product.domain.QProductAttachmentFile;
 import com.example.toycontent.app.Product.repository.querydsl.ProductRepositoryCustom;
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
+import com.example.toycontent.app.file.domain.dto.AttachmentFileDto;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
@@ -47,12 +51,24 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             productReview.count().intValue().as("reviewCount"),
             product.category.name.as("categoryName"),
             product.releaseDate,
-            product.createdAt
+            product.createdAt,
+            // 썸네일 DTO 매핑
+            Projections.fields(AttachmentFileDto.class,
+                productAttachmentFile.id,
+                productAttachmentFile.orgFileNm,
+                productAttachmentFile.fileUrl,
+                productAttachmentFile.fileSize,
+                productAttachmentFile.fileExplain,
+                productAttachmentFile.contentType
+            ).as("thumbnailDto")
         ))
         .from(product)
         .leftJoin(product.category, category)
         .leftJoin(product.productReviews, productReview)
         .on(productReview.status.eq(ReviewStatus.ACTIVE))
+        .leftJoin(product.productAttachmentFiles, productAttachmentFile)
+        .on(productAttachmentFile.product.id.eq(product.id)
+            .and(productAttachmentFile.isPrimary.isTrue()))
         .where(whereClause)
         .groupBy(product.id)
         .orderBy(getOrderSpecifier(pageable.getSort()))
