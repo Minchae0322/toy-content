@@ -49,6 +49,7 @@ public abstract class AttachmentFileRequest {
           .contentType(this.contentType)
           .fileExplain(this.fileExplain)
           .sortOrder(ord)
+          .isPrimary(isPrimary)
           .build();
     }
   }
