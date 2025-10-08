@@ -62,6 +62,8 @@ public class OneMouth extends BaseTimeEntity {
     @Comment("판매자 정보")
     private Long sellerId;
 
+    private String sellerName;
+
     @Column(nullable = false)
     @Comment("판매 가격")
     private Long sellingPrice;

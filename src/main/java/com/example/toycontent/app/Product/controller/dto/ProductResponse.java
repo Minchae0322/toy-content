@@ -11,6 +11,7 @@ import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.common.utils.RatingUtil;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileDto;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.ProductTradeSummary;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.querydsl.core.annotations.QueryProjection;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -168,6 +169,8 @@ public abstract class ProductResponse {
 
         @Schema(description = "사용자의 반응 목록", example = "false")
         private ProductReactionResponse.ProductUserReaction userReaction;
+
+        private List<ProductTradeSummary> tradeList;
 
         public static ProductDetail of(Product product, ProductUserReaction userReaction,
             List<ProductReviewResponse.ReviewList> recentReviews) {

@@ -17,6 +17,44 @@ import java.util.List;
 @Data
 public abstract class OneMouthResponse {
 
+    //TODO - 재정리 필요
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ProductTradeSummary {
+
+        private Long id;                      // 거래 ID
+        private String title;                 // 거래 제목
+        private Long sellingPrice;            // 판매가
+        private OneMouthStatus status;        // 거래 상태
+        private String thumbnailUrl;          // 대표 이미지 URL
+        private String sellerNickname;        // 판매자 닉네임
+        private Double sellerRating;          // 판매자 평점
+        private String tradeLocation;         // 거래 지역
+        private Double distance;              // 현재 위치와 거리 (옵션)
+        private LocalDateTime createdAt;      // 등록일
+
+        /**
+         * 엔티티 → DTO 변환 메서드
+         * @param entity OneMouth 엔티티
+         */
+        public static ProductTradeSummary of(OneMouth entity) {
+
+            return ProductTradeSummary.builder()
+                .id(entity.getId())
+                .title(entity.getTitle())
+                .sellingPrice(entity.getSellingPrice())
+                .status(entity.getOneMouthStatus())
+                .thumbnailUrl(entity.getAttachmentFiles().get(0).getFileUrl())
+                .sellerNickname(entity.getSellerName())
+                .tradeLocation(entity.getTradeLocation())
+                .createdAt(entity.getCreatedAt())
+                .build();
+        }
+
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
