@@ -43,34 +43,13 @@ public class OneMouthDraft extends BaseTimeEntity {
     @Comment("제품 상세 설명")
     private String description;
 
-    @Comment("사용자 설정 수량 값")
-    @Column(name = "quantity")
-    private String quantity;
-
-    @Comment("유닛 (개, 입, 그램, 커스텀)")
-    @Enumerated(EnumType.STRING)
-    private Unit unit;
-
     @Comment("가격")
     @Column(name = "price")
     private Long price;
 
-    @JoinColumn(name = "category_id")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @Comment("카테고리")
-    private Category category;
-
     @Column(nullable = false)
     @Comment("판매자 아이디")
     private Long sellerId;
-
-    @Column(nullable = false, updatable = false)
-    @Comment("생성 시간")
-    private LocalDateTime createdAt;
-
-    @Column(nullable = false)
-    @Comment("수정 시간")
-    private LocalDateTime updatedAt;
 
     @OneToMany(orphanRemoval = true, cascade = CascadeType.ALL, mappedBy = "oneMouthDraft")
     private List<OneMouthDraftAttachmentFile> oneMouthDraftAttachmentFiles;

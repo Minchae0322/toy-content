@@ -55,14 +55,8 @@ public class OneMouthCreateDto {
         return OneMouth.builder()
             .title(this.title)
             .description(this.description)
-            .quantity(this.quantity)
-            .unit(this.unit)
             .sellerId(this.sellerId)
-            .location(this.location)
-            .createdAt(now)
-            .updatedAt(now)
             .oneMouthStatus(OneMouthStatus.ON_SALE)
-            .price(this.price)
             .build();
     }
 

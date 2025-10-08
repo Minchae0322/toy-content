@@ -3,6 +3,7 @@ package com.example.toycontent.app.Product.domain;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -117,11 +118,11 @@ public class Product extends BaseTimeEntity {
     @Comment("제품 카테고리 (음료, 스낵, 베이커리 등)")
     private Category category;
 
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Comment("제품 첨부 파일 목록 (이미지, 문서 등)")
     private List<ProductAttachmentFile> productAttachmentFiles;
 
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductReview> productReviews;
 
 }
