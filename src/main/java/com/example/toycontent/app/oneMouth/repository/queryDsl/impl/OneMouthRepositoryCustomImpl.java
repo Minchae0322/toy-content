@@ -33,16 +33,6 @@ public class OneMouthRepositoryCustomImpl implements OneMouthRepositoryCustom {
             .select(Projections.fields(ListView.class,
                 oneMouth.id.as("oneMouthId"),
                 oneMouth.title,
-                oneMouth.quantity,
-                oneMouth.unit,
-                oneMouth.price,
-                oneMouth.description,
-                oneMouth.sellerId,
-                oneMouth.location,
-                oneMouth.createdAt,
-                oneMouth.updatedAt,
-                oneMouth.hits,
-                oneMouth.thumbnailUrl,
 
                 //관심 수
                 Expressions.as(

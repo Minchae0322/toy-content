@@ -136,24 +136,6 @@ public abstract class OneMouthResponse {
             return Detail.builder()
                 .oneMouthId(oneMouth.getId())
                 .title(oneMouth.getTitle())
-                .quantity(oneMouth.getQuantity())
-                .unit(oneMouth.getUnit())
-                .price(oneMouth.getPrice())
-                .oneMouthStatus(oneMouth.getOneMouthStatus())
-                .description(oneMouth.getDescription())
-                .sellerId(oneMouth.getSellerId())
-                .location(oneMouth.getLocation())
-                .createdAt(oneMouth.getCreatedAt())
-                .updatedAt(oneMouth.getUpdatedAt())
-                .hits(oneMouth.getHits())
-                .favoritesCount(oneMouth.getFavorites().size())
-                .thumbnailUrl(oneMouth.getThumbnailUrl())
-                .isUserFavorited(isUserFavorited)
-                .oneMouthAttachmentFiles(
-                    oneMouth.getOneMouthAttachmentFiles().stream()
-                        .map(AttachmentFileResponse::from)
-                        .toList()
-                )
                 .build();
         }
 

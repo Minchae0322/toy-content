@@ -1,6 +1,7 @@
 package com.example.toycontent.app.oneMouth.domain;
 
 
+import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.common.enumuration.FileCode;
 import com.example.toycontent.app.file.domain.AttachmentFile;
 import jakarta.persistence.*;
@@ -42,4 +43,6 @@ public class OneMouthAttachmentFile {
     private Integer sortOrder;
 
     private String fileExplain;
+
+    private Boolean isPrimary;
 }
