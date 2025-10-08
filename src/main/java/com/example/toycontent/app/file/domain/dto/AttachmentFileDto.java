@@ -5,12 +5,16 @@ import com.example.toycontent.app.common.enumuration.FileCode;
 import com.example.toycontent.app.file.domain.AttachmentFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Comment;
 
 @Getter
 @Builder
+@NoArgsConstructor  // 이것만 추가하면 됨
+@AllArgsConstructor
 public class AttachmentFileDto {
 
     @Schema(description = "첨부 파일 ID", example = "1")
