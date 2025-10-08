@@ -13,9 +13,13 @@ import com.example.toycontent.app.Product.repository.querydsl.ProductRepositoryC
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileDto;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.NumberExpression;
+import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +52,14 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             product.viewCount,
             product.likeCount,
             product.avgRating.as("averageRating"),
-            productReview.count().intValue().as("reviewCount"),
+            ExpressionUtils.as(
+                JPAExpressions
+                    .select(productReview.count().intValue())  // 여기서 변환
+                    .from(productReview)
+                    .where(productReview.product.id.eq(product.id)
+                        .and(productReview.status.eq(ReviewStatus.ACTIVE))),
+                "reviewCount"
+            ),
             product.category.name.as("categoryName"),
             product.releaseDate,
             product.createdAt,
@@ -65,12 +76,10 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
         .from(product)
         .leftJoin(product.category, category)
         .leftJoin(product.productReviews, productReview)
-        .on(productReview.status.eq(ReviewStatus.ACTIVE))
         .leftJoin(product.productAttachmentFiles, productAttachmentFile)
         .on(productAttachmentFile.product.id.eq(product.id)
             .and(productAttachmentFile.isPrimary.isTrue()))
         .where(whereClause)
-        .groupBy(product.id)
         .orderBy(getOrderSpecifier(pageable.getSort()))
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize())
