@@ -43,18 +43,13 @@ public class OneMouthDraftCreateDto {
 
     private List<Long> attachmentFileIds = new ArrayList<>();
 
-    public OneMouthDraft toEntity(Category category) {
+    public OneMouthDraft toEntity() {
         LocalDateTime now = LocalDateTime.now();
 
         return OneMouthDraft.builder()
                 .title(this.title)
                 .description(this.content)
-                .quantity(this.quantity)
-                .unit(this.unit)
                 .sellerId(this.sellerId)
-                .category(category)
-                .createdAt(now)
-                .updatedAt(now)
                 .price(this.price)
                 .build();
     }

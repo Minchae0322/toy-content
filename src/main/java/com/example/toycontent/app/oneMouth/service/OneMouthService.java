@@ -58,14 +58,12 @@ public class OneMouthService {
 
     @Transactional
     public Long createOneMouthDraft(OneMouthDraftCreateDto draftCreateDto) {
-        Category category = categoryRepository.findById(draftCreateDto.getCategoryId()).orElseThrow();
-
         Optional<OneMouthDraft> optionalDraft = draftRepository.findBySellerId(draftCreateDto.getSellerId());
 
         OneMouthDraft draft = optionalDraft
                 .map(existing -> updateExistingDraft(existing, draftCreateDto))
                 .orElseGet(() -> {
-                    OneMouthDraft createdOneMouthDraft = draftRepository.save(draftCreateDto.toEntity(category));
+                    OneMouthDraft createdOneMouthDraft = draftRepository.save(draftCreateDto.toEntity());
                     createOneMouthDraftAttachmentFiles(createdOneMouthDraft, draftCreateDto.getAttachmentFileIds());
                     return createdOneMouthDraft;
                 });
