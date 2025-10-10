@@ -1,15 +1,17 @@
 package com.example.toycontent.app.oneMouth.controller.dto;
 
 import com.example.toycontent.app.common.enumuration.OneMouthStatus;
-import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.Unit;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.app.oneMouth.domain.OneMouth;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 
 
@@ -60,56 +62,57 @@ public abstract class OneMouthResponse {
     @AllArgsConstructor
     @Builder
     public static class ListView {
-        @Schema(title = "게시글 기본 키 ID")
+        @Schema(title = "게시글 기본 키 ID", example = "1")
         private Long oneMouthId;
 
-        @Schema(title = "게시글 제목")
+        @Schema(title = "게시글 제목", example = "스타벅스 아메리카노 Tall 쿠폰 1매")
         private String title;
 
-        @Schema(title = "사용자 설정 수량 값")
-        private String quantity;
+        @Schema(title = "판매 상태", description = "ON_SALE(판매중), RESERVED(예약중), SOLD_OUT(판매완료)")
+        private OneMouthStatus oneMouthStatus;
 
-        @Schema(title = "유닛 (개, 입, 그램, 커스텀)")
-        private Unit unit;
-
-        @Schema(title = "가격")
-        private Long price;
-
-        @Schema(title = "판매 상태 (판매중, 품절, 예약중, 판매중단)")
-        private ProductStatus productStatus;
-
-        @Schema(title = "제품 상세 설명")
+        @Schema(title = "제품 상세 설명", example = "선물 받았는데 커피를 안 마셔서 판매합니다.")
         private String description;
 
-        @Schema(title = "판매자 아이디")
+        @Schema(title = "판매 가격", example = "7500")
+        private Long sellingPrice;
+
+        @Schema(title = "판매자 아이디", example = "123")
         private Long sellerId;
 
-        @Schema(title = "카테고리 아이디")
+        @Schema(title = "판매자 이름", example = "카페인중독자")
+        private String sellerName;
+
+        @Schema(title = "연결된 공식 제품 ID", example = "1")
+        private Long productId;
+
+        @Schema(title = "연결된 공식 제품명", example = "스타벅스 아메리카노 Tall")
+        private String productName;
+
+        @Schema(title = "카테고리 아이디", example = "1")
         private Long categoryId;
 
-        @Schema(title = "카테고리명")
+        @Schema(title = "카테고리명", example = "편의점")
         private String categoryName;
 
-        @Schema(title = "판매자 거래 위치")
-        private String location;
+        @Schema(title = "거래 희망 지역", example = "강남역 2번 출구")
+        private String tradeLocation;
 
         @Schema(title = "생성 시간")
         private LocalDateTime createdAt;
 
-        @Schema(title = "수정 시간")
-        private LocalDateTime updatedAt;
+        @Schema(title = "조회수", example = "42")
+        private Integer viewCount;
 
-        @Schema(title = "제품 유형 (예: rental, sale)")
-        private String productType;
+        @Schema(title = "관심 등록 수", example = "15")
+        private Integer favoriteCount;
 
-        @Schema(title = "조회수")
-        private Integer hits;
+        @Schema(title = "채팅방 수", example = "3")
+        private Integer chatRoomCount;
 
-        @Schema(title = "관심수")
-        private Integer favoritesCount;
-
-        @Schema(title = "썸네일 URL")
+        @Schema(title = "썸네일 URL", example = "https://example.com/images/thumbnail.jpg")
         private String thumbnailUrl;
+
     }
 
 
