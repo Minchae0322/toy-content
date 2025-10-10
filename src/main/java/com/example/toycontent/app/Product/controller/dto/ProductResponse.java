@@ -4,16 +4,11 @@ import static com.example.toycontent.app.common.utils.TagParsingUtil.parseToList
 
 import com.example.toycontent.app.Product.controller.dto.ProductReactionResponse.ProductUserReaction;
 import com.example.toycontent.app.Product.domain.Product;
-import com.example.toycontent.app.Product.domain.ProductReaction;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
-import com.example.toycontent.app.common.enumuration.ReviewStatus;
-import com.example.toycontent.app.common.utils.RatingUtil;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
-import com.example.toycontent.app.file.domain.dto.AttachmentFileDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.ProductTradeSummary;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.querydsl.core.annotations.QueryProjection;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -66,7 +61,7 @@ public abstract class ProductResponse {
         private String productType;
 
         @Schema(description = "대표 이미지")
-        private AttachmentFileDto thumbnailDto;
+        private AttachmentFileResponse thumbnailDto;
 
         @Schema(description = "상품 출시일", example = "2024-01-15")
         @JsonFormat(pattern = "yyyy-MM-dd")
@@ -162,7 +157,7 @@ public abstract class ProductResponse {
         private String productType;
 
         @Schema(description = "상품 첨부파일 목록")
-        private List<AttachmentFileDto> attachmentFiles;
+        private List<AttachmentFileResponse> attachmentFiles;
 
         @Schema(description = "최근 리뷰 목록")
         private List<ProductReviewResponse.ReviewList> recentReviews;
@@ -196,7 +191,7 @@ public abstract class ProductResponse {
                 .category(CategoryResponse.Detail.from(product.getCategory()))
                 .attachmentFiles(product.getProductAttachmentFiles()
                     .stream()
-                    .map(AttachmentFileDto::of)
+                    .map(AttachmentFileResponse::of)
                     .toList())
                 .recentReviews(recentReviews)
                 .userReaction(userReaction)

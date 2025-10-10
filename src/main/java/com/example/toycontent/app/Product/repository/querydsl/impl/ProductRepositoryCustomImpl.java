@@ -4,22 +4,18 @@ import static com.example.toycontent.app.Product.domain.QProduct.product;
 import static com.example.toycontent.app.Product.domain.QProductAttachmentFile.productAttachmentFile;
 import static com.example.toycontent.app.Product.domain.QProductReview.productReview;
 import static com.example.toycontent.app.category.domain.QCategory.category;
-import static com.example.toycontent.app.file.domain.QAttachmentFile.attachmentFile;
 
 import com.example.toycontent.app.Product.controller.dto.ProductResponse.ProductList;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
-import com.example.toycontent.app.Product.domain.QProductAttachmentFile;
 import com.example.toycontent.app.Product.repository.querydsl.ProductRepositoryCustom;
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
-import com.example.toycontent.app.file.domain.dto.AttachmentFileDto;
+import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
-import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
-import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,7 +60,7 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             product.releaseDate,
             product.createdAt,
             // 썸네일 DTO 매핑
-            Projections.fields(AttachmentFileDto.class,
+            Projections.fields(AttachmentFileResponse.class,
                 productAttachmentFile.id,
                 productAttachmentFile.orgFileNm,
                 productAttachmentFile.fileUrl,
