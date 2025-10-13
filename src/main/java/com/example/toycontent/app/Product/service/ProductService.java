@@ -11,13 +11,10 @@ import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
-import com.example.toycontent.app.Product.domain.ProductReaction;
-import com.example.toycontent.app.Product.domain.ProductReview;
 import com.example.toycontent.app.Product.repository.ProductAttachmentFileRepository;
 import com.example.toycontent.app.Product.repository.ProductReactionRepository;
 import com.example.toycontent.app.Product.repository.ProductRepository;
 import com.example.toycontent.app.Product.repository.ProductReviewRepository;
-import com.example.toycontent.app.Product.repository.querydsl.impl.ProductRepositoryCustomImpl;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
@@ -25,13 +22,9 @@ import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
-import com.example.toycontent.app.file.domain.AttachmentFile;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
-import com.example.toycontent.app.file.repository.AttachmentFileRepository;
-import jakarta.validation.Valid;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
@@ -39,8 +32,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -183,4 +174,6 @@ public class ProductService {
     }
 
 
+    public void createReview(Long id) {
+    }
 }

@@ -50,6 +50,7 @@ public abstract class ProductRequest {
         @Schema(description = "제품 판매처 (구매 가능한 장소)", example = "스타벅스 매장, 편의점, 대형마트")
         private String distributor;
 
+        @NotNull(message = "상품 가격은 필수 입니다.")
         @Pattern(regexp = "^[0-9]{1,10}$", message = "가격은 숫자만 입력 가능하며 최대 10자리까지 입력할 수 있습니다.")
         @Schema(description = "제품 정가 (원 단위)", example = "4500")
         private String price;
