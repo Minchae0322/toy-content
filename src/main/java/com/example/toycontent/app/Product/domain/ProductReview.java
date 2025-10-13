@@ -63,7 +63,6 @@ public class ProductReview extends BaseTimeEntity {
   @NotNull
   private String creatorName;
 
-
   @Column(name = "rating", nullable = false)
   @Comment("평점 (1-5)")
   @NotNull

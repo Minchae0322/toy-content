@@ -131,4 +131,12 @@ public class ProductController {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "상품 리뷰 작성", description = "상품 ID에 해당하는 상품을 리뷰합니다.")
+    @PostMapping("/{id}/reviews")
+    public ResponseEntity<Void> createProductReview(
+        @PathVariable @Parameter(description = "상품 ID") Long id) {
+        productService.createReview(id);
+        return ResponseEntity.noContent().build();
+    }
 }
