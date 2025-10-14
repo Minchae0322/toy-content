@@ -19,7 +19,7 @@ public class CurrentUserNameArgumentResolver implements HandlerMethodArgumentRes
   @Override
   public boolean supportsParameter(MethodParameter parameter) {
     return parameter.hasParameterAnnotation(CurrentUserName.class)
-        && parameter.getParameterType().equals(Long.class);
+        && parameter.getParameterType().equals(String.class);
   }
 
   @Override
