@@ -1,14 +1,18 @@
 package com.example.toycontent.app.Product.repository.querydsl.impl;
 
 import static com.example.toycontent.app.Product.domain.QProductReview.productReview;
+import static com.example.toycontent.app.Product.domain.QProductReviewAttachmentFile.productReviewAttachmentFile;
 
 import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse.ReviewList;
+import com.example.toycontent.app.Product.domain.ProductReview;
+import com.example.toycontent.app.Product.domain.QProductReviewAttachmentFile;
 import com.example.toycontent.app.Product.repository.querydsl.ProductReviewRepositoryCustom;
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -40,5 +44,21 @@ public class ProductReviewRepositoryCustomImpl implements ProductReviewRepositor
         .orderBy(productReview.createdAt.desc())
         .fetch();
 
+  }
+
+  @Override
+  public List<ProductReview> findProductReviews(Long productId, ReviewStatus reviewStatus, Pageable pageable) {
+    return queryFactory
+        .select(productReview)
+        .from(productReview)
+        .leftJoin(productReview.productReviewAttachmentFiles, productReviewAttachmentFile).fetchJoin()
+        .where(
+            productReview.product.id.eq(productId),
+            productReview.status.eq(reviewStatus)
+        )
+        .orderBy(productReview.createdAt.desc())
+        .offset(pageable.getOffset())
+        .limit(pageable.getPageSize())
+        .fetch();
   }
 }

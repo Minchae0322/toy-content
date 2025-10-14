@@ -1,6 +1,7 @@
 package com.example.toycontent.app.file.controller.dto;
 
 import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
+import com.example.toycontent.app.Product.domain.ProductReviewAttachmentFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -39,6 +40,16 @@ public class AttachmentFileResponse {
                 .fileSize(attachmentFile.getFileSize())
                 .fileExplain(attachmentFile.getFileExplain())
                 .build();
+    }
+
+    public static AttachmentFileResponse of(ProductReviewAttachmentFile attachmentFile) {
+        return AttachmentFileResponse.builder()
+            .id(attachmentFile.getId())
+            .orgFileNm(attachmentFile.getOrgFileNm())
+            .fileUrl(attachmentFile.getFileUrl())
+            .fileSize(attachmentFile.getFileSize())
+            .fileExplain(attachmentFile.getFileExplain())
+            .build();
     }
 
 }

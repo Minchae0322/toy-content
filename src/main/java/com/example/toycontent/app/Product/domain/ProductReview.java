@@ -2,6 +2,7 @@ package com.example.toycontent.app.Product.domain;
 
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -15,11 +16,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -94,6 +97,10 @@ ProductReview extends BaseTimeEntity {
   @Builder.Default
   @ColumnDefault("0")
   private Integer reportCount = 0;
+
+  @OneToMany(mappedBy = "productReview", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+  @Comment("제품 첨부 파일 목록 (이미지, 문서 등)")
+  private List<ProductReviewAttachmentFile> productReviewAttachmentFiles;
 
 
 }

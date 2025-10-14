@@ -6,6 +6,7 @@ import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -65,6 +66,10 @@ public abstract class ProductReviewResponse {
           .reportCount(review.getReportCount())
           .createdAt(review.getCreatedAt())
           .updatedAt(review.getUpdatedAt())
+          .attachmentFiles(
+              review.getProductReviewAttachmentFiles().stream().map(AttachmentFileResponse::of)
+                  .collect(
+                      Collectors.toList()))
           .build();
     }
   }
