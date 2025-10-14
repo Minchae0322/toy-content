@@ -2,8 +2,10 @@ package com.example.toycontent.app.Product.controller.dto;
 
 import com.example.toycontent.app.Product.domain.ProductReview;
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
+import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,7 +27,7 @@ public abstract class ProductReviewResponse {
     private Long creatorId;
 
     @Schema(description = "작성자 닉네임", example = "홍길동")
-    private String creatorNickname;
+    private String creatorName;
 
     @Schema(description = "평점", example = "5")
     private Integer rating;
@@ -48,12 +50,14 @@ public abstract class ProductReviewResponse {
     @Schema(description = "수정일시", example = "2024-03-15T10:30:00")
     private LocalDateTime updatedAt;
 
+    @Schema(description = "리뷰 첨부파일 목록")
+    private List<AttachmentFileResponse> attachmentFiles;
 
     public static ReviewList of(ProductReview review) {
       return ReviewList.builder()
           .id(review.getId())
           .creatorId(review.getCreatorId())
-          .creatorNickname(review.getCreatorName())
+          .creatorName(review.getCreatorName())
           .rating(review.getRating())
           .comment(review.getComment())
           .status(review.getStatus())

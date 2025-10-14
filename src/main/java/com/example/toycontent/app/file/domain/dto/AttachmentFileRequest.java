@@ -2,6 +2,8 @@ package com.example.toycontent.app.file.domain.dto;
 
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
+import com.example.toycontent.app.Product.domain.ProductReview;
+import com.example.toycontent.app.Product.domain.ProductReviewAttachmentFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -50,6 +52,19 @@ public abstract class AttachmentFileRequest {
           .fileExplain(this.fileExplain)
           .sortOrder(ord)
           .isPrimary(isPrimary)
+          .build();
+    }
+
+    public ProductReviewAttachmentFile toEntity(ProductReview productReview, int ord) {
+      return ProductReviewAttachmentFile.builder()
+          .productReview(productReview)
+          .attachFileId(this.fileId)
+          .fileUrl(this.storedPath)
+          .orgFileNm(this.originName)
+          .fileSize(this.fileSize)
+          .contentType(this.contentType)
+          .fileExplain(this.fileExplain)
+          .sortOrder(ord)
           .build();
     }
   }
