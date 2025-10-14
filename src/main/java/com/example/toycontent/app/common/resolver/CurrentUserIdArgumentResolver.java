@@ -1,5 +1,6 @@
 package com.example.toycontent.app.common.resolver;
 
+import com.example.toycontent.app.auth.CustomUserDetails;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
@@ -33,12 +34,12 @@ public class CurrentUserIdArgumentResolver implements HandlerMethodArgumentResol
             throw new IllegalStateException("인증되지 않은 사용자입니다.");
         }
 
-        Object principal = authentication.getPrincipal();
+        CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
 
-        if (principal instanceof Long) {
-            return (Long) principal;
+        if (principal.getUserId() != null) {
+            return principal.getUserId();
         }
 
-        throw new IllegalStateException("인증 정보에서 사용자 ID를 찾을 수 없습니다.");
+        throw new IllegalStateException("인증 정보에서 사용자를 찾을 수 없습니다.");
     }
 }

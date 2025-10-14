@@ -5,11 +5,12 @@ import com.example.toycontent.app.Product.controller.dto.ProductResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductReviewRequest;
 import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse.ReviewCreateResponse;
+import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse.ReviewList;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.service.ProductService;
 import com.example.toycontent.app.common.annotation.CheckAdmin;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
-import com.example.toycontent.app.common.response.ApiResponse;
+import com.example.toycontent.app.common.annotation.CurrentUserName;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -25,8 +26,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Tag(name = "ProductController", description = "상품 API")
 @RestController
@@ -140,9 +139,11 @@ public class ProductController {
     public ResponseEntity<ProductReviewResponse.ReviewCreateResponse> createProductReview(
         @PathVariable @Parameter(description = "상품 ID") Long id,
         @RequestBody @Valid ProductReviewRequest.CreateReview createReviewDto,
-        @CurrentUserId Long userId) {
+        @CurrentUserId Long userId,
+        @CurrentUserName String userName) {
         ReviewCreateResponse createdReview = productService.createReview(id, createReviewDto,
-            userId);
+            userId, userName);
         return ResponseEntity.ok(createdReview);
     }
+
 }
