@@ -146,4 +146,13 @@ public class ProductController {
         return ResponseEntity.ok(createdReview);
     }
 
+    @Operation(summary = "상품 리뷰 목록 조회", description = "상품 ID에 해당하는 리뷰 목록을 조회합니다.")
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<ProductReviewResponse.ReviewList> getProductReviews(
+        @PathVariable @Parameter(description = "상품 ID") Long id,
+        @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        ReviewList reviews = productService.getReviews(id, pageable);
+        return ResponseEntity.ok(reviews);
+    }
 }

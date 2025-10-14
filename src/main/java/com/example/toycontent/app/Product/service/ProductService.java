@@ -203,6 +203,16 @@ public class ProductService {
         return ReviewCreateResponse.of(productReview);
     }
 
+    public ReviewList getReviews(Long productId, Pageable pageable) {
+        Product product = findProductByIdOrElseThrow(productId);
+
+        List<ProductReview> productReviews = productReviewRepository.findProductReviews(productId,
+            ReviewStatus.ACTIVE,
+            pageable);
+
+        return null;
+    }
+
     private Product findProductByIdOrElseThrow(Long productId) {
         return productRepository.findById(productId)
             .orElseThrow(() -> new RestApiException(ProductErrorCode.PRODUCT_NOT_FOUND));
