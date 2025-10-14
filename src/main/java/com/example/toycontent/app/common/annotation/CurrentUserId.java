@@ -7,8 +7,8 @@ import java.lang.annotation.*;
 @Documented
 public @interface CurrentUserId {
     /**
-     * JWT 클레임 키 이름 (기본값: "userId")
+     * JWT 클레임 키 이름 (기본값: "currentUserId")
      */
-    String value() default "userId";
+    String value() default "currentUserId";
 }
 

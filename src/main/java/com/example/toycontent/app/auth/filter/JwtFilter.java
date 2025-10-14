@@ -1,11 +1,13 @@
 package com.example.toycontent.app.auth.filter;
 
 
+import com.example.toycontent.app.auth.CustomUserDetails;
 import com.example.toycontent.app.auth.token.JwtParser;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -33,6 +35,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (StringUtils.hasText(token) && tokenProvider.validateToken(token)) {
             Long userId = tokenProvider.getUserId(token); // JWT에서 userId 추출
+            String userName = tokenProvider.getUsername(token);
             List<String> roles = tokenProvider.getRoles(token); // JWT에서 roles 추출
 
             // 권한 목록 생성
@@ -40,8 +43,14 @@ public class JwtFilter extends OncePerRequestFilter {
                     .map(SimpleGrantedAuthority::new)
                     .collect(Collectors.toList());
 
+            CustomUserDetails userDetails = new CustomUserDetails(
+                userId,
+                userName,
+                new ArrayList<>(authorities)
+            );
+
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userId, null, authorities);
+                    new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             filterChain.doFilter(request, response);

@@ -10,6 +10,7 @@ import com.example.toycontent.app.Product.controller.dto.ProductResponse.Product
 import com.example.toycontent.app.Product.controller.dto.ProductReviewRequest;
 import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse.ReviewCreateResponse;
+import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse.ReviewList;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
@@ -178,10 +179,10 @@ public class ProductService {
 
 
     @Transactional
-    public ReviewCreateResponse createReview(Long productId, ProductReviewRequest.CreateReview createReviewDto, Long userId) {
+    public ReviewCreateResponse createReview(Long productId, ProductReviewRequest.CreateReview createReviewDto, Long userId, String userName) {
         Product product = findProductByIdOrElseThrow(productId);
 
-        ProductReview productReview = createReviewDto.toEntity(product, userId);
+        ProductReview productReview = createReviewDto.toEntity(product, userId, userName);
         productReviewRepository.save(productReview);
 
         return ReviewCreateResponse.of(productReview);
