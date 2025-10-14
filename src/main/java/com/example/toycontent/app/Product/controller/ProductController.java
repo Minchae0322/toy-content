@@ -2,6 +2,9 @@ package com.example.toycontent.app.Product.controller;
 
 import com.example.toycontent.app.Product.controller.dto.ProductRequest;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse;
+import com.example.toycontent.app.Product.controller.dto.ProductReviewRequest;
+import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse;
+import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse.ReviewCreateResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.service.ProductService;
 import com.example.toycontent.app.common.annotation.CheckAdmin;
@@ -134,9 +137,12 @@ public class ProductController {
 
     @Operation(summary = "상품 리뷰 작성", description = "상품 ID에 해당하는 상품을 리뷰합니다.")
     @PostMapping("/{id}/reviews")
-    public ResponseEntity<Void> createProductReview(
-        @PathVariable @Parameter(description = "상품 ID") Long id) {
-        productService.createReview(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ProductReviewResponse.ReviewCreateResponse> createProductReview(
+        @PathVariable @Parameter(description = "상품 ID") Long id,
+        @RequestBody @Valid ProductReviewRequest.CreateReview createReviewDto,
+        @CurrentUserId Long userId) {
+        ReviewCreateResponse createdReview = productService.createReview(id, createReviewDto,
+            userId);
+        return ResponseEntity.ok(createdReview);
     }
 }

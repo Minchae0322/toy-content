@@ -7,10 +7,13 @@ import com.example.toycontent.app.Product.controller.dto.ProductResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse.ProductCreate;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse.ProductDetail;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse.ProductList;
+import com.example.toycontent.app.Product.controller.dto.ProductReviewRequest;
 import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse;
+import com.example.toycontent.app.Product.controller.dto.ProductReviewResponse.ReviewCreateResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
+import com.example.toycontent.app.Product.domain.ProductReview;
 import com.example.toycontent.app.Product.repository.ProductAttachmentFileRepository;
 import com.example.toycontent.app.Product.repository.ProductReactionRepository;
 import com.example.toycontent.app.Product.repository.ProductRepository;
@@ -159,7 +162,7 @@ public class ProductService {
     }
 
     /**
-     * 🚧 TODO: 제품 수정
+     * TODO: 제품 수정
      * - 제품명, 브랜드, 카테고리, 이미지 변경 로직 구현 예정
      */
     public ProductResponse updateProduct(Long id, ProductResponse productDto) {
@@ -167,13 +170,25 @@ public class ProductService {
     }
 
     /**
-     * 🚧 TODO: 제품 삭제
+     * TODO: 제품 삭제
      * - 상태 변경 (soft delete) 또는 물리 삭제 정책에 따라 구현 예정
      */
     public void deleteProduct(Long id) {
     }
 
 
-    public void createReview(Long id) {
+    @Transactional
+    public ReviewCreateResponse createReview(Long productId, ProductReviewRequest.CreateReview createReviewDto, Long userId) {
+        Product product = findProductByIdOrElseThrow(productId);
+
+        ProductReview productReview = createReviewDto.toEntity(product, userId);
+        productReviewRepository.save(productReview);
+
+        return ReviewCreateResponse.of(productReview);
+    }
+
+    private Product findProductByIdOrElseThrow(Long productId) {
+        return productRepository.findById(productId)
+            .orElseThrow(() -> new RestApiException(ProductErrorCode.PRODUCT_NOT_FOUND));
     }
 }
