@@ -2,11 +2,8 @@ package com.example.toycontent.app.Product.controller.dto;
 
 import com.example.toycontent.app.Product.domain.ProductReview;
 import com.example.toycontent.app.common.enumuration.ReviewStatus;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -64,6 +61,27 @@ public abstract class ProductReviewResponse {
           .reportCount(review.getReportCount())
           .createdAt(review.getCreatedAt())
           .updatedAt(review.getUpdatedAt())
+          .build();
+    }
+  }
+
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @Schema(description = "리뷰 목록 응답")
+  public static class ReviewCreateResponse {
+
+    @Schema(description = "리뷰 ID", example = "1")
+    private Long productReviewId;
+
+    @Schema(description = "제품 ID", example = "1")
+    private Long productId;
+
+    public static ReviewCreateResponse of(ProductReview review) {
+      return ReviewCreateResponse.builder()
+          .productReviewId(review.getId())
+          .productId(review.getProduct().getId())
           .build();
     }
   }

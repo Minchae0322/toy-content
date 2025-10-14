@@ -1,5 +1,7 @@
 package com.example.toycontent.app.Product.controller.dto;
 
+import com.example.toycontent.app.Product.domain.Product;
+import com.example.toycontent.app.Product.domain.ProductReview;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -52,6 +54,17 @@ public abstract class ProductReviewRequest {
     )
     @Size(max = 5, message = "이미지는 최대 5장까지 첨부 가능합니다")
     private List<String> imageUrls;
+
+    public ProductReview toEntity(Product product, Long creatorId) {
+      return ProductReview.builder()
+          .product(product)
+          .creatorId(creatorId)
+          .creatorName("Test")//TODO:: 추후 연동
+          .rating(rating)
+          .comment(comment)
+          .build();
+    }
+
   }
 
   /**
