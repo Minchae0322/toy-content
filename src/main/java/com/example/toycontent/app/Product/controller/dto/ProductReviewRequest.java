@@ -2,12 +2,14 @@ package com.example.toycontent.app.Product.controller.dto;
 
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.Product.domain.ProductReview;
+import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -47,13 +49,8 @@ public abstract class ProductReviewRequest {
     @Size(min = 10, max = 1000, message = "리뷰 내용은 10자 이상 1000자 이하여야 합니다")
     private String comment;
 
-    @Schema(
-        description = "리뷰 이미지 URL 목록 (최대 5장)",
-        example = "[\"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\"]",
-        maxLength = 5
-    )
-    @Size(max = 5, message = "이미지는 최대 5장까지 첨부 가능합니다")
-    private List<String> imageUrls;
+    @Schema(description = "리뷰 첨부파일 정보 목록")
+    private List<AttachmentInfo> attachmentFileInfos = new ArrayList<>();
 
     public ProductReview toEntity(Product product, Long creatorId, String creatorName) {
       return ProductReview.builder()
