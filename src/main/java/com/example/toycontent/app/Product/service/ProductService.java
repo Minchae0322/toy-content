@@ -203,14 +203,16 @@ public class ProductService {
         return ReviewCreateResponse.of(productReview);
     }
 
-    public ReviewList getReviews(Long productId, Pageable pageable) {
+    public List<ReviewList> getReviews(Long productId, Pageable pageable) {
         Product product = findProductByIdOrElseThrow(productId);
 
         List<ProductReview> productReviews = productReviewRepository.findProductReviews(productId,
             ReviewStatus.ACTIVE,
             pageable);
 
-        return null;
+        return productReviews.stream()
+            .map(ReviewList::of)
+            .toList();
     }
 
     private Product findProductByIdOrElseThrow(Long productId) {
