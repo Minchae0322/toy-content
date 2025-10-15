@@ -154,9 +154,9 @@ public class ProductService {
             .map(ProductUserReaction::of)
             .orElse(ProductUserReaction.createDefault());
 
-        // 활성 리뷰 목록 조회
+      /*  // 활성 리뷰 목록 조회
         List<ProductReviewResponse.ReviewList> productReviewResponses = productReviewRepository
-            .searchProductReviews(product.getId(), ReviewStatus.ACTIVE);
+            .searchProductReviews(product.getId(), ReviewStatus.ACTIVE);*/
 
         // 종합 DTO로 변환 후 반환
         return ProductDetail.of(product, productUserReaction, productReviewResponses);
