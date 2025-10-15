@@ -159,7 +159,7 @@ public class ProductService {
             .searchProductReviews(product.getId(), ReviewStatus.ACTIVE);*/
 
         // 종합 DTO로 변환 후 반환
-        return ProductDetail.of(product, productUserReaction, productReviewResponses);
+        return ProductDetail.of(product, productUserReaction);
     }
 
     /**
