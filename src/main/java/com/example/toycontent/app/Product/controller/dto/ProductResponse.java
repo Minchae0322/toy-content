@@ -159,16 +159,12 @@ public abstract class ProductResponse {
         @Schema(description = "상품 첨부파일 목록")
         private List<AttachmentFileResponse> attachmentFiles;
 
-        @Schema(description = "최근 리뷰 목록")
-        private List<ProductReviewResponse.ReviewList> recentReviews;
-
         @Schema(description = "사용자의 반응 목록", example = "false")
         private ProductReactionResponse.ProductUserReaction userReaction;
 
         private List<ProductTradeSummary> tradeList;
 
-        public static ProductDetail of(Product product, ProductUserReaction userReaction,
-            List<ProductReviewResponse.ReviewList> recentReviews) {
+        public static ProductDetail of(Product product, ProductUserReaction userReaction) {
 
             return ProductDetail.builder()
                 .id(product.getId())
@@ -193,7 +189,6 @@ public abstract class ProductResponse {
                     .stream()
                     .map(AttachmentFileResponse::of)
                     .toList())
-                .recentReviews(recentReviews)
                 .userReaction(userReaction)
                 .build();
         }

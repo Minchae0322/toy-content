@@ -67,9 +67,9 @@ public abstract class ProductReviewResponse {
           .createdAt(review.getCreatedAt())
           .updatedAt(review.getUpdatedAt())
           .attachmentFiles(
-              review.getProductReviewAttachmentFiles().stream().map(AttachmentFileResponse::of)
-                  .collect(
-                      Collectors.toList()))
+              review.getProductReviewAttachmentFiles().stream()
+                  .map(AttachmentFileResponse::of)
+                  .toList())
           .build();
     }
   }
