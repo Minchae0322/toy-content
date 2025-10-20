@@ -48,14 +48,6 @@ public class BiteSizeOption extends BaseTimeEntity {
   @Comment("한입 가격")
   private Long unitPrice;
 
-  @Column(nullable = false)
-  @Comment("총 한입 판매 수량")
-  private Integer totalBiteCount;
-
-  @ColumnDefault("0")
-  @Column(nullable = false)
-  @Comment("판매된 한입 수")
-  private Integer soldBiteCount;
 
   @Column
   @Comment("원가 (비교용)")

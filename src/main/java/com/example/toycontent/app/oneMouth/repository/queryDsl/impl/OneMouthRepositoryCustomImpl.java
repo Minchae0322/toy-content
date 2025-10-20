@@ -17,8 +17,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-import static com.example.toycontent.app.oneMouth.domain.QOneMouth.oneMouth;
+
 import static com.example.toycontent.app.oneMouth.domain.QOneMouthFavorite.oneMouthFavorite;
+import static com.example.toycontent.app.oneMouth.domain.QSalePost.salePost;
 
 @Repository
 @RequiredArgsConstructor
@@ -31,23 +32,23 @@ public class OneMouthRepositoryCustomImpl implements OneMouthRepositoryCustom {
 
         List<ListView> content = queryFactory
             .select(Projections.fields(ListView.class,
-                oneMouth.id.as("oneMouthId"),
-                oneMouth.title,
+                salePost.id.as("oneMouthId"),
+                salePost.title,
 
                 //관심 수
                 Expressions.as(
                     JPAExpressions
                         .select(oneMouthFavorite.count().intValue())
                         .from(oneMouthFavorite)
-                        .where(oneMouthFavorite.oneMouth.id.eq(oneMouth.id)),
+                        .where(oneMouthFavorite.salePost.id.eq(salePost.id)),
                     "favoritesCount"
                 )
             ))
-            .from(oneMouth)
+            .from(salePost)
             .where(where)
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
-            .orderBy(oneMouth.createdAt.desc())
+            .orderBy(salePost.createdAt.desc())
             .fetch();
 
         return content;
@@ -58,8 +59,8 @@ public class OneMouthRepositoryCustomImpl implements OneMouthRepositoryCustom {
         BooleanBuilder where = where(condition);
 
         Long count = queryFactory
-                .select(oneMouth.count())
-                .from(oneMouth)
+                .select(salePost.count())
+                .from(salePost)
                 .where(where)
                 .fetchOne();
 
@@ -70,7 +71,7 @@ public class OneMouthRepositoryCustomImpl implements OneMouthRepositoryCustom {
         BooleanBuilder builder = new BooleanBuilder();
 
         Optional.ofNullable(condition.getKeyword())
-                .ifPresent(keyword -> builder.and(oneMouth.title.contains(keyword).or(oneMouth.description.contains(keyword))));
+                .ifPresent(keyword -> builder.and(salePost.title.contains(keyword).or(salePost.description.contains(keyword))));
 
         return builder;
     }
