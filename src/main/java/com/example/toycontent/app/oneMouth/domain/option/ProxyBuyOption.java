@@ -70,5 +70,8 @@ public class ProxyBuyOption extends BaseTimeEntity {
   @Comment("옵션명")
   private String optionName;
 
+  public void assignSalePost(SalePost salePost) {
+    this.salePost = salePost;
+  }
 
 }

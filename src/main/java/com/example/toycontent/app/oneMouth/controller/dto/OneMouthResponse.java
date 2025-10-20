@@ -10,6 +10,7 @@ import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
@@ -181,4 +182,23 @@ public abstract class OneMouthResponse {
         }
 
     }
+
+    @Getter
+    @AllArgsConstructor
+    @Builder
+    @Schema(description = "판매 게시글 생성 응답")
+    public static class SalePostCreateResponse {
+
+        @Schema(description = "생성된 게시글 ID", example = "1")
+        private Long salePostId;
+
+        public static SalePostCreateResponse of(SalePost salePost) {
+            return SalePostCreateResponse.builder()
+                .salePostId(salePost.getId())
+                .build();
+        }
+    }
+
+
+
 }
