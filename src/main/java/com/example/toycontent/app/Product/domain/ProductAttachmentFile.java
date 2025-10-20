@@ -1,6 +1,5 @@
 package com.example.toycontent.app.Product.domain;
 
-import com.example.toycontent.app.oneMouth.domain.OneMouth;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

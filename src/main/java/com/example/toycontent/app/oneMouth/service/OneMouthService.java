@@ -1,6 +1,5 @@
 package com.example.toycontent.app.oneMouth.service;
 
-import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.OneMouthErrorCode;
@@ -14,7 +13,7 @@ import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.Detai
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.ListView;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
-import com.example.toycontent.app.oneMouth.domain.OneMouth;
+import com.example.toycontent.app.oneMouth.domain.SalePost;
 import com.example.toycontent.app.oneMouth.domain.OneMouthAttachmentFile;
 import com.example.toycontent.app.oneMouth.domain.OneMouthDraft;
 import com.example.toycontent.app.oneMouth.domain.OneMouthDraftAttachmentFile;
@@ -50,10 +49,10 @@ public class OneMouthService {
     public Long createOneMouth(OneMouthCreateDto createDto) {
         draftRepository.findBySellerId(createDto.getSellerId()).ifPresent(draftRepository::delete);
 
-        OneMouth createdOneMouth = oneMouthRepository.save(createDto.toEntity());
-        createOneMouthAttachmentFiles(createdOneMouth, createDto.getAttachmentFileSimpleDtos());
+        SalePost createdSalePost = oneMouthRepository.save(createDto.toEntity());
+        createOneMouthAttachmentFiles(createdSalePost, createDto.getAttachmentFileSimpleDtos());
 
-        return createdOneMouth.getId();
+        return createdSalePost.getId();
     }
 
     @Transactional
@@ -79,13 +78,13 @@ public class OneMouthService {
     }
 
 
-    private void createOneMouthAttachmentFiles(OneMouth oneMouth, List<SimpleDto> simpleDtos) {
+    private void createOneMouthAttachmentFiles(SalePost salePost, List<SimpleDto> simpleDtos) {
         IntStream.range(0, simpleDtos.size())
                 .forEach(i -> {
                     SimpleDto simpleDto = simpleDtos.get(i);
 
                   OneMouthAttachmentFile fileMapping = OneMouthAttachmentFile.builder()
-                      .oneMouth(oneMouth)
+                      .salePost(salePost)
                       .attachFileId(simpleDto.getAttachFileId())
                       .fileExplain(simpleDto.getFileExplain())
                       .fileSize(simpleDto.getFileSize())
@@ -121,12 +120,12 @@ public class OneMouthService {
 
 
     public Detail getOneMouthDetail(Long id, Long viewerId) {
-      OneMouth oneMouth = oneMouthRepository.findById(id).orElseThrow(
+      SalePost salePost = oneMouthRepository.findById(id).orElseThrow(
           () -> new RestApiException(OneMouthErrorCode.ONE_MOUTH_NOT_FOUND));
 
       boolean isFavorite = oneMouthFavoriteRepository.existsByUserId(viewerId);
 
-      return OneMouthResponse.Detail.from(oneMouth, isFavorite);
+      return OneMouthResponse.Detail.from(salePost, isFavorite);
     }
 
     public Page<ListView> getPagedOneMouthPosts(Pageable pageable, OneMouthSearchCondition condition) {

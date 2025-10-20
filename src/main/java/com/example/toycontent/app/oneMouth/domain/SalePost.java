@@ -3,6 +3,11 @@ package com.example.toycontent.app.oneMouth.domain;
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.OneMouthStatus;
+import com.example.toycontent.app.common.enumuration.SaleType;
+import com.example.toycontent.app.oneMouth.domain.option.BiteSizeOption;
+import com.example.toycontent.app.oneMouth.domain.option.GroupBuyOption;
+import com.example.toycontent.app.oneMouth.domain.option.NormalSaleOption;
+import com.example.toycontent.app.oneMouth.domain.option.ProxyBuyOption;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -38,59 +43,87 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "TB_ONE_MOUTH_POST")
-public class OneMouth extends BaseTimeEntity {
+public class SalePost extends BaseTimeEntity {
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "one_mouth_id", updatable = false, nullable = false)
-    @Comment("개인 거래 게시글 ID")
+    @Column(name = "post_id")
+    @Comment("게시글 ID")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
-    @Comment("연결된 공식 제품")
+    @Comment("연결된 공식 제품 (선택)")
     private Product product;
 
     @Column(length = 500, nullable = false)
     @Comment("제목")
     private String title;
 
-    @Column(length = 1000)
-    @Comment("추가 설명 (판매 이유 등)")
+    @Column(length = 2000)
+    @Comment("상품 설명")
     private String description;
 
-    @Comment("판매자 정보")
+    @Column(nullable = false)
+    @Comment("판매자 ID")
     private Long sellerId;
 
+    private Long price;
+
+    @Column(length = 100)
+    @Comment("판매자 닉네임")
     private String sellerName;
 
-    @Column(nullable = false)
-    @Comment("판매 가격")
-    private Long sellingPrice;
-
-    @Column(length = 255)
-    @Comment("거래 희망 지역 (직거래 시)")
-    private String tradeLocation;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sale_type", nullable = false, length = 20)
+    @Comment("판매 방식 (BITE_SIZE/NORMAL/GROUP_BUY/PROXY_BUY)")
+    private SaleType saleType;
 
     @Enumerated(EnumType.STRING)
-    @ColumnDefault("ON_SALE")
+    @ColumnDefault("'ON_SALE'")
     @Column(nullable = false, length = 20)
-    @Comment("거래 상태 (판매중, 예약중, 완료)")
-    private OneMouthStatus oneMouthStatus;
+    @Comment("게시글 상태")
+    private OneMouthStatus status;
+
+    @Column(length = 255)
+    @Comment("거래 희망 지역")
+    private String tradeLocation;
 
     @ColumnDefault("0")
     @Comment("관심 등록 수")
     private Integer favoriteCount;
 
-    @Comment("조회수 (상세 페이지 방문 횟수)")
     @ColumnDefault("0")
+    @Comment("조회수")
     private Integer viewCount;
 
     @ColumnDefault("0")
     @Comment("채팅방 수")
     private Integer chatRoomCount;
 
+    @OneToMany(mappedBy = "salePost", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @Comment("한입만 옵션 목록")
+    private List<BiteSizeOption> biteSizeOptions = new ArrayList<>();
+
+    @OneToMany(mappedBy = "salePost", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @Comment("일반 판매 옵션 목록")
+    private List<NormalSaleOption> normalSaleOptions = new ArrayList<>();
+
+    @OneToMany(mappedBy = "salePost", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @Comment("공동구매 옵션 목록")
+    private List<GroupBuyOption> groupBuyOptions = new ArrayList<>();
+
+    @OneToMany(mappedBy = "salePost", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @Comment("대리구매 옵션 목록")
+    private List<ProxyBuyOption> proxyBuyOptions = new ArrayList<>();
+
     @OneToMany(mappedBy = "oneMouth", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     @Comment("상품 이미지 목록")
     private List<OneMouthAttachmentFile> attachmentFiles = new ArrayList<>();
 }

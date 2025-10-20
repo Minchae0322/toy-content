@@ -3,7 +3,7 @@ package com.example.toycontent.app.Product.domain;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
-import com.example.toycontent.app.oneMouth.domain.OneMouth;
+import com.example.toycontent.app.oneMouth.domain.SalePost;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,7 +20,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,7 +29,6 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
-import org.hibernate.envers.NotAudited;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Getter
@@ -122,7 +120,7 @@ public class Product extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     @Comment("제품 거래 게시물 목록")
-    private List<OneMouth> oneMouths;
+    private List<SalePost> salePosts;
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Comment("제품 첨부 파일 목록 (이미지, 문서 등)")

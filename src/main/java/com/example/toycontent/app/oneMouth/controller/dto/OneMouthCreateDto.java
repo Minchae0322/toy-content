@@ -1,11 +1,9 @@
 package com.example.toycontent.app.oneMouth.controller.dto;
 
-import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.enumuration.OneMouthStatus;
-import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.common.enumuration.Unit;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileRequest;
-import com.example.toycontent.app.oneMouth.domain.OneMouth;
+import com.example.toycontent.app.oneMouth.domain.SalePost;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
@@ -36,7 +34,6 @@ public class OneMouthCreateDto {
     @Schema(title = "판매자 ID", description = "판매자의 고유 ID", example = "101")
     private Long sellerId;
 
-
     @Schema(title = "거래 위치", description = "직거래 혹은 배송을 위한 지역 정보", example = "서울시 강남구")
     private String location;
 
@@ -48,15 +45,15 @@ public class OneMouthCreateDto {
 
     private List<AttachmentFileRequest.SimpleDto> attachmentFileSimpleDtos = new ArrayList<>();
 
-    public OneMouth toEntity() {
+    public SalePost toEntity() {
 
         LocalDateTime now = LocalDateTime.now();
 
-        return OneMouth.builder()
+        return SalePost.builder()
             .title(this.title)
             .description(this.description)
             .sellerId(this.sellerId)
-            .oneMouthStatus(OneMouthStatus.ON_SALE)
+            .status(OneMouthStatus.ON_SALE)
             .build();
     }
 
