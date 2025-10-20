@@ -64,4 +64,8 @@ public class BiteSizeOption extends BaseTimeEntity {
   @Column(length = 100)
   @Comment("옵션명 (선택)")
   private String optionName;
+
+  public void assignSalePost(SalePost salePost) {
+    this.salePost = salePost;
+  }
 }

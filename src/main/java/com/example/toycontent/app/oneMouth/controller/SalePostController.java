@@ -1,13 +1,14 @@
 package com.example.toycontent.app.oneMouth.controller;
 
 import com.example.toycontent.app.common.annotation.CurrentUserId;
-import com.example.toycontent.app.oneMouth.controller.dto.OneMouthCreateDto;
+import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.SalePostCreateResponse;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthDraftCreateDto;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.Detail;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.ListView;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthUpdateDto;
+import com.example.toycontent.app.oneMouth.controller.dto.SalePostRequest;
 import com.example.toycontent.app.oneMouth.controller.dto.condition.OneMouthSearchCondition;
-import com.example.toycontent.app.oneMouth.service.OneMouthService;
+import com.example.toycontent.app.oneMouth.service.SalePostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,16 +33,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(value = "/one-mouths")
-public class OneMouthController {
+public class SalePostController {
 
-    private final OneMouthService oneMouthService;
+    private final SalePostService salePostService;
 
-    @PostMapping("")
-    @Operation(summary = "한입만 게시물 생성", tags = "OneMouthController")
-    public ResponseEntity<Long> createOneMouth(
-            @RequestBody @Valid OneMouthCreateDto createDto
+    @PostMapping
+    @Operation(summary = "판매 게시글 생성", description = "판매 타입에 따라 적절한 옵션과 함께 게시글을 생성합니다")
+    public ResponseEntity<SalePostCreateResponse> createSalePost(
+        @RequestBody @Valid SalePostRequest.SalePostCreateRequest request,
+        @CurrentUserId Long sellerId
     ) {
-        return ResponseEntity.ok(oneMouthService.createOneMouth(createDto));
+        SalePostCreateResponse salePost = salePostService.createSalePost(request, sellerId);
+        return ResponseEntity.ok(salePost);
     }
 
     @PostMapping("/draft")
@@ -49,7 +52,7 @@ public class OneMouthController {
     public ResponseEntity<Long> createOneMouthDraft(
             @RequestBody @Valid OneMouthDraftCreateDto createDto
     ) {
-        return ResponseEntity.ok(oneMouthService.createOneMouthDraft(createDto));
+        return ResponseEntity.ok(salePostService.createOneMouthDraft(createDto));
     }
 
 
@@ -59,7 +62,7 @@ public class OneMouthController {
         @PathVariable @Parameter(description = "게시물 ID") Long id,
         @CurrentUserId Long userId) {
 
-        Detail product = oneMouthService.getOneMouthDetail(id, userId);
+        Detail product = salePostService.getOneMouthDetail(id, userId);
         return ResponseEntity.ok(product);
     }
 
@@ -69,7 +72,7 @@ public class OneMouthController {
             @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             @ParameterObject OneMouthSearchCondition condition
     ) {
-        Page<ListView> products = oneMouthService.getPagedOneMouthPosts(pageable, condition);
+        Page<ListView> products = salePostService.getPagedOneMouthPosts(pageable, condition);
         return ResponseEntity.ok(products);
     }
 
@@ -78,7 +81,7 @@ public class OneMouthController {
     public ResponseEntity<Detail> updateOneMouth(
             @PathVariable @Parameter(description = "게시물 ID") Long id,
             @RequestBody @Parameter(description = "수정할 게시물 정보") OneMouthUpdateDto updateDto) {
-        Detail updated = oneMouthService.updateOneMouth(id, updateDto);
+        Detail updated = salePostService.updateOneMouth(id, updateDto);
         return ResponseEntity.ok(updated);
     }
 
@@ -86,7 +89,7 @@ public class OneMouthController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOneMouth(
             @PathVariable @Parameter(description = "게시물 ID") Long id) {
-        oneMouthService.deleteOneMouth(id);
+        salePostService.deleteOneMouth(id);
         return ResponseEntity.noContent().build();
     }
 }

@@ -4,6 +4,8 @@ import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.OneMouthStatus;
 import com.example.toycontent.app.common.enumuration.SaleType;
+import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.common.exception.impl.SalePostErrorCode;
 import com.example.toycontent.app.oneMouth.domain.option.BiteSizeOption;
 import com.example.toycontent.app.oneMouth.domain.option.GroupBuyOption;
 import com.example.toycontent.app.oneMouth.domain.option.NormalSaleOption;
@@ -125,5 +127,37 @@ public class SalePost extends BaseTimeEntity {
     @OneToMany(mappedBy = "oneMouth", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @Comment("상품 이미지 목록")
-    private List<OneMouthAttachmentFile> attachmentFiles = new ArrayList<>();
+    private List<SalePostAttachmentFile> attachmentFiles = new ArrayList<>();
+
+    public void addBiteSizeOption(BiteSizeOption option) {
+        if (this.saleType != SaleType.ONEMOUTH) {
+            throw new RestApiException(SalePostErrorCode.SALE_TYPE_MISMATCH);
+        }
+        this.biteSizeOptions.add(option);
+        option.assignSalePost(this);
+    }
+
+    public void addNormalSaleOption(NormalSaleOption option) {
+        if (this.saleType != SaleType.NORMAL) {
+            throw new RestApiException(SalePostErrorCode.SALE_TYPE_MISMATCH);
+        }
+        this.normalSaleOptions.add(option);
+        option.assignSalePost(this);
+    }
+
+    public void addGroupBuyOption(GroupBuyOption option) {
+        if (this.saleType != SaleType.GROUP_BUY) {
+            throw new RestApiException(SalePostErrorCode.SALE_TYPE_MISMATCH);
+        }
+        this.groupBuyOptions.add(option);
+        option.assignSalePost(this);
+    }
+
+    public void addProxyBuyOption(ProxyBuyOption option) {
+        if (this.saleType != SaleType.PROXY) {
+            throw new RestApiException(SalePostErrorCode.SALE_TYPE_MISMATCH);
+        }
+        this.proxyBuyOptions.add(option);
+        option.assignSalePost(this);
+    }
 }

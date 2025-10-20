@@ -61,4 +61,8 @@ public class NormalSaleOption extends BaseTimeEntity {
   @Comment("옵션명 (예: 5개입, 10개입)")
   private String optionName;
 
+  public void assignSalePost(SalePost salePost) {
+    this.salePost = salePost;
+  }
+
 }

@@ -11,7 +11,7 @@ import org.hibernate.annotations.Comment;
 @AllArgsConstructor
 @Entity
 @Table(name = "tb_one_mouth_attachment_file")
-public class OneMouthAttachmentFile {
+public class SalePostAttachmentFile {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
