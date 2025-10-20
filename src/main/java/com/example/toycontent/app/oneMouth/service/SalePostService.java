@@ -55,7 +55,8 @@ public class SalePostService {
   public OneMouthResponse.SalePostCreateResponse createSalePost(SalePostCreateRequest request, Long sellerId) {
 
     // 공식 제품 조회 (있는 경우)
-    Product product = productRepository.findById(request.getProductId())
+    Product product = Optional.ofNullable(request.getProductId())
+        .flatMap(productRepository::findById)
         .orElse(null);
 
     // 게시글 생성

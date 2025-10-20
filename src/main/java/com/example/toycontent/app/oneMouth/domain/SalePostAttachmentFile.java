@@ -10,7 +10,7 @@ import org.hibernate.annotations.Comment;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "tb_one_mouth_attachment_file")
+@Table(name = "tb_sale_post_attachment_file")
 public class SalePostAttachmentFile {
 
     @Id
@@ -18,7 +18,7 @@ public class SalePostAttachmentFile {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "one_mouth_id")
+    @JoinColumn(name = "post_id")
     private SalePost salePost;
 
     @Column(name = "attch_file_id")

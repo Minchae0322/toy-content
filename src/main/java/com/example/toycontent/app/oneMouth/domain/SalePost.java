@@ -44,7 +44,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "TB_ONE_MOUTH_POST")
+@Table(name = "TB_SALE_POST")
 public class SalePost extends BaseTimeEntity {
 
 
@@ -124,7 +124,7 @@ public class SalePost extends BaseTimeEntity {
     @Comment("대리구매 옵션 목록")
     private List<ProxyBuyOption> proxyBuyOptions = new ArrayList<>();
 
-    @OneToMany(mappedBy = "oneMouth", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "salePost", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @Comment("상품 이미지 목록")
     private List<SalePostAttachmentFile> attachmentFiles = new ArrayList<>();
