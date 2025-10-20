@@ -3,7 +3,7 @@ package com.example.toycontent.app.oneMouth.controller.dto;
 import com.example.toycontent.app.common.enumuration.OneMouthStatus;
 import com.example.toycontent.app.common.enumuration.Unit;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
-import com.example.toycontent.app.oneMouth.domain.OneMouth;
+import com.example.toycontent.app.oneMouth.domain.SalePost;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,13 +41,13 @@ public abstract class OneMouthResponse {
          * 엔티티 → DTO 변환 메서드
          * @param entity OneMouth 엔티티
          */
-        public static ProductTradeSummary of(OneMouth entity) {
+        public static ProductTradeSummary of(SalePost entity) {
 
             return ProductTradeSummary.builder()
                 .id(entity.getId())
                 .title(entity.getTitle())
-                .sellingPrice(entity.getSellingPrice())
-                .status(entity.getOneMouthStatus())
+                .sellingPrice(entity.getPrice())
+                .status(entity.getStatus())
                 .thumbnailUrl(entity.getAttachmentFiles().get(0).getFileUrl())
                 .sellerNickname(entity.getSellerName())
                 .tradeLocation(entity.getTradeLocation())
@@ -173,10 +173,10 @@ public abstract class OneMouthResponse {
         @Schema(title = "첨부파일 리스트", description = "상품 이미지 및 첨부파일 목록")
         private List<AttachmentFileResponse> oneMouthAttachmentFiles;
 
-        public static Detail from(OneMouth oneMouth, Boolean isUserFavorited) {
+        public static Detail from(SalePost salePost, Boolean isUserFavorited) {
             return Detail.builder()
-                .oneMouthId(oneMouth.getId())
-                .title(oneMouth.getTitle())
+                .oneMouthId(salePost.getId())
+                .title(salePost.getTitle())
                 .build();
         }
 
