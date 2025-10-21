@@ -24,7 +24,7 @@ import org.hibernate.annotations.DynamicUpdate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "feed_hashtags", indexes = {
+@Table(name = "tb_feed_hashtags", indexes = {
     @Index(name = "idx_hashtag_name", columnList = "hashtagName")
 })
 public class FeedHashtag {
