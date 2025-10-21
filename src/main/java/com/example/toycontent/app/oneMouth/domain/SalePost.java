@@ -6,7 +6,7 @@ import com.example.toycontent.app.common.enumuration.OneMouthStatus;
 import com.example.toycontent.app.common.enumuration.SaleType;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.SalePostErrorCode;
-import com.example.toycontent.app.oneMouth.domain.option.BiteSizeOption;
+import com.example.toycontent.app.oneMouth.domain.option.OneMouthOption;
 import com.example.toycontent.app.oneMouth.domain.option.GroupBuyOption;
 import com.example.toycontent.app.oneMouth.domain.option.NormalSaleOption;
 import com.example.toycontent.app.oneMouth.domain.option.ProxyBuyOption;
@@ -107,7 +107,7 @@ public class SalePost extends BaseTimeEntity {
     @OneToMany(mappedBy = "salePost", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @Comment("한입만 옵션 목록")
-    private List<BiteSizeOption> biteSizeOptions = new ArrayList<>();
+    private List<OneMouthOption> oneMouthOptions = new ArrayList<>();
 
     @OneToMany(mappedBy = "salePost", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -129,11 +129,11 @@ public class SalePost extends BaseTimeEntity {
     @Comment("상품 이미지 목록")
     private List<SalePostAttachmentFile> attachmentFiles = new ArrayList<>();
 
-    public void addBiteSizeOption(BiteSizeOption option) {
+    public void addBiteSizeOption(OneMouthOption option) {
         if (this.saleType != SaleType.ONEMOUTH) {
             throw new RestApiException(SalePostErrorCode.SALE_TYPE_MISMATCH);
         }
-        this.biteSizeOptions.add(option);
+        this.oneMouthOptions.add(option);
         option.assignSalePost(this);
     }
 
