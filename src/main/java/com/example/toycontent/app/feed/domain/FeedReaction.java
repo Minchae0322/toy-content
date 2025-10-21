@@ -33,7 +33,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Entity
-@Table(name = "feed_reactions",
+@Table(name = "tb_feed_reaction",
     uniqueConstraints = @UniqueConstraint(columnNames = {"feed_id", "user_id", "reactionType"}),
     indexes = {
         @Index(name = "idx_feed_reaction", columnList = "feed_id, reactionType")

@@ -82,10 +82,10 @@ public class Feed extends BaseTimeEntity {
   @Column(nullable = false)
   private Integer viewCount = 0;
 
-  @OneToMany(mappedBy = "salePost", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   @Comment("상품 이미지 목록")
-  private List<SalePostAttachmentFile> attachmentFiles = new ArrayList<>();
+  private List<FeedAttachmentFile> attachmentFiles = new ArrayList<>();
 
   @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL)
   private List<FeedHashtag> hashtags;
