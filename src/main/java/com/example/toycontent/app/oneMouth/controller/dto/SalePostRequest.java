@@ -56,7 +56,7 @@ public abstract class SalePostRequest {
     private List<AttachmentInfo> attachmentFileInfos = new ArrayList<>();
 
     @Schema(description = "한입만 판매 옵션 (saleType이 BITE_SIZE인 경우 필수)")
-    private BiteSizeOptionDto biteSizeOption;
+    private OneMouthOptionDto biteSizeOption;
 
     @Schema(description = "일반 판매 옵션 목록 (saleType이 NORMAL인 경우 필수)")
     private List<NormalSaleOptionDto> normalSaleOptions;
@@ -95,7 +95,7 @@ public abstract class SalePostRequest {
   @NoArgsConstructor
   @AllArgsConstructor
   @Schema(description = "한입만 판매 옵션")
-  public static class BiteSizeOptionDto {
+  public static class OneMouthOptionDto {
 
     @NotNull(message = "한입 단위 수량은 필수입니다")
     @Min(value = 1, message = "한입 단위 수량은 1 이상이어야 합니다")

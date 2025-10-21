@@ -16,19 +16,18 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Getter
 @Builder
 @Entity
-@Table(name = "TB_BITE_SIZE_OPTION")
+@Table(name = "TB_ONE_MOUTH_OPTION")
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Comment("한입만 판매 옵션")
-public class BiteSizeOption extends BaseTimeEntity {
+public class OneMouthOption extends BaseTimeEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,7 +46,6 @@ public class BiteSizeOption extends BaseTimeEntity {
   @Column(nullable = false)
   @Comment("한입 가격")
   private Long unitPrice;
-
 
   @Column
   @Comment("원가 (비교용)")
