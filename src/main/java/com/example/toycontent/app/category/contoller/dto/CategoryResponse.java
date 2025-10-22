@@ -47,17 +47,23 @@ public class CategoryResponse {
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime updatedAt;
 
+        @Schema(title = "자식 카테고리 목록")
+        private List<ListView> children;
+
         public static ListView from(Category category) {
             return ListView.builder()
-                    .categoryId(category.getId())
-                    .categoryName(category.getName())
-                    .description(category.getDescription())
-                    .sortOrder(category.getSortOrder())
-                    .isActive(category.getIsActive())
-                    .keywords(category.getKeywords())
-                    .createdAt(category.getCreatedAt())
-                    .updatedAt(category.getUpdatedAt())
-                    .build();
+                .categoryId(category.getId())
+                .categoryName(category.getName())
+                .description(category.getDescription())
+                .sortOrder(category.getSortOrder())
+                .isActive(category.getIsActive())
+                .keywords(category.getKeywords())
+                .createdAt(category.getCreatedAt())
+                .updatedAt(category.getUpdatedAt())
+                .children(category.getChildren().stream()
+                    .map(ListView::from)
+                    .toList())
+                .build();
         }
     }
 
@@ -101,17 +107,24 @@ public class CategoryResponse {
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime updatedAt;
 
+        @Schema(title = "자식 카테고리 목록")
+        private List<ListView> children;
+
         public static Detail from(Category category) {
             return Detail.builder()
-                    .categoryId(category.getId())
-                    .categoryName(category.getName())
-                    .description(category.getDescription())
-                    .sortOrder(category.getSortOrder())
-                    .isActive(category.getIsActive())
-                    .createdAt(category.getCreatedAt())
-                    .updatedAt(category.getUpdatedAt())
-                    .build();
+                .categoryId(category.getId())
+                .categoryName(category.getName())
+                .description(category.getDescription())
+                .sortOrder(category.getSortOrder())
+                .isActive(category.getIsActive())
+                .createdAt(category.getCreatedAt())
+                .updatedAt(category.getUpdatedAt())
+                .children(category.getChildren().stream()
+                    .map(ListView::from)
+                    .toList())
+                .build();
         }
+
     }
 
 
