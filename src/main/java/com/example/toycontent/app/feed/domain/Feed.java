@@ -65,21 +65,21 @@ public class Feed extends BaseTimeEntity {
   @Comment("제품 카테고리 (음료, 스낵, 베이커리 등)")
   private Category category;
 
-  @JoinColumn(name = "sub_category_id")
-  @ManyToOne(fetch = FetchType.LAZY)
-  @Comment("제품 카테고리 (음료, 스낵, 베이커리 등)")
-  private Category subCategory;
-
-  @Column(nullable = false, length = 100)
+  @Column(nullable = false, length = 1000)
+  @Comment("리뷰 내용")
   private String review;
 
-  @Column(name = "구매 가격")
+  @Column(name = "buy_price")
+  @Comment("구매 가격")
   private Integer buyPrice;
 
-  @Column(name = "정가")
+  @Column(name = "price")
+  @Comment("정가")
   private Integer price;
 
   @Column(nullable = false)
+  @Comment("조회수")
+  @Builder.Default
   private Integer viewCount = 0;
 
   @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -87,8 +87,10 @@ public class Feed extends BaseTimeEntity {
   @Comment("상품 이미지 목록")
   private List<FeedAttachmentFile> attachmentFiles = new ArrayList<>();
 
-  @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL)
-  private List<FeedHashtag> hashtags;
+  @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
+  @Comment("피드-해시태그 연결 목록")
+  private List<FeedHashtag> hashtags = new ArrayList<>();
 
   @OneToMany(mappedBy = "feed")
   private List<FeedReaction> reactions;
