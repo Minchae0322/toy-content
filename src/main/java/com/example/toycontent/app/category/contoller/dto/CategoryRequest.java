@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.ArrayList;
 import lombok.*;
 
 import java.util.List;
@@ -42,15 +43,19 @@ public class CategoryRequest {
         @Size(max = 10, message = "키워드는 최대 10개까지 입력 가능합니다.")
         private List<@NotBlank @Size(max = 20, message = "키워드는 20자 이하여야 합니다.") String> keywords;
 
+        @Schema(title = "부모 카테고리 ID", example = "1", description = "null인 경우 최상위 카테고리로 생성됩니다.")
+        private Long parentId;
 
         public Category toEntity(Integer lastOrder) {
             return Category.builder()
-                    .name(this.categoryName)
-                    .description(this.description)
-                    .keywords(convertKeywordsToString(this.keywords))
-                    .sortOrder(lastOrder)
-                    .isActive(true)
-                    .build();
+                .name(this.categoryName)
+                .description(this.description)
+                .keywords(convertKeywordsToString(this.keywords))
+                .sortOrder(lastOrder)
+                .isActive(true)
+                .depth(0)
+                .children(new ArrayList<>())
+                .build();
         }
 
     }

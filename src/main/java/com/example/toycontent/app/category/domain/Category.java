@@ -8,6 +8,7 @@ import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import jakarta.persistence.*;
+import java.util.ArrayList;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Comment;
@@ -58,6 +59,21 @@ public class Category extends BaseTimeEntity {
     @Comment("키워드 (콤마로 구분)")
     private String keywords;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    @Comment("부모 카테고리")
+    private Category parent;
+
+    // 자식 카테고리들
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Category> children = new ArrayList<>();
+
+    @Column(name = "depth", nullable = false)
+    @Comment("카테고리 depth (0: 최상위)")
+    @Builder.Default
+    private Integer depth = 0;
+
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
     private List<Product> products;
 
@@ -92,6 +108,11 @@ public class Category extends BaseTimeEntity {
             throw new RestApiException(CategoryErrorCode.INVALID_SORT_ORDER);
         }
         this.sortOrder = sortOrder;
+    }
+
+    public void setParent(Category parent) {
+        this.parent = parent;
+        this.depth = parent.getDepth() + 1;
     }
 
 
