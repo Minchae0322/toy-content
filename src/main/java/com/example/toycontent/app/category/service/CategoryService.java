@@ -102,7 +102,31 @@ public class CategoryService {
     @Transactional
     public void deleteCategory(Long categoryId) {
         Category category = findCategoryById(categoryId);
+
+        Integer deletedPosition = category.getSortOrder();
+        Long parentId = Optional.ofNullable(category.getParent())
+            .map(Category::getId)
+            .orElse(null);
+
+        //카테고리 삭제
         categoryRepository.delete(category);
+
+        //삭제된 위치 이후의 카테고리들을 앞으로 당김
+        pullUpAfterDeletion(parentId, deletedPosition);
+    }
+
+    /**
+     * 삭제된 위치 이후의 카테고리들을 한 칸씩 앞으로 당김
+     */
+    private void pullUpAfterDeletion(Long parentId, Integer deletedPosition) {
+        List<Category> categoriesToShift = Optional.ofNullable(parentId)
+            .map(id -> categoryRepository.findByParentIdAndSortOrderGreaterThanOrderBySortOrder(
+                id, deletedPosition))
+            .orElseGet(() -> categoryRepository.findByParentIsNullAndSortOrderGreaterThanOrderBySortOrder(
+                deletedPosition));
+
+        categoriesToShift.forEach(cat -> cat.setSortOrder(cat.getSortOrder() - 1));
+        categoryRepository.saveAll(categoriesToShift);
     }
 
     @Transactional

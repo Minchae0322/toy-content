@@ -34,6 +34,13 @@ public interface CategoryRepository extends JpaRepository<Category, Long>, Categ
     List<Category> findByParentIsNullAndSortOrderBetweenOrderBySortOrderDesc(
         Integer start, Integer end);
 
+    // 부모 카테고리가 있는 경우
+    List<Category> findByParentIdAndSortOrderGreaterThanOrderBySortOrder(
+        Long parentId, Integer sortOrder);
+
+    // 최상위 카테고리인 경우
+    List<Category> findByParentIsNullAndSortOrderGreaterThanOrderBySortOrder(
+        Integer sortOrder);
 
 
 }
