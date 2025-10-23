@@ -47,7 +47,7 @@ public class Hashtag extends BaseTimeEntity {
   @Builder.Default
   private Long usageCount = 0L;
 
-  @OneToMany(mappedBy = "hashtag", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(fetch = FetchType.LAZY, mappedBy = "hashtag")
   @Builder.Default
   @Comment("피드-해시태그 연결 목록")
   private List<FeedHashtag> feedHashtags = new ArrayList<>();
