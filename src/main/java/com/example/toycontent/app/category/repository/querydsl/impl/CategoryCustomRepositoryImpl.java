@@ -48,13 +48,14 @@ public class CategoryCustomRepositoryImpl implements CategoryCustomRepository {
 
     @Override
     public List<Category> findCategoriesWithSearchCondition(CategorySearchCondition condition) {
-        BooleanBuilder builder = createSearchCondition(condition);
+        BooleanBuilder conditionBuilder = createSearchCondition(condition);
 
         return queryFactory
-                .selectFrom(category)
-                .where(builder)
-                .orderBy(getDefaultOrderSpecifiers())
-                .fetch();
+            .selectFrom(category)
+            .where(conditionBuilder,
+                category.depth.eq(0))
+            .orderBy(getDefaultOrderSpecifiers())
+            .fetch();
     }
 
 
