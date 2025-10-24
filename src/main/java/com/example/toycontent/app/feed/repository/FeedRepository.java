@@ -2,13 +2,14 @@ package com.example.toycontent.app.feed.repository;
 
 import com.example.toycontent.app.feed.controller.dto.FeedSearchCondition;
 import com.example.toycontent.app.feed.domain.Feed;
+import com.example.toycontent.app.feed.repository.querydsl.FeedRepositoryCustom;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface FeedRepository extends JpaRepository<Feed, Long> {
+public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositoryCustom {
 
   /**
    * 검색 조건에 따른 피드 목록 조회 (페이징)

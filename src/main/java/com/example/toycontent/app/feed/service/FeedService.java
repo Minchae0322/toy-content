@@ -1,6 +1,7 @@
 package com.example.toycontent.app.feed.service;
 
 import com.example.toycontent.app.Product.domain.Product;
+import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
 import com.example.toycontent.app.Product.repository.ProductRepository;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
@@ -12,11 +13,17 @@ import com.example.toycontent.app.feed.controller.dto.FeedSearchCondition;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedAttachmentFile;
 import com.example.toycontent.app.feed.domain.FeedHashtag;
+import com.example.toycontent.app.feed.repository.FeedAttachmentFileRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
+import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import com.example.toycontent.app.hashtag.domain.Hashtag;
 import com.example.toycontent.app.hashtag.repository.HashtagRepository;
 import jakarta.transaction.Transactional;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -32,6 +39,7 @@ public class FeedService {
   private final CategoryRepository categoryRepository;
   private final ProductRepository productRepository;
   private final HashtagRepository hashtagRepository;
+  private final FeedAttachmentFileRepository feedAttachmentFileRepository;
 
   /**
    * 피드 목록 조회 (페이징)
@@ -50,7 +58,8 @@ public class FeedService {
   /**
    * 피드 목록 조회 (커서 페이징) - 인피니티 스크롤용
    */
-  public FeedResponse.FeedCursorResponse getFeedsWithCursor(FeedSearchCondition condition) {
+  public FeedResponse.FeedCursorResponse getFeedsWithCursor(FeedSearchCondition condition, Pageable pageable) {
+
     // size+1개를 조회해서 다음 페이지 존재 여부 확인
     Integer requestSize = condition.getSize();
     condition.setSize(requestSize + 1);
@@ -96,47 +105,72 @@ public class FeedService {
     Category category = categoryRepository.findById(request.getSubCategoryId())
         .orElseThrow(() -> new RestApiException(FeedErrorCode.CATEGORY_NOT_FOUND));
 
-    // Feed 엔티티 생성
-    Feed feed = Feed.builder()
+    Product product = Optional.ofNullable(request.getProductId())
+        .flatMap(productRepository::findById)
+        .orElse(null);
+
+    Feed feed = toEntity(request, category, product);
+
+    // 피드 첨부파일 추가
+    createFeedAttachmentFiles(
+        request.getThumbnailAttachmentInfo(),
+        request.getAttachmentFileInfos(),
+        feed
+    );
+
+    // 새로운 해시태그 추가
+    Optional.ofNullable(request.getHashtags())
+        .orElse(Collections.emptyList())
+        .stream()
+        .map(this::findOrCreateHashtag)
+        .map(hashtag -> FeedHashtag.create(feed, hashtag))
+        .forEach(feed.getHashtags()::add);
+
+    Feed savedFeed = feedRepository.save(feed);
+    return FeedResponse.Detail.from(savedFeed);
+  }
+
+  private Feed toEntity(FeedRequest.CreateFeed request, Category category, Product product) {
+    return Feed.builder()
         .userId(request.getUserId())
         .productNameCustom(request.getProductNameCustom())
         .category(category)
         .review(request.getReview())
+        .product(product)
         .buyPrice(request.getBuyPrice())
         .price(request.getPrice())
         .viewCount(0)
         .build();
+  }
 
-    // 상품 ID가 있는 경우 상품 연결
-    if (request.getProductId() != null) {
-      Product product = productRepository.findById(request.getProductId())
-          .orElseThrow(() -> new RestApiException(FeedErrorCode.PRODUCT_NOT_FOUND));
-      feed.setProduct(product);
-    }
+  /**
+   * 제품 첨부파일(대표 이미지 + 상세 이미지) 생성
+   * - 썸네일(대표 이미지)와 상세 이미지 파일을 각각 엔티티로 변환 후 일괄 저장
+   */
+  private void createFeedAttachmentFiles(AttachmentInfo thumbnailAttachmentInfo,
+      List<AttachmentInfo> attachmentInfos,
+      Feed feed) {
+    // 대표 이미지 파일 생성
+    FeedAttachmentFile primaryImage = createAttachmentFile(thumbnailAttachmentInfo, feed, 0, true);
 
-    // 이미지 URL 처리
-    if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-      for (int i = 0; i < request.getImageUrls().size(); i++) {
-        FeedAttachmentFile attachmentFile = FeedAttachmentFile.builder()
-            .feed(feed)
-            .fileUrl(request.getImageUrls().get(i))
-            .displayOrder(i)
-            .build();
-        feed.getAttachmentFiles().add(attachmentFile);
-      }
-    }
+    // 상세 이미지 파일 생성 (순서 부여)
+    List<FeedAttachmentFile> detailFiles = IntStream.range(0, attachmentInfos.size())
+        .mapToObj(i -> createAttachmentFile(attachmentInfos.get(i), feed, i + 1, false))
+        .toList();
 
-    // 해시태그 처리
-    if (request.getHashtags() != null && !request.getHashtags().isEmpty()) {
-      for (String hashtagName : request.getHashtags()) {
-        Hashtag hashtag = findOrCreateHashtag(hashtagName);
-        FeedHashtag feedHashtag = FeedHashtag.create(feed, hashtag);
-        feed.getHashtags().add(feedHashtag);
-      }
-    }
+    // 대표 + 상세 이미지 통합 저장
+    feedAttachmentFileRepository.saveAll(
+        Stream.concat(Stream.of(primaryImage), detailFiles.stream()).toList()
+    );
+  }
 
-    Feed savedFeed = feedRepository.save(feed);
-    return FeedResponse.Detail.from(savedFeed);
+  /**
+   * 개별 첨부파일 생성 헬퍼 메서드
+   * - AttachmentInfo → ProductAttachmentFile 변환
+   * - 순서(order)와 대표 여부(isPrimary) 설정 포함
+   */
+  private FeedAttachmentFile createAttachmentFile(AttachmentInfo info, Feed feed, int order, boolean isPrimary) {
+    return info.toEntity(feed, order, isPrimary);
   }
 
   /**
@@ -190,14 +224,13 @@ public class FeedService {
     feed.getHashtags().clear();
 
     // 새로운 해시태그 추가
-    if (request.getHashtags() != null && !request.getHashtags().isEmpty()) {
-      for (String hashtagName : request.getHashtags()) {
-        Hashtag hashtag = findOrCreateHashtag(hashtagName);
-        FeedHashtag feedHashtag = FeedHashtag.create(feed, hashtag);
-        feed.getHashtags().add(feedHashtag);
-      }
-    }
-
+    Optional.ofNullable(request.getHashtags())
+        .orElse(Collections.emptyList())
+        .stream()
+        .map(this::findOrCreateHashtag)
+        .map(hashtag -> FeedHashtag.create(feed, hashtag))
+        .forEach(feed.getHashtags()::add);
+    
     return FeedResponse.Detail.from(feed);
   }
 
@@ -222,7 +255,7 @@ public class FeedService {
         .orElseGet(() -> {
           Hashtag newHashtag = Hashtag.builder()
               .name(normalizedName)
-              .usageCount(0)
+              .usageCount(0L)
               .build();
           return hashtagRepository.save(newHashtag);
         });

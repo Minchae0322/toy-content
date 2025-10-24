@@ -1,11 +1,14 @@
 package com.example.toycontent.app.feed.controller.dto;
 
+import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest;
+import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -51,9 +54,12 @@ public abstract class FeedRequest {
     @Max(value = 999999999, message = "정가는 999,999,999원 이하여야 합니다")
     private Integer price;
 
-    @Schema(description = "이미지 URL 목록 (최대 10개)", example = "[\"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\"]", maxLength = 10)
-    @Size(max = 10, message = "이미지는 최대 10개까지 업로드 가능합니다")
-    private List<String> imageUrls;
+    @NotNull(message = "대표이미지는 필수 입니다.")
+    @Schema(description = "대표이미지")
+    private AttachmentFileRequest.AttachmentInfo thumbnailAttachmentInfo;
+
+    @Schema(description = "첨부파일 정보 목록")
+    private List<AttachmentInfo> attachmentFileInfos = new ArrayList<>();
 
     @Schema(description = "해시태그 목록 (# 제외, 최대 20개)", example = "[\"커피\", \"스타벅스\", \"아메리카노\"]", maxLength = 20)
     @Size(max = 20, message = "해시태그는 최대 20개까지 등록 가능합니다")
