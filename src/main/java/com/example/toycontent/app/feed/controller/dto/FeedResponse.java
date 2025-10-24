@@ -1,6 +1,7 @@
 package com.example.toycontent.app.feed.controller.dto;
 
 import com.example.toycontent.app.Product.controller.dto.ProductResponse;
+import com.example.toycontent.app.Product.controller.dto.ProductResponse.FeedProduct;
 import com.example.toycontent.app.common.enumuration.ReactionType;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedAttachmentFile;
@@ -59,7 +60,7 @@ public abstract class FeedResponse {
     private Integer viewCount;
 
     @Schema(description = "대표 이미지 URL")
-    private String thumbnailUrl;
+    private AttachmentFileResponse thumbnailUrl;
 
     @Schema(description = "해시태그 목록")
     private List<String> hashtags;
@@ -77,15 +78,19 @@ public abstract class FeedResponse {
       return ListView.builder()
           .feedId(feed.getId())
           .userId(feed.getUserId())
-          .productId(feed.getProduct() != null ? feed.getProduct().getId() : null)
+          .productId(feed.getProduct().getId())
           .productName(feed.getProductNameCustom())
-          .categoryId(feed.getCategory() != null ? feed.getCategory().getId() : null)
-          .categoryName(feed.getCategory() != null ? feed.getCategory().getCategoryName() : null)
           .reviewSummary(truncateReview(feed.getReview(), 100))
           .buyPrice(feed.getBuyPrice())
           .price(feed.getPrice())
           .viewCount(feed.getViewCount())
-          .thumbnailUrl(getThumbnailUrl(feed.getAttachmentFiles()))
+          .thumbnailUrl(
+              feed.getAttachmentFiles()
+                  .stream()
+                  .findFirst()
+                  .map(AttachmentFileResponse::of)
+                  .orElse(null)
+          )
           .hashtags(extractHashtags(feed.getHashtags()))
           .reactionStats(ReactionStats.from(feed.getReactions()))
           .createdAt(feed.getCreatedAt())
@@ -98,17 +103,6 @@ public abstract class FeedResponse {
         return review;
       }
       return review.substring(0, maxLength) + "...";
-    }
-
-    private static String getThumbnailUrl(List<FeedAttachmentFile> files) {
-      if (files == null || files.isEmpty()) {
-        return null;
-      }
-      return files.stream()
-          .filter(file -> file.getDisplayOrder() == 0)
-          .findFirst()
-          .map(FeedAttachmentFile::getFileUrl)
-          .orElse(files.get(0).getFileUrl());
     }
 
     private static List<String> extractHashtags(List<FeedHashtag> feedHashtags) {
@@ -136,7 +130,7 @@ public abstract class FeedResponse {
     private Long userId;
 
     @Schema(description = "상품 정보")
-    private ProductResponse.ProductDetail product;
+    private ProductResponse.FeedProduct product;
 
     @Schema(description = "카테고리 ID")
     private Long categoryId;
@@ -175,14 +169,18 @@ public abstract class FeedResponse {
       return Detail.builder()
           .feedId(feed.getId())
           .userId(feed.getUserId())
-          .product(ProductInfo.from(feed))
+          //.product(FeedProduct.from(feed)) //TODO:: 추가
           .categoryId(feed.getCategory() != null ? feed.getCategory().getId() : null)
-          .categoryName(feed.getCategory() != null ? feed.getCategory().getCategoryName() : null)
+          .categoryName(feed.getCategory() != null ? feed.getCategory().getName() : null)
           .review(feed.getReview())
           .buyPrice(feed.getBuyPrice())
           .price(feed.getPrice())
           .viewCount(feed.getViewCount())
-          .attachmentFiles(AttachmentFileInfo.fromList(feed.getAttachmentFiles()))
+          .attachmentFiles(
+              feed.getAttachmentFiles()
+                  .stream()
+                  .map(AttachmentFileResponse::of)
+                  .toList())
           .hashtags(HashtagInfo.fromList(feed.getHashtags()))
           .reactionStats(ReactionStats.from(feed.getReactions()))
           .createdAt(feed.getCreatedAt())

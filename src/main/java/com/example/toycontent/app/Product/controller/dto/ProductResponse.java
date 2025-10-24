@@ -94,6 +94,19 @@ public abstract class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(description = "피드용 상품 응답")
+    public static class FeedProduct {
+        @Schema(description = "상품 ID", example = "1")
+        private Long id;
+
+        @Schema(description = "상품명", example = "건담 로봇")
+        private String name;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "상품 상세 응답")
     public static class ProductDetail {
         @Schema(description = "상품 ID", example = "1")

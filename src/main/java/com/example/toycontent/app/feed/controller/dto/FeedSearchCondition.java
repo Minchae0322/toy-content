@@ -29,4 +29,7 @@ public class FeedSearchCondition {
 
   @Parameter(description = "커서 (마지막 조회한 피드 ID)")
   private Long cursor;
+
+  @Schema(description = "Size")
+  private Integer size;
 }

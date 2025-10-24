@@ -4,6 +4,8 @@ import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
 import com.example.toycontent.app.Product.domain.ProductReview;
 import com.example.toycontent.app.Product.domain.ProductReviewAttachmentFile;
+import com.example.toycontent.app.feed.domain.Feed;
+import com.example.toycontent.app.feed.domain.FeedAttachmentFile;
 import com.example.toycontent.app.oneMouth.domain.SalePostAttachmentFile;
 import com.example.toycontent.app.oneMouth.domain.SalePost;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -73,6 +75,20 @@ public abstract class AttachmentFileRequest {
     public SalePostAttachmentFile toEntity(SalePost salePost, int ord, boolean isPrimary) {
       return SalePostAttachmentFile.builder()
           .salePost(salePost)
+          .attachFileId(this.fileId)
+          .fileUrl(this.storedPath)
+          .orgFileNm(this.originName)
+          .fileSize(this.fileSize)
+          .contentType(this.contentType)
+          .fileExplain(this.fileExplain)
+          .sortOrder(ord)
+          .isPrimary(isPrimary)
+          .build();
+    }
+
+    public FeedAttachmentFile toEntity(Feed feed, int ord, boolean isPrimary) {
+      return FeedAttachmentFile.builder()
+          .feed(feed)
           .attachFileId(this.fileId)
           .fileUrl(this.storedPath)
           .orgFileNm(this.originName)
