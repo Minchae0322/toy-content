@@ -71,23 +71,6 @@ public abstract class ProductResponse {
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime createdAt;
 
-        public static ProductList of(Product product, ProductReactionResponse.ProductUserReaction userReaction) {
-            return ProductList.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .brand(product.getBrand())
-                .status(product.getStatus())
-                .price(product.getPrice())
-                .viewCount(product.getViewCount())
-                .likeCount(product.getLikeCount())
-                .averageRating(product.getAvgRating())
-                .reviewCount(product.getProductReviews().size())
-                .categoryName(product.getCategory().getName())
-                .releaseDate(product.getReleaseDate())
-                .createdAt(product.getCreatedAt())
-                .build();
-        }
-
     }
 
     @Data
@@ -101,6 +84,23 @@ public abstract class ProductResponse {
 
         @Schema(description = "상품명", example = "건담 로봇")
         private String name;
+
+        @Schema(description = "브랜드명", example = "반다이")
+        private String brand;
+
+        @Schema(description = "대표 이미지")
+        private AttachmentFileResponse thumbnailDto;
+
+        public static FeedProduct of(Product product) {
+            return FeedProduct.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .brand(product.getBrand())
+                .thumbnailDto(
+                    AttachmentFileResponse.of(product.getProductAttachmentFiles().get(0)))
+                .build();
+        }
+
     }
 
     @Data
