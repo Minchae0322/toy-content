@@ -107,10 +107,6 @@ public abstract class FeedRequest {
     @Max(value = 999999999, message = "정가는 999,999,999원 이하여야 합니다")
     private Integer price;
 
-    @Schema(description = "이미지 URL 목록 (최대 10개)", example = "[\"https://example.com/image1.jpg\"]", maxLength = 10)
-    @Size(max = 10, message = "이미지는 최대 10개까지 업로드 가능합니다")
-    private List<String> imageUrls;
-
     @Schema(description = "해시태그 목록 (# 제외, 최대 20개)", example = "[\"커피\", \"맛집\"]", maxLength = 20)
     @Size(max = 20, message = "해시태그는 최대 20개까지 등록 가능합니다")
     private List<@Size(max = 50, message = "해시태그는 최대 50자까지 입력 가능합니다") String> hashtags;

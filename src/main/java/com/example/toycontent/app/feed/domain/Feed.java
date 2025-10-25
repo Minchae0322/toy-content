@@ -3,6 +3,7 @@ package com.example.toycontent.app.feed.domain;
 import com.example.toycontent.app.Product.domain.Product;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseTimeEntity;
+import com.example.toycontent.app.feed.controller.dto.FeedRequest;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -25,6 +26,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.envers.NotAudited;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Getter
@@ -76,6 +78,7 @@ public class Feed extends BaseTimeEntity {
 
   @Column(nullable = false)
   @Comment("조회수")
+  @NotAudited
   @Builder.Default
   private Integer viewCount = 0;
 
@@ -92,4 +95,29 @@ public class Feed extends BaseTimeEntity {
   @OneToMany(mappedBy = "feed")
   private List<FeedReaction> reactions;
 
+
+  /**
+   * 피드 정보 업데이트 (첨부파일 제외)
+   */
+  public void update(FeedRequest.UpdateFeed request, Category category, Product product) {
+    this.productNameCustom = request.getProductNameCustom();
+    this.review = request.getReview();
+    this.buyPrice = request.getBuyPrice();
+    this.price = request.getPrice();
+    this.category = category;
+    this.product = product;
+  }
+
+  /**
+   * 해시태그 업데이트 (기존 삭제 후 새로 추가)
+   */
+  public void updateHashtags(List<FeedHashtag> newHashtags) {
+    this.hashtags.clear();
+    this.hashtags.addAll(newHashtags);
+  }
+
+  public void incrementViewCount() {
+    this.viewCount++;
+
+  }
 }

@@ -4,7 +4,6 @@ import com.example.toycontent.app.Product.controller.dto.ProductResponse;
 import com.example.toycontent.app.Product.controller.dto.ProductResponse.FeedProduct;
 import com.example.toycontent.app.common.enumuration.ReactionType;
 import com.example.toycontent.app.feed.domain.Feed;
-import com.example.toycontent.app.feed.domain.FeedAttachmentFile;
 import com.example.toycontent.app.feed.domain.FeedHashtag;
 import com.example.toycontent.app.feed.domain.FeedReaction;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
@@ -169,7 +168,7 @@ public abstract class FeedResponse {
       return Detail.builder()
           .feedId(feed.getId())
           .userId(feed.getUserId())
-          //.product(FeedProduct.from(feed)) //TODO:: 추가
+          .product(FeedProduct.of(feed.getProduct()))
           .categoryId(feed.getCategory() != null ? feed.getCategory().getId() : null)
           .categoryName(feed.getCategory() != null ? feed.getCategory().getName() : null)
           .review(feed.getReview())

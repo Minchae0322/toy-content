@@ -58,7 +58,7 @@ public class FeedService {
   /**
    * 피드 목록 조회 (커서 페이징) - 인피니티 스크롤용
    */
-  public FeedResponse.FeedCursorResponse getFeedsWithCursor(FeedSearchCondition condition, Pageable pageable) {
+  public FeedResponse.FeedCursorResponse getFeedsWithCursor(FeedSearchCondition condition) {
 
     // size+1개를 조회해서 다음 페이지 존재 여부 확인
     Integer requestSize = condition.getSize();
@@ -174,63 +174,40 @@ public class FeedService {
   }
 
   /**
-   * 피드 수정
+   * 피드 수정 (첨부파일은 수정 불가)
    */
   @Transactional
-  public FeedResponse.Detail updateFeed(Long feedId, FeedRequest.UpdateFeed request) {
+  public FeedResponse.Detail updateFeed(Long feedId, FeedRequest.UpdateFeed request, Long currentUserId) {
     Feed feed = findFeedById(feedId);
 
     // 권한 확인
-    if (!feed.getUserId().equals(request.getUserId())) {
-      throw new RestApiException(FeedErrorCode.UNAUTHORIZED_ACCESS);
+    if (!currentUserId.equals(feed.getUserId())) {
+      throw new RestApiException(FeedErrorCode.CREATOR_NOT_MATCH);
     }
 
-    // 카테고리 업데이트
-    if (request.getCategoryId() != null) {
-      Category category = categoryRepository.findById(request.getCategoryId())
-          .orElseThrow(() -> new RestApiException(FeedErrorCode.CATEGORY_NOT_FOUND));
-      feed.setCategory(category);
-    }
+    // 카테고리 조회
+    Category category = Optional.ofNullable(request.getCategoryId())
+        .map(id -> categoryRepository.findById(id)
+            .orElseThrow(() -> new RestApiException(FeedErrorCode.CATEGORY_NOT_FOUND)))
+        .orElse(feed.getCategory());
 
-    // 상품 업데이트
-    if (request.getProductId() != null) {
-      Product product = productRepository.findById(request.getProductId())
-          .orElseThrow(() -> new RestApiException(FeedErrorCode.PRODUCT_NOT_FOUND));
-      feed.setProduct(product);
-    }
+    // 상품 조회
+    Product product = Optional.ofNullable(request.getProductId())
+        .flatMap(productRepository::findById)
+        .orElse(null);
 
     // 기본 정보 업데이트
-    feed.setProductNameCustom(request.getProductNameCustom());
-    feed.setReview(request.getReview());
-    feed.setBuyPrice(request.getBuyPrice());
-    feed.setPrice(request.getPrice());
+    feed.update(request, category, product);
 
-    // 기존 첨부파일 제거
-    feed.getAttachmentFiles().clear();
-
-    // 새로운 이미지 URL 추가
-    if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-      for (int i = 0; i < request.getImageUrls().size(); i++) {
-        FeedAttachmentFile attachmentFile = FeedAttachmentFile.builder()
-            .feed(feed)
-            .fileUrl(request.getImageUrls().get(i))
-            .displayOrder(i)
-            .build();
-        feed.getAttachmentFiles().add(attachmentFile);
-      }
-    }
-
-    // 기존 해시태그 제거
-    feed.getHashtags().clear();
-
-    // 새로운 해시태그 추가
-    Optional.ofNullable(request.getHashtags())
+    // 해시태그 업데이트
+    List<FeedHashtag> newHashtags = Optional.ofNullable(request.getHashtags())
         .orElse(Collections.emptyList())
         .stream()
         .map(this::findOrCreateHashtag)
         .map(hashtag -> FeedHashtag.create(feed, hashtag))
-        .forEach(feed.getHashtags()::add);
-    
+        .toList();
+    feed.updateHashtags(newHashtags);
+
     return FeedResponse.Detail.from(feed);
   }
 

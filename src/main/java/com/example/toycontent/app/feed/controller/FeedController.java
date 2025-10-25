@@ -1,5 +1,6 @@
 package com.example.toycontent.app.feed.controller;
 
+import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.response.ApiResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedRequest;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse;
@@ -87,9 +88,10 @@ public class FeedController {
   @PutMapping("/{feedId}")
   public ResponseEntity<ApiResponse<FeedResponse.Detail>> updateFeed(
       @Parameter(description = "피드 ID") @PathVariable Long feedId,
-      @Valid @RequestBody FeedRequest.UpdateFeed request) {
+      @Valid @RequestBody FeedRequest.UpdateFeed request,
+      @CurrentUserId Long userId) {
 
-    FeedResponse.Detail feed = feedService.updateFeed(feedId, request);
+    FeedResponse.Detail feed = feedService.updateFeed(feedId, request, userId);
     return ResponseEntity.ok(ApiResponse.success(feed, "피드가 수정되었습니다."));
   }
 

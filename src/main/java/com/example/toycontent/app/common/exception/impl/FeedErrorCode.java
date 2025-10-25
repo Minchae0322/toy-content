@@ -15,6 +15,7 @@ public enum FeedErrorCode implements ErrorCode {
   UNAUTHORIZED_ACCESS(HttpStatus.FORBIDDEN, "FEED_004", "피드를 수정할 권한이 없습니다."),
   INVALID_IMAGE_COUNT(HttpStatus.BAD_REQUEST, "FEED_005", "이미지는 최대 10개까지 업로드 가능합니다."),
   INVALID_HASHTAG_COUNT(HttpStatus.BAD_REQUEST, "FEED_006", "해시태그는 최대 20개까지 등록 가능합니다."),
+  CREATOR_NOT_MATCH(HttpStatus.NOT_FOUND,"FEED_007", "작성자만 수정할 수 있습니다."),
   INVALID_REVIEW_LENGTH(HttpStatus.BAD_REQUEST, "FEED_007", "리뷰는 1000자 이하로 작성해주세요.");
 
   private final HttpStatus httpStatus;
