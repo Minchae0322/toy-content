@@ -66,6 +66,8 @@ public abstract class FeedResponse {
     @Schema(description = "반응 통계")
     private ReactionStats reactionStats;
 
+    private String buyPlace;
+
     @Schema(description = "생성일시")
     private LocalDateTime createdAt;
 
@@ -90,6 +92,7 @@ public abstract class FeedResponse {
                   .orElse(null)
           )
           .hashtags(extractHashtags(feed.getHashtags()))
+          .buyPlace(feed.getBuyPlace())
           .reactionStats(ReactionStats.from(feed.getReactions()))
           .createdAt(feed.getCreatedAt())
           .updatedAt(feed.getUpdatedAt())
