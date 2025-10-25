@@ -17,6 +17,8 @@ import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import com.example.toycontent.app.hashtag.domain.Hashtag;
 import com.example.toycontent.app.hashtag.repository.HashtagRepository;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import com.example.toycontent.external.user.service.UserCacheService;
 import jakarta.transaction.Transactional;
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +41,8 @@ public class FeedService {
   private final ProductRepository productRepository;
   private final HashtagRepository hashtagRepository;
   private final FeedAttachmentFileRepository feedAttachmentFileRepository;
+  private final UserCacheService userCacheService;
+
 
   /**
    * 피드 목록 조회 (페이징)
@@ -49,7 +53,12 @@ public class FeedService {
 
     return new PageImpl<>(
         feeds.stream()
-            .map(FeedResponse.ListView::from)
+            .map(feed ->  {
+
+              ExternalUserInfo userInfo = userCacheService.getUserInfo(feed.getUserId());
+              return FeedResponse.ListView.from(feed, userInfo);
+
+            })
             .toList(),
         pageable, totalCount);
   }
@@ -66,7 +75,12 @@ public class FeedService {
     List<Feed> feeds = feedRepository.findFeedsWithCursor(condition);
 
     List<FeedResponse.ListView> feedResponses = feeds.stream()
-        .map(FeedResponse.ListView::from)
+        .map(feed -> {
+
+          ExternalUserInfo userInfo = userCacheService.getUserInfo(feed.getUserId());
+          return FeedResponse.ListView.from(feed, userInfo);
+
+        })
         .toList();
 
     return FeedResponse.FeedCursorResponse.of(feedResponses, requestSize);
@@ -79,7 +93,12 @@ public class FeedService {
     List<Feed> feeds = feedRepository.findFeedsWithSearchCondition(condition);
 
     return feeds.stream()
-        .map(FeedResponse.ListView::from)
+        .map(feed -> {
+
+          ExternalUserInfo userInfo = userCacheService.getUserInfo(feed.getUserId());
+          return FeedResponse.ListView.from(feed, userInfo);
+
+        })
         .toList();
   }
 
@@ -110,6 +129,8 @@ public class FeedService {
 
     Feed feed = toEntity(request, category, product);
 
+    Feed savedFeed = feedRepository.save(feed);
+
     // 피드 첨부파일 추가
     createFeedAttachmentFiles(
         request.getThumbnailAttachmentInfo(),
@@ -125,7 +146,7 @@ public class FeedService {
         .map(hashtag -> FeedHashtag.create(feed, hashtag))
         .forEach(feed.getHashtags()::add);
 
-    Feed savedFeed = feedRepository.save(feed);
+
     return FeedResponse.Detail.from(savedFeed);
   }
 
@@ -138,6 +159,7 @@ public class FeedService {
         .product(product)
         .buyPrice(request.getBuyPrice())
         .price(request.getPrice())
+        .buyPlace(request.getBuyPlace())
         .viewCount(0)
         .build();
   }
@@ -226,8 +248,7 @@ public class FeedService {
    */
   private Hashtag findOrCreateHashtag(String name) {
     String normalizedName = name.trim().toLowerCase();
-
-    return hashtagRepository.findByName(normalizedName)
+    Hashtag hashtag = hashtagRepository.findByName(normalizedName)
         .orElseGet(() -> {
           Hashtag newHashtag = Hashtag.builder()
               .name(normalizedName)
@@ -235,6 +256,10 @@ public class FeedService {
               .build();
           return hashtagRepository.save(newHashtag);
         });
+
+    hashtag.incrementUsageCount();
+
+    return hashtag;
   }
 
   /**

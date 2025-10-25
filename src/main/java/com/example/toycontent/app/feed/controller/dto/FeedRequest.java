@@ -54,6 +54,8 @@ public abstract class FeedRequest {
     @Max(value = 999999999, message = "정가는 999,999,999원 이하여야 합니다")
     private Integer price;
 
+    private String buyPlace;
+
     @NotNull(message = "대표이미지는 필수 입니다.")
     @Schema(description = "대표이미지")
     private AttachmentFileRequest.AttachmentInfo thumbnailAttachmentInfo;

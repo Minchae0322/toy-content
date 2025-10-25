@@ -6,6 +6,7 @@ import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse.React
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedHashtag;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,7 +31,7 @@ public abstract class FeedResponse {
     private Long feedId;
 
     @Schema(description = "사용자 ID")
-    private Long userId;
+    private ExternalUserInfo userInfo;
 
     @Schema(description = "상품 ID")
     private Long productId;
@@ -71,11 +72,11 @@ public abstract class FeedResponse {
     @Schema(description = "수정일시")
     private LocalDateTime updatedAt;
 
-    public static ListView from(Feed feed) {
+    public static ListView from(Feed feed, ExternalUserInfo userInfo) {
       return ListView.builder()
           .feedId(feed.getId())
-          .userId(feed.getUserId())
-          .productId(feed.getProduct().getId())
+          .userInfo(userInfo)
+          .productId(feed.getProduct() != null ? feed.getProduct().getId() : null)
           .productName(feed.getProductNameCustom())
           .reviewSummary(truncateReview(feed.getReview(), 100))
           .buyPrice(feed.getBuyPrice())
@@ -166,7 +167,7 @@ public abstract class FeedResponse {
       return Detail.builder()
           .feedId(feed.getId())
           .userId(feed.getUserId())
-          .product(FeedProduct.of(feed.getProduct()))
+          .product(feed.getProduct() != null ? FeedProduct.of(feed.getProduct()) : null)
           .categoryId(feed.getCategory() != null ? feed.getCategory().getId() : null)
           .categoryName(feed.getCategory() != null ? feed.getCategory().getName() : null)
           .review(feed.getReview())
@@ -184,6 +185,7 @@ public abstract class FeedResponse {
           .updatedAt(feed.getUpdatedAt())
           .build();
     }
+
   }
 
   @Getter

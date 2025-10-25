@@ -3,7 +3,7 @@ package com.example.toycontent.external.user.service;
 
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.UserErrorCode;
-import com.example.toycontent.external.user.dto.UserInfo;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +28,7 @@ public class UserServiceClient {
   /**
    * 여러 사용자 정보 일괄 조회 (List 반환)
    */
-  public List<UserInfo> getUserInfosOrElseCache(List<Long> userIds) {
+  public List<ExternalUserInfo> getUserInfosOrElseCache(List<Long> userIds) {
     if (ObjectUtils.isEmpty(userIds)) {
       return List.of();
     }
@@ -38,7 +38,7 @@ public class UserServiceClient {
         .toList();
   }
 
-  public UserInfo getUserInfoOrElseCache(Long userId) {
+  public ExternalUserInfo getUserInfoOrElseCache(Long userId) {
     if (userId == null || userId <= 0) {
       throw new RestApiException(UserErrorCode.USER_NOT_INVALID);
     }
@@ -51,8 +51,8 @@ public class UserServiceClient {
    * 사용자 닉네임만 조회 (간단한 버전)
    */
   public String getUserNickname(Long userId) {
-    UserInfo userInfo = getUserInfoOrElseCache(userId);
-    return userInfo != null ? userInfo.getNickname() : "사용자" + userId;
+    ExternalUserInfo externalUserInfo = getUserInfoOrElseCache(userId);
+    return externalUserInfo != null ? externalUserInfo.getNickname() : "사용자" + userId;
   }
 
   /**
@@ -79,8 +79,8 @@ public class UserServiceClient {
   /**
    * 외부 서비스에서 사용자 정보 조회 후 캐시 저장
    */
-  private UserInfo fetchAndCacheUserInfo(Long userId) {
-    UserInfo userInfo = userServiceWebClient.get()
+  private ExternalUserInfo fetchAndCacheUserInfo(Long userId) {
+    ExternalUserInfo externalUserInfo = userServiceWebClient.get()
         .uri("/api/external/users/{userId}", userId)
         .retrieve()
         .onStatus(
@@ -95,35 +95,35 @@ public class UserServiceClient {
             HttpStatusCode::is5xxServerError,
             response -> Mono.error(new RestApiException(UserErrorCode.USER_SERVICE_ERROR))
         )
-        .bodyToMono(UserInfo.class)
+        .bodyToMono(ExternalUserInfo.class)
         .timeout(TIMEOUT)
         .doOnError(error -> log.error("[User service] 서비스 호출 실패: userId={}, error={}", userId,
             error.getMessage()))
         .block();
 
-    if (userInfo == null) {
+    if (externalUserInfo == null) {
       throw new RestApiException(UserErrorCode.USER_NOT_EXIST);
     }
 
-    boolean success = userInfoCacheService.cacheUserInfo(userInfo);
-    return userInfo;
+    boolean success = userInfoCacheService.cacheUserInfo(externalUserInfo);
+    return externalUserInfo;
   }
 
   /**
    * 외부 서비스에서 사용자 정보 일괄 조회
    */
-  private Map<Long, UserInfo> fetchUserInfosFromService(List<Long> userIds) {
+  private Map<Long, ExternalUserInfo> fetchUserInfosFromService(List<Long> userIds) {
     try {
       String userIdsParam = String.join(",",
           userIds.stream().map(String::valueOf).toList());
 
-      List<UserInfo> fetchedUsers = userServiceWebClient.get()
+      List<ExternalUserInfo> fetchedUsers = userServiceWebClient.get()
           .uri(uriBuilder -> uriBuilder
               .path("/api/users")
               .queryParam("ids", userIdsParam)
               .build())
           .retrieve()
-          .bodyToFlux(UserInfo.class)
+          .bodyToFlux(ExternalUserInfo.class)
           .collectList()
           .timeout(TIMEOUT)
           .doOnError(error ->
@@ -137,9 +137,9 @@ public class UserServiceClient {
       }
 
       // List를 Map으로 변환
-      Map<Long, UserInfo> result = fetchedUsers.stream()
+      Map<Long, ExternalUserInfo> result = fetchedUsers.stream()
           .filter(user -> user != null && user.getUserId() != null)
-          .collect(Collectors.toMap(UserInfo::getUserId, user -> user));
+          .collect(Collectors.toMap(ExternalUserInfo::getUserId, user -> user));
 
       // 조회되지 않은 사용자들에 대해 폴백 데이터 생성
       userIds.forEach(userId -> {
@@ -163,8 +163,8 @@ public class UserServiceClient {
   /**
    * 폴백 사용자 정보 생성
    */
-  private UserInfo createFallbackUserInfo(Long userId) {
-    return UserInfo.builder()
+  private ExternalUserInfo createFallbackUserInfo(Long userId) {
+    return ExternalUserInfo.builder()
         .userId(userId)
         .nickname("사용자" + userId)
         .email(null)
