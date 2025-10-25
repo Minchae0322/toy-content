@@ -1,6 +1,6 @@
 package com.example.toycontent.app.oneMouth.domain;
 
-import com.example.toycontent.app.Product.domain.Product;
+import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.OneMouthStatus;
 import com.example.toycontent.app.common.enumuration.SaleType;

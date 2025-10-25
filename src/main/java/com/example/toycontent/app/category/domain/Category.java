@@ -1,8 +1,7 @@
 package com.example.toycontent.app.category.domain;
 
 
-import ch.qos.logback.core.util.StringUtil;
-import com.example.toycontent.app.Product.domain.Product;
+import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.category.contoller.dto.CategoryRequest;
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.exception.RestApiException;
@@ -10,17 +9,11 @@ import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
-import org.hibernate.annotations.Fetch;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 

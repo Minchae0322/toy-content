@@ -1,6 +1,7 @@
 package com.example.toycontent.app.feed.domain;
 
 import com.example.toycontent.app.common.BaseTimeEntity;
+import com.example.toycontent.app.common.enumuration.FeedReactionType;
 import com.example.toycontent.app.common.enumuration.ReactionType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -53,6 +54,14 @@ public class FeedReaction extends BaseTimeEntity {
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
-  private ReactionType reactionType;
+  private FeedReactionType reactionType;
+
+  public static FeedReaction create(Feed feed, Long userId, FeedReactionType reactionType) {
+    return FeedReaction.builder()
+        .feed(feed)
+        .userId(userId)
+        .reactionType(reactionType)
+        .build();
+  }
 
 }

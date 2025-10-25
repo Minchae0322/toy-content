@@ -37,6 +37,14 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+
+    //webClient
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+
 
     //validation
     implementation("org.springframework.boot:spring-boot-starter-validation")

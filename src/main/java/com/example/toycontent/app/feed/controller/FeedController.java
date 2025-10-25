@@ -1,12 +1,16 @@
 package com.example.toycontent.app.feed.controller;
 
 import com.example.toycontent.app.common.annotation.CurrentUserId;
+import com.example.toycontent.app.common.enumuration.FeedReactionType;
+import com.example.toycontent.app.common.enumuration.ReactionType;
 import com.example.toycontent.app.common.response.ApiResponse;
+import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedRequest;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.FeedCursorResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.ListView;
 import com.example.toycontent.app.feed.controller.dto.FeedSearchCondition;
+import com.example.toycontent.app.feed.service.FeedReactionService;
 import com.example.toycontent.app.feed.service.FeedService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,6 +32,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "FeedController", description = "피드 API")
@@ -36,6 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(value = "/feeds")
 public class FeedController {
   private final FeedService feedService;
+  private final FeedReactionService feedReactionService;
 
   @Operation(summary = "피드 목록 조회 (페이징)", description = "피드 목록을 페이징하여 조회합니다.")
   @GetMapping
@@ -47,7 +53,6 @@ public class FeedController {
     return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 
-  // 새로운 커서 기반 API (클라이언트용)
   @Operation(summary = "피드 목록 조회 (커서 페이징)", description = "인피니티 스크롤용 커서 기반 API")
   @GetMapping("/scroll")
   public ResponseEntity<ApiResponse<FeedCursorResponse>> getFeedsWithCursor(
@@ -102,6 +107,28 @@ public class FeedController {
 
     feedService.deleteFeed(feedId);
     return ResponseEntity.ok(ApiResponse.success(null, "피드가 삭제되었습니다."));
+  }
+
+  @Operation(summary = "피드 리액션 토글", description = "피드에 리액션을 추가/제거/변경합니다.")
+  @PostMapping("/{feedId}/reactions")
+  public ResponseEntity<ApiResponse<FeedReactionResponse.ReactionResult>> toggleReaction(
+      @Parameter(description = "피드 ID") @PathVariable Long feedId,
+      @Parameter(description = "리액션 타입") @RequestParam FeedReactionType reactionType,
+      @CurrentUserId Long userId) {
+
+    FeedReactionResponse.ReactionResult result =
+        feedReactionService.toggleReaction(feedId, userId, reactionType);
+    return ResponseEntity.ok(ApiResponse.success(result));
+  }
+
+  @Operation(summary = "피드 리액션 제거", description = "피드의 리액션을 제거합니다.")
+  @DeleteMapping("/{feedId}/reactions")
+  public ResponseEntity<ApiResponse<Void>> removeReaction(
+      @Parameter(description = "피드 ID") @PathVariable Long feedId,
+      @CurrentUserId Long userId) {
+
+    feedReactionService.removeReaction(feedId, userId);
+    return ResponseEntity.ok(ApiResponse.success(null, "리액션이 제거되었습니다."));
   }
 
 }

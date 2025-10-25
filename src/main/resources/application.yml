@@ -10,6 +10,17 @@ spring:
     url: jdbc:mysql://localhost:3306/content?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: root
     password: __REDACTED__
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
   jpa:
     show-sql: false
     hibernate:
@@ -27,6 +38,13 @@ spring:
       max-file-size: 1GB
       max-request-size: 1GB
       file-size-threshold: 2KB
+
+external:
+  user-service:
+    protocol: http
+    host: localhost
+    port: 8081
+    api-key: test
 
 springdoc:
   api-docs:

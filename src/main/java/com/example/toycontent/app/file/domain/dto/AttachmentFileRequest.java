@@ -1,9 +1,9 @@
 package com.example.toycontent.app.file.domain.dto;
 
-import com.example.toycontent.app.Product.domain.Product;
-import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
-import com.example.toycontent.app.Product.domain.ProductReview;
-import com.example.toycontent.app.Product.domain.ProductReviewAttachmentFile;
+import com.example.toycontent.app.product.domain.Product;
+import com.example.toycontent.app.product.domain.ProductAttachmentFile;
+import com.example.toycontent.app.product.domain.ProductReview;
+import com.example.toycontent.app.product.domain.ProductReviewAttachmentFile;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedAttachmentFile;
 import com.example.toycontent.app.oneMouth.domain.SalePostAttachmentFile;
