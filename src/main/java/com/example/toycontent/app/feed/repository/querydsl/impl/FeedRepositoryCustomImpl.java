@@ -19,7 +19,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
 
-  private JPAQueryFactory queryFactory;
+  private final JPAQueryFactory queryFactory;
 
   @Override
   public List<Feed> findFeedsWithCursor(FeedSearchCondition condition) {

@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserInfo {
+public class ExternalUserInfo {
 
   @Schema(description = "사용자 아이디")
   private Long userId;

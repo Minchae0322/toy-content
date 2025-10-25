@@ -84,6 +84,8 @@ public class Feed extends BaseTimeEntity {
   @Builder.Default
   private Integer viewCount = 0;
 
+  private String buyPlace;
+
   @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   @Comment("상품 이미지 목록")

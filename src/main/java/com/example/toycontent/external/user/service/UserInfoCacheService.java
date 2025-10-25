@@ -1,6 +1,6 @@
 package com.example.toycontent.external.user.service;
 
-import com.example.toycontent.external.user.dto.UserInfo;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
@@ -35,7 +35,7 @@ public class UserInfoCacheService {
   /**
    * 단일 사용자 정보 캐시 조회
    */
-  public Optional<UserInfo> getCachedUserInfos(Long userId) {
+  public Optional<ExternalUserInfo> getCachedUserInfos(Long userId) {
     return Optional.ofNullable(userId)
         .map(this::buildCacheKey)
         .map(this::getCachedValue)
@@ -55,27 +55,27 @@ public class UserInfoCacheService {
   /**
    * 단일 사용자 정보 캐시 저장
    */
-  public boolean cacheUserInfo(UserInfo userInfo) {
-    return cacheUserInfo(userInfo, DEFAULT_TTL);
+  public boolean cacheUserInfo(ExternalUserInfo externalUserInfo) {
+    return cacheUserInfo(externalUserInfo, DEFAULT_TTL);
   }
 
   /**
    * 단일 사용자 정보 캐시 저장 (TTL 지정)
    */
-  public boolean cacheUserInfo(UserInfo userInfo, Duration ttl) {
-    if (!isValidUserInfo(userInfo) || ttl == null || ttl.isNegative()) {
+  public boolean cacheUserInfo(ExternalUserInfo externalUserInfo, Duration ttl) {
+    if (!isValidUserInfo(externalUserInfo) || ttl == null || ttl.isNegative()) {
       return false;
     }
 
     try {
-      String cacheKey = buildCacheKey(userInfo.getUserId());
-      String serializedValue = serializeUserInfo(userInfo);
+      String cacheKey = buildCacheKey(externalUserInfo.getUserId());
+      String serializedValue = serializeUserInfo(externalUserInfo);
 
       redisTemplate.opsForValue().set(cacheKey, serializedValue, ttl);
       return true;
 
     } catch (Exception e) {
-      log.error("Redis 캐시 저장 실패: userId={}", userInfo.getUserId(), e);
+      log.error("Redis 캐시 저장 실패: userId={}", externalUserInfo.getUserId(), e);
       return false;
     }
   }
@@ -83,24 +83,24 @@ public class UserInfoCacheService {
   /**
    * 여러 사용자 정보 일괄 캐시 저장
    */
-  public int cacheUserInfoBatch(List<UserInfo> userInfos) {
-    return cacheUserInfoBatch(userInfos, DEFAULT_TTL);
+  public int cacheUserInfoBatch(List<ExternalUserInfo> externalUserInfos) {
+    return cacheUserInfoBatch(externalUserInfos, DEFAULT_TTL);
   }
 
   /**
    * 여러 사용자 정보 일괄 캐시 저장 (TTL 지정)
    */
-  public int cacheUserInfoBatch(List<UserInfo> userInfos, Duration ttl) {
-    if (CollectionUtils.isEmpty(userInfos) || ttl == null || ttl.isNegative()) {
+  public int cacheUserInfoBatch(List<ExternalUserInfo> externalUserInfos, Duration ttl) {
+    if (CollectionUtils.isEmpty(externalUserInfos) || ttl == null || ttl.isNegative()) {
       log.warn("⚠️ 유효하지 않은 사용자 정보 목록 또는 TTL");
       return 0;
     }
 
-    List<UserInfo> validUserInfos = userInfos.stream()
+    List<ExternalUserInfo> validExternalUserInfos = externalUserInfos.stream()
         .filter(this::isValidUserInfo)
         .toList();
 
-    if (validUserInfos.isEmpty()) {
+    if (validExternalUserInfos.isEmpty()) {
       log.warn("⚠️ 저장할 유효한 사용자 정보가 없습니다");
       return 0;
     }
@@ -108,10 +108,10 @@ public class UserInfoCacheService {
     try {
       // Redis Pipeline을 사용하여 일괄 처리
       redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-        validUserInfos.forEach(userInfo -> {
+        validExternalUserInfos.forEach(externalUserInfo -> {
           try {
-            String cacheKey = buildCacheKey(userInfo.getUserId());
-            String serializedValue = serializeUserInfo(userInfo);
+            String cacheKey = buildCacheKey(externalUserInfo.getUserId());
+            String serializedValue = serializeUserInfo(externalUserInfo);
             connection.setEx(
                 cacheKey.getBytes(),
                 ttl.getSeconds(),
@@ -119,16 +119,16 @@ public class UserInfoCacheService {
             );
           } catch (Exception e) {
             log.warn("⚠️ 개별 사용자 정보 캐시 저장 실패: userId={}",
-                userInfo.getUserId(), e);
+                externalUserInfo.getUserId(), e);
           }
         });
         return null;
       });
 
       log.debug("💾 사용자 정보 일괄 캐시 저장 완료: 성공={}/{}, ttl={}초",
-          validUserInfos.size(), userInfos.size(), ttl.getSeconds());
+          validExternalUserInfos.size(), externalUserInfos.size(), ttl.getSeconds());
 
-      return validUserInfos.size();
+      return validExternalUserInfos.size();
 
     } catch (Exception e) {
       log.error("❌ Redis 일괄 캐시 저장 실패", e);
@@ -139,15 +139,15 @@ public class UserInfoCacheService {
   /**
    * 폴백 데이터 캐시 저장 (짧은 TTL)
    */
-  public boolean cacheFallbackUserInfo(UserInfo fallbackUserInfo) {
-    if (!isValidUserInfo(fallbackUserInfo)) {
+  public boolean cacheFallbackUserInfo(ExternalUserInfo fallbackExternalUserInfo) {
+    if (!isValidUserInfo(fallbackExternalUserInfo)) {
       return false;
     }
 
-    if (isFallbackUserInfo(fallbackUserInfo)) {
-      boolean result = cacheUserInfo(fallbackUserInfo, FALLBACK_TTL);
+    if (isFallbackUserInfo(fallbackExternalUserInfo)) {
+      boolean result = cacheUserInfo(fallbackExternalUserInfo, FALLBACK_TTL);
       if (result) {
-        log.debug("🔄 폴백 사용자 정보 캐시 저장: userId={}", fallbackUserInfo.getUserId());
+        log.debug("🔄 폴백 사용자 정보 캐시 저장: userId={}", fallbackExternalUserInfo.getUserId());
       }
       return result;
     }
@@ -314,20 +314,20 @@ public class UserInfoCacheService {
     return CACHE_KEY_PREFIX + userId;
   }
 
-  private String serializeUserInfo(UserInfo userInfo) throws JsonProcessingException {
-    return objectMapper.writeValueAsString(userInfo);
+  private String serializeUserInfo(ExternalUserInfo externalUserInfo) throws JsonProcessingException {
+    return objectMapper.writeValueAsString(externalUserInfo);
   }
 
-  private UserInfo deserializeUserInfo(String json) {
+  private ExternalUserInfo deserializeUserInfo(String json) {
     try {
-      return objectMapper.readValue(json, UserInfo.class);
+      return objectMapper.readValue(json, ExternalUserInfo.class);
     } catch (JsonProcessingException e) {
       log.error("UserInfo 역직렬화 실패: json={}", json, e);
       return null;
     }
   }
 
-  private UserInfo parseUserInfoSafely(String cachedValue, Long userId) {
+  private ExternalUserInfo parseUserInfoSafely(String cachedValue, Long userId) {
     if (!StringUtils.hasText(cachedValue)) {
       return null;
     }
@@ -342,15 +342,15 @@ public class UserInfoCacheService {
     }
   }
 
-  private boolean isValidUserInfo(UserInfo userInfo) {
-    return userInfo != null
-        && userInfo.getUserId() != null
-        && StringUtils.hasText(userInfo.getNickname());
+  private boolean isValidUserInfo(ExternalUserInfo externalUserInfo) {
+    return externalUserInfo != null
+        && externalUserInfo.getUserId() != null
+        && StringUtils.hasText(externalUserInfo.getNickname());
   }
 
-  private boolean isFallbackUserInfo(UserInfo userInfo) {
-    return userInfo != null
-        && StringUtils.hasText(userInfo.getNickname())
-        && userInfo.getNickname().startsWith(FALLBACK_NICKNAME_PREFIX);
+  private boolean isFallbackUserInfo(ExternalUserInfo externalUserInfo) {
+    return externalUserInfo != null
+        && StringUtils.hasText(externalUserInfo.getNickname())
+        && externalUserInfo.getNickname().startsWith(FALLBACK_NICKNAME_PREFIX);
   }
 }

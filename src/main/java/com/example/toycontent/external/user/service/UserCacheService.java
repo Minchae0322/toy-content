@@ -1,6 +1,6 @@
 package com.example.toycontent.external.user.service;
 
-import com.example.toycontent.external.user.dto.UserInfo;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,10 +23,10 @@ public class UserCacheService {
   /**
    * 사용자 정보 조회 (캐시 우선, 실패 시 HTTP 호출)
    */
-  public UserInfo getUserInfo(Long userId) {
+  public ExternalUserInfo getUserInfo(Long userId) {
     String cacheKey = USER_CACHE_PREFIX + userId;
 
-    UserInfo cachedUser = getCachedUserInfo(cacheKey);
+    ExternalUserInfo cachedUser = getCachedUserInfo(cacheKey);
     if (cachedUser != null) {
       log.debug("Cache hit for userId: {}", userId);
       return cachedUser;
@@ -34,11 +34,11 @@ public class UserCacheService {
 
     //캐시 미스 시 HTTP 호출
     log.debug("Cache miss for userId: {}, calling user service", userId);
-    UserInfo userInfo = userServiceClient.getUserInfoOrElseCache(userId);
+    ExternalUserInfo externalUserInfo = userServiceClient.getUserInfoOrElseCache(userId);
 
     //조회 성공 시 캐시에 저장
-    cacheUserInfo(cacheKey, userInfo, CACHE_TTL);
-    return userInfo;
+    cacheUserInfo(cacheKey, externalUserInfo, CACHE_TTL);
+    return externalUserInfo;
   }
 
   /**
@@ -53,38 +53,38 @@ public class UserCacheService {
   /**
    * 사용자 정보 캐시 갱신 (UserService에서 이벤트 받을 때)
    */
-  public void refreshUserCache(Long userId, UserInfo userInfo) {
+  public void refreshUserCache(Long userId, ExternalUserInfo externalUserInfo) {
     String cacheKey = USER_CACHE_PREFIX + userId;
-    cacheUserInfo(cacheKey, userInfo, CACHE_TTL);
+    cacheUserInfo(cacheKey, externalUserInfo, CACHE_TTL);
     log.info("Refreshed cache for userId: {}", userId);
   }
 
-  private UserInfo getCachedUserInfo(String cacheKey) {
+  private ExternalUserInfo getCachedUserInfo(String cacheKey) {
     try {
       Object cached = redisTemplate.opsForValue().get(cacheKey);
-      return cached instanceof UserInfo ? (UserInfo) cached : null;
+      return cached instanceof ExternalUserInfo ? (ExternalUserInfo) cached : null;
     } catch (Exception e) {
       log.warn("Failed to get cache for key: {}", cacheKey, e);
       return null;
     }
   }
 
-  private void cacheUserInfo(String cacheKey, UserInfo userInfo, Duration ttl) {
+  private void cacheUserInfo(String cacheKey, ExternalUserInfo externalUserInfo, Duration ttl) {
     try {
-      redisTemplate.opsForValue().set(cacheKey, userInfo, ttl);
+      redisTemplate.opsForValue().set(cacheKey, externalUserInfo, ttl);
     } catch (Exception e) {
       log.warn("Failed to cache user info for key: {}", cacheKey, e);
     }
   }
 
-  private UserInfo getExpiredCacheOrDefault(String cacheKey, Long userId) {
+  private ExternalUserInfo getExpiredCacheOrDefault(String cacheKey, Long userId) {
     // 만료된 캐시라도 있으면 반환 (긴급 상황 대응)
     try {
       Object cached = redisTemplate.opsForValue().get(cacheKey + ":backup");
-      if (cached instanceof UserInfo userInfo) {
+      if (cached instanceof ExternalUserInfo externalUserInfo) {
         // 짧은 TTL로 다시 캐시 (서비스 복구 시 빠른 갱신)
-        cacheUserInfo(cacheKey, userInfo, FALLBACK_TTL);
-        return userInfo;
+        cacheUserInfo(cacheKey, externalUserInfo, FALLBACK_TTL);
+        return externalUserInfo;
       }
     } catch (Exception e) {
       log.warn("Failed to get backup cache", e);
@@ -93,8 +93,8 @@ public class UserCacheService {
     return createFallbackUserInfo(userId);
   }
 
-  private UserInfo createFallbackUserInfo(Long userId) {
-    return UserInfo.builder()
+  private ExternalUserInfo createFallbackUserInfo(Long userId) {
+    return ExternalUserInfo.builder()
         .userId(userId)
         .nickname("사용자" + userId) // 기본 닉네임
         .profileImageFile(null)
