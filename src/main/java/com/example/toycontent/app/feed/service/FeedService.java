@@ -1,8 +1,7 @@
 package com.example.toycontent.app.feed.service;
 
-import com.example.toycontent.app.Product.domain.Product;
-import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
-import com.example.toycontent.app.Product.repository.ProductRepository;
+import com.example.toycontent.app.product.domain.Product;
+import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.exception.RestApiException;

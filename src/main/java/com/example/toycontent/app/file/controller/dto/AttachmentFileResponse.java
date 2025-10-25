@@ -1,7 +1,7 @@
 package com.example.toycontent.app.file.controller.dto;
 
-import com.example.toycontent.app.Product.domain.ProductAttachmentFile;
-import com.example.toycontent.app.Product.domain.ProductReviewAttachmentFile;
+import com.example.toycontent.app.product.domain.ProductAttachmentFile;
+import com.example.toycontent.app.product.domain.ProductReviewAttachmentFile;
 import com.example.toycontent.app.feed.domain.FeedAttachmentFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;

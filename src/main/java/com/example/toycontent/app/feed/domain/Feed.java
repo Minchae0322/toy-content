@@ -1,8 +1,9 @@
 package com.example.toycontent.app.feed.domain;
 
-import com.example.toycontent.app.Product.domain.Product;
+import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseTimeEntity;
+import com.example.toycontent.app.common.enumuration.FeedReactionType;
 import com.example.toycontent.app.feed.controller.dto.FeedRequest;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -19,6 +20,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -119,5 +121,46 @@ public class Feed extends BaseTimeEntity {
   public void incrementViewCount() {
     this.viewCount++;
 
+  }
+
+  /**
+   * 리액션 추가
+   */
+  public FeedReaction addReaction(Long userId, FeedReactionType reactionType) {
+    FeedReaction reaction = FeedReaction.create(this, userId, reactionType);
+    this.reactions.add(reaction);
+    return reaction;
+  }
+
+  /**
+   * 리액션 제거
+   */
+  public void removeReaction(FeedReaction reaction) {
+    this.reactions.remove(reaction);
+  }
+
+  /**
+   * 특정 사용자의 특정 타입 리액션 조회
+   */
+  public Optional<FeedReaction> findReaction(Long userId, FeedReactionType reactionType) {
+    return this.reactions.stream()
+        .filter(r -> r.getUserId().equals(userId) && r.getReactionType() == reactionType)
+        .findFirst();
+  }
+
+  /**
+   * 리액션 타입별 개수 조회
+   */
+  public long getReactionCount(FeedReactionType reactionType) {
+    return this.reactions.stream()
+        .filter(r -> r.getReactionType() == reactionType)
+        .count();
+  }
+
+  /**
+   * 전체 리액션 개수
+   */
+  public long getTotalReactionCount() {
+    return this.reactions.size();
   }
 }
