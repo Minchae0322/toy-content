@@ -1,5 +1,6 @@
 package com.example.toycontent.app.feed.controller.dto;
 
+import com.example.toycontent.app.common.enumuration.FeedEvaluation;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.FeedProduct;
 import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse.ReactionStats;
@@ -8,6 +9,8 @@ import com.example.toycontent.app.feed.domain.FeedHashtag;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -66,7 +69,11 @@ public abstract class FeedResponse {
     @Schema(description = "반응 통계")
     private ReactionStats reactionStats;
 
+    @Schema(description = "구매처", example = "무신사")
     private String buyPlace;
+
+    @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
+    private FeedEvaluation feedEvaluation;
 
     @Schema(description = "생성일시")
     private LocalDateTime createdAt;
@@ -79,7 +86,8 @@ public abstract class FeedResponse {
           .feedId(feed.getId())
           .userInfo(userInfo)
           .productId(feed.getProduct() != null ? feed.getProduct().getId() : null)
-          .productName(feed.getProductNameCustom())
+          .productName(
+              feed.getProduct() != null ? feed.getProduct().getName() : feed.getProductNameCustom())
           .reviewSummary(truncateReview(feed.getReview(), 100))
           .buyPrice(feed.getBuyPrice())
           .price(feed.getPrice())
@@ -94,6 +102,7 @@ public abstract class FeedResponse {
           .hashtags(extractHashtags(feed.getHashtags()))
           .buyPlace(feed.getBuyPlace())
           .reactionStats(ReactionStats.from(feed.getReactions()))
+          .feedEvaluation(feed.getEvaluation())
           .createdAt(feed.getCreatedAt())
           .updatedAt(feed.getUpdatedAt())
           .build();
@@ -160,6 +169,9 @@ public abstract class FeedResponse {
     @Schema(description = "반응 통계")
     private ReactionStats reactionStats;
 
+    @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
+    private FeedEvaluation feedEvaluation;
+
     @Schema(description = "생성일시")
     private LocalDateTime createdAt;
 
@@ -184,6 +196,7 @@ public abstract class FeedResponse {
                   .toList())
           .hashtags(HashtagInfo.fromList(feed.getHashtags()))
           .reactionStats(ReactionStats.from(feed.getReactions()))
+          .feedEvaluation(feed.getEvaluation())
           .createdAt(feed.getCreatedAt())
           .updatedAt(feed.getUpdatedAt())
           .build();
