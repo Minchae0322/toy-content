@@ -161,6 +161,7 @@ public class FeedService {
         .price(request.getPrice())
         .buyPlace(request.getBuyPlace())
         .viewCount(0)
+        .evaluation(request.getEvaluation())
         .build();
   }
 

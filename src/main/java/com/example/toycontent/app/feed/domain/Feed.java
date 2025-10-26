@@ -1,5 +1,6 @@
 package com.example.toycontent.app.feed.domain;
 
+import com.example.toycontent.app.common.enumuration.FeedEvaluation;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseTimeEntity;
@@ -9,6 +10,8 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -84,7 +87,14 @@ public class Feed extends BaseTimeEntity {
   @Builder.Default
   private Integer viewCount = 0;
 
+  @Column(length = 100, name = "buy_place")
+  @Comment("구매처")
   private String buyPlace;
+
+  @Enumerated(EnumType.STRING)
+  @Column(length = 20, name = "evaluation")
+  @Comment("제품 평가 (BEST/GOOD/OKAY/BAD)")
+  private FeedEvaluation evaluation;
 
   @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
