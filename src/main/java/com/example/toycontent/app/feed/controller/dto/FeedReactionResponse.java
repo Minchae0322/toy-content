@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -94,23 +95,36 @@ public class FeedReactionResponse {
     }
   }
 
+  /**
+   * 사용자의 리액션 정보 (좋아요, 핫 모두 포함)
+   */
   @Getter
   @Builder
-  public static class UserReaction {
+  public static class UserReactions {
+    private Boolean hasLike;      // 좋아요 눌렀는지
+    private Boolean hasHot;       // 핫 눌렀는지
+    private Set<FeedReactionType> reactionTypes;  // 전체 리액션 타입들
 
-    private FeedReactionType reactionType;
-    private boolean hasReaction;
-
-    public static UserReaction from(FeedReaction reaction) {
+    public static UserReactions from(FeedReaction reaction) {
       if (reaction == null) {
-        return UserReaction.builder()
-            .hasReaction(false)
-            .build();
+        return noReaction();
       }
 
-      return UserReaction.builder()
-          .reactionType(reaction.getReactionType())
-          .hasReaction(true)
+      boolean isLike = reaction.getReactionType() == FeedReactionType.LIKE;
+      boolean isHot = reaction.getReactionType() == FeedReactionType.HOT;
+
+      return UserReactions.builder()
+          .hasLike(isLike)
+          .hasHot(isHot)
+          .reactionTypes(Set.of(reaction.getReactionType()))
+          .build();
+    }
+
+    public static UserReactions noReaction() {
+      return UserReactions.builder()
+          .hasLike(false)
+          .hasHot(false)
+          .reactionTypes(Set.of())
           .build();
     }
   }

@@ -8,6 +8,7 @@ import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedRequest;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.FeedCursorResponse;
+import com.example.toycontent.app.feed.controller.dto.FeedResponse.HotFeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.ListView;
 import com.example.toycontent.app.feed.controller.dto.FeedSearchCondition;
 import com.example.toycontent.app.feed.service.FeedReactionService;
@@ -59,6 +60,32 @@ public class FeedController {
       @ParameterObject @ModelAttribute FeedSearchCondition condition) {
 
     FeedCursorResponse feeds = feedService.getFeedsWithCursor(condition);
+    return ResponseEntity.ok(ApiResponse.success(feeds));
+  }
+
+  @Operation(
+      summary = "핫 피드 목록 조회",
+      description = """
+          인기도 점수가 높은 피드를 조회합니다.
+          
+          **핫 스코어 계산 공식:**
+```
+          hotScore = (좋아요 * 2 + 핫 * 3 + 조회수 * 0.1) / 시간 감쇠 계수
+          시간 감쇠 계수 = (경과 시간(시) + 2)^1.5
+```
+          
+          **특징:**
+          - 최근 게시물일수록 높은 점수
+          - 좋아요보다 핫 리액션에 더 높은 가중치
+          - 시간이 지날수록 점수 자동 하락
+          - Reddit/Hacker News 알고리즘 적용
+          """
+  )
+  @GetMapping("/hot")
+  public ResponseEntity<ApiResponse<Page<HotFeedResponse>>> getHotFeeds(
+      @ParameterObject Pageable pageable) {
+
+    Page<FeedResponse.HotFeedResponse> feeds = feedService.getHotFeeds(pageable);
     return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 
@@ -125,9 +152,10 @@ public class FeedController {
   @DeleteMapping("/{feedId}/reactions")
   public ResponseEntity<ApiResponse<Void>> removeReaction(
       @Parameter(description = "피드 ID") @PathVariable Long feedId,
+      @Parameter(description = "리액션 타입") @RequestParam FeedReactionType reactionType,
       @CurrentUserId Long userId) {
 
-    feedReactionService.removeReaction(feedId, userId);
+    feedReactionService.removeReaction(feedId, userId, reactionType);
     return ResponseEntity.ok(ApiResponse.success(null, "리액션이 제거되었습니다."));
   }
 

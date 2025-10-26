@@ -82,6 +82,14 @@ public class Feed extends BaseTimeEntity {
   private Integer price;
 
   @Column(nullable = false)
+  @Builder.Default
+  private Integer likeCount = 0;
+
+  @Column(nullable = false)
+  @Builder.Default
+  private Integer hotCount = 0;
+
+  @Column(nullable = false)
   @Comment("조회수")
   @NotAudited
   @Builder.Default
@@ -136,43 +144,65 @@ public class Feed extends BaseTimeEntity {
   }
 
   /**
-   * 리액션 추가
+   * 좋아요 수 증가
+   */
+  public void incrementLikeCount() {
+    this.likeCount++;
+  }
+
+  /**
+   * 좋아요 수 감소
+   */
+  public void decrementLikeCount() {
+    if (this.likeCount > 0) {
+      this.likeCount--;
+    }
+  }
+
+  /**
+   * 핫 수 증가
+   */
+  public void incrementHotCount() {
+    this.hotCount++;
+  }
+
+  /**
+   * 핫 수 감소
+   */
+  public void decrementHotCount() {
+    if (this.hotCount > 0) {
+      this.hotCount--;
+    }
+  }
+
+  /**
+   * 리액션 추가 (카운트도 함께 업데이트)
    */
   public FeedReaction addReaction(Long userId, FeedReactionType reactionType) {
     FeedReaction reaction = FeedReaction.create(this, userId, reactionType);
     this.reactions.add(reaction);
+
+    //카운트 증가
+    if (reactionType == FeedReactionType.LIKE) {
+      incrementLikeCount();
+    } else if (reactionType == FeedReactionType.HOT) {
+      incrementHotCount();
+    }
+
     return reaction;
   }
 
   /**
-   * 리액션 제거
+   * 리액션 제거 (카운트도 함께 업데이트)
    */
   public void removeReaction(FeedReaction reaction) {
     this.reactions.remove(reaction);
-  }
 
-  /**
-   * 특정 사용자의 특정 타입 리액션 조회
-   */
-  public Optional<FeedReaction> findReaction(Long userId, FeedReactionType reactionType) {
-    return this.reactions.stream()
-        .filter(r -> r.getUserId().equals(userId) && r.getReactionType() == reactionType)
-        .findFirst();
-  }
-
-  /**
-   * 리액션 타입별 개수 조회
-   */
-  public long getReactionCount(FeedReactionType reactionType) {
-    return this.reactions.stream()
-        .filter(r -> r.getReactionType() == reactionType)
-        .count();
-  }
-
-  /**
-   * 전체 리액션 개수
-   */
-  public long getTotalReactionCount() {
-    return this.reactions.size();
+    //카운트 감소
+    if (reaction.getReactionType() == FeedReactionType.LIKE) {
+      decrementLikeCount();
+    } else if (reaction.getReactionType() == FeedReactionType.HOT) {
+      decrementHotCount();
+    }
   }
 }

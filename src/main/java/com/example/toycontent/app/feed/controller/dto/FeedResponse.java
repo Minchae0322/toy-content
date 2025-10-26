@@ -205,6 +205,26 @@ public abstract class FeedResponse {
   }
 
   @Getter
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @Schema(description = "핫 피드 응답")
+  public static class HotFeedResponse {
+
+    @Schema(description = "피드 ID")
+    private Long feedId;
+
+    @Schema(description = "상품명")
+    private String productName;
+
+    @Schema(description = "리뷰 내용 (요약)")
+    private String reviewSummary;
+
+    @Schema(description = "대표 이미지 URL")
+    private AttachmentFileResponse hotFeedThumbnailDto;
+  }
+
+  @Getter
   @Setter
   @NoArgsConstructor
   @AllArgsConstructor
