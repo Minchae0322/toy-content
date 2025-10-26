@@ -1,5 +1,6 @@
 package com.example.toycontent.app.feed.service;
 
+import com.example.toycontent.app.feed.controller.dto.FeedResponse.HotFeedResponse;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.app.category.domain.Category;
@@ -43,6 +44,7 @@ public class FeedService {
   private final FeedAttachmentFileRepository feedAttachmentFileRepository;
   private final UserCacheService userCacheService;
 
+  private static final int HOT_FEED_RECENT_DAYS = 7;
 
   /**
    * 피드 목록 조회 (페이징)
@@ -85,6 +87,17 @@ public class FeedService {
 
     return FeedResponse.FeedCursorResponse.of(feedResponses, requestSize);
   }
+
+  /**
+   * 핫 피드 목록 조회 (실시간 계산)
+   *
+   * 최근 N일 이내 게시물만 대상으로 하여 성능 최적화
+   */
+  public Page<FeedResponse.HotFeedResponse> getHotFeeds(Pageable pageable) {
+    // 실시간 핫 스코어 계산하여 조회
+    return feedRepository.findAllByHotScore(HOT_FEED_RECENT_DAYS, pageable);
+  }
+
 
   /**
    * 피드 전체 목록 조회

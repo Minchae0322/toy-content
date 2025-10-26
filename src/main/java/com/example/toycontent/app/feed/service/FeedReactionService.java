@@ -9,6 +9,10 @@ import com.example.toycontent.app.feed.domain.FeedReaction;
 import com.example.toycontent.app.feed.repository.FeedReactionRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import jakarta.transaction.Transactional;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,78 +25,81 @@ public class FeedReactionService {
   private final FeedReactionRepository feedReactionRepository;
 
   /**
-   * 리액션 추가 또는 변경
-   * - 기존 리액션이 없으면 추가
-   * - 같은 타입 리액션이 있으면 제거 (토글)
-   * - 다른 타입 리액션이 있으면 변경
+   * 특정 타입 리액션 토글 (좋아요 또는 핫 개별 토글)
    */
   public FeedReactionResponse.ReactionResult toggleReaction(
       Long feedId, Long userId, FeedReactionType reactionType) {
 
-    Feed feed = feedRepository.findById(feedId)
-        .orElseThrow(() -> new RestApiException(FeedErrorCode.FEED_NOT_FOUND));
+    Feed feed = findFeedWithLockOrElseThrow(feedId);
 
-    // 기존 리액션 조회
-    FeedReaction existingReaction = feedReactionRepository
-        .findByFeedIdAndUserId(feedId, userId)
-        .orElse(null);
+    return feedReactionRepository
+        .findByFeedIdAndUserIdAndReactionType(feedId, userId, reactionType)
+        .map(existing -> removeReactionAndSave(feed, existing, reactionType))
+        .orElseGet(() -> addReactionAndSave(feed, userId, reactionType));
+  }
 
-    // 1. 기존 리액션이 없는 경우 -> 새로 추가
-    if (existingReaction == null) {
-      FeedReaction newReaction = feed.addReaction(userId, reactionType);
-      feedReactionRepository.save(newReaction);
-      return FeedReactionResponse.ReactionResult.added(reactionType);
-    }
+  /**
+   * 리액션 추가
+   */
+  private FeedReactionResponse.ReactionResult addReactionAndSave(
+      Feed feed, Long userId, FeedReactionType type) {
 
-    // 2. 같은 타입의 리액션인 경우 -> 제거 (토글)
-    if (existingReaction.getReactionType() == reactionType) {
-      feed.removeReaction(existingReaction);
-      feedReactionRepository.delete(existingReaction);
-      return FeedReactionResponse.ReactionResult.removed(reactionType);
-    }
+    FeedReaction reaction = feed.addReaction(userId, type);
+    feedReactionRepository.save(reaction);
+    feedRepository.save(feed);
 
-    // 3. 다른 타입의 리액션인 경우 -> 기존 삭제 후 새로 추가
-    feed.removeReaction(existingReaction);
-    feedReactionRepository.delete(existingReaction);
-
-    FeedReaction newReaction = feed.addReaction(userId, reactionType);
-    feedReactionRepository.save(newReaction);
-    return FeedReactionResponse.ReactionResult.changed(reactionType);
+    return FeedReactionResponse.ReactionResult.added(type);
   }
 
   /**
    * 리액션 제거
    */
-  public void removeReaction(Long feedId, Long userId) {
-    Feed feed = feedRepository.findById(feedId)
-        .orElseThrow(() -> new RestApiException(FeedErrorCode.FEED_NOT_FOUND));
+  private FeedReactionResponse.ReactionResult removeReactionAndSave(
+      Feed feed, FeedReaction reaction, FeedReactionType type) {
+
+    feed.removeReaction(reaction);
+    feedReactionRepository.delete(reaction);
+    feedRepository.save(feed);
+
+    return FeedReactionResponse.ReactionResult.removed(type);
+  }
+
+  /**
+   * 특정 타입 리액션 제거
+   */
+  public void removeReaction(Long feedId, Long userId, FeedReactionType reactionType) {
+    Feed feed = findFeedWithLockOrElseThrow(feedId);
 
     FeedReaction reaction = feedReactionRepository
-        .findByFeedIdAndUserId(feedId, userId)
+        .findByFeedIdAndUserIdAndReactionType(feedId, userId, reactionType)
         .orElseThrow(() -> new RestApiException(FeedErrorCode.REACTION_NOT_FOUND));
 
     feed.removeReaction(reaction);
     feedReactionRepository.delete(reaction);
+    feedRepository.save(feed);
   }
 
+
   /**
-   * 피드의 리액션 통계 조회
+   * 사용자가 누른 리액션 조회 (좋아요, 핫 모두)
    */
-  public FeedReactionResponse.ReactionStats getReactionStats(Long feedId) {
-    Feed feed = feedRepository.findById(feedId)
+  public FeedReactionResponse.UserReactions getUserReactions(Long feedId, Long userId) {
+    List<FeedReaction> reactions = feedReactionRepository
+        .findByFeedIdAndUserId(feedId, userId);
+
+    Set<FeedReactionType> reactionTypes = reactions.stream()
+        .map(FeedReaction::getReactionType)
+        .collect(Collectors.toSet());
+
+    return FeedReactionResponse.UserReactions.builder()
+        .hasLike(reactionTypes.contains(FeedReactionType.LIKE))
+        .hasHot(reactionTypes.contains(FeedReactionType.HOT))
+        .reactionTypes(reactionTypes)
+        .build();
+  }
+
+  private Feed findFeedWithLockOrElseThrow(Long feedId) {
+    return feedRepository.findByIdWithPessimisticLock(feedId)
         .orElseThrow(() -> new RestApiException(FeedErrorCode.FEED_NOT_FOUND));
-
-    return FeedReactionResponse.ReactionStats.from(feed.getReactions());
-  }
-
-  /**
-   * 사용자가 누른 리액션 조회
-   */
-  public FeedReactionResponse.UserReaction getUserReaction(Long feedId, Long userId) {
-    FeedReaction reaction = feedReactionRepository
-        .findByFeedIdAndUserId(feedId, userId)
-        .orElse(null);
-
-    return FeedReactionResponse.UserReaction.from(reaction);
   }
 }
