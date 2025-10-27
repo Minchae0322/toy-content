@@ -94,7 +94,6 @@ public class FeedReactionService {
     return FeedReactionResponse.UserReactions.builder()
         .hasLike(reactionTypes.contains(FeedReactionType.LIKE))
         .hasHot(reactionTypes.contains(FeedReactionType.HOT))
-        .reactionTypes(reactionTypes)
         .build();
   }
 
