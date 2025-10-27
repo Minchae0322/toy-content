@@ -21,6 +21,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -46,7 +47,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     @Index(name = "idx_category", columnList = "category"),
     @Index(name = "idx_created_at", columnList = "createdAt"),
     @Index(name = "idx_user_id", columnList = "user_id"),
-    @Index(name = "idx_product_id", columnList = "product_id")  // 추가
+    @Index(name = "idx_product_id", columnList = "product_id"),  // 추가
+    @Index(name = "idx_del_yn", columnList = "del_yn")
 })
 public class Feed extends BaseTimeEntity {
   @Id
@@ -89,6 +91,15 @@ public class Feed extends BaseTimeEntity {
   @Builder.Default
   private Integer hotCount = 0;
 
+  @Column(nullable = false, name = "del_yn")
+  @Builder.Default
+  @Comment("삭제 여부")
+  private Boolean isDeleted = false;
+
+  @Column(name = "deleted_at")
+  @Comment("삭제 일시")
+  private LocalDateTime deletedAt;
+
   @Column(nullable = false)
   @Comment("조회수")
   @NotAudited
@@ -128,6 +139,11 @@ public class Feed extends BaseTimeEntity {
     this.price = request.getPrice();
     this.category = category;
     this.product = product;
+  }
+
+  public void delete() {
+    this.isDeleted = true;
+    this.deletedAt = LocalDateTime.now();
   }
 
   /**

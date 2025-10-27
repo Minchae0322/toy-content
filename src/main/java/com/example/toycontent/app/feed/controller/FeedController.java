@@ -2,7 +2,6 @@ package com.example.toycontent.app.feed.controller;
 
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.enumuration.FeedReactionType;
-import com.example.toycontent.app.common.enumuration.ReactionType;
 import com.example.toycontent.app.common.response.ApiResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedRequest;
@@ -22,8 +21,6 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
