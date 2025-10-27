@@ -255,9 +255,12 @@ public class FeedService {
   @Transactional
   public void deleteFeed(Long feedId) {
     Feed feed = findFeedById(feedId);
+    feed.delete();
 
-    // 연관된 데이터들은 cascade 설정으로 자동 삭제됨
-    feedRepository.delete(feed);
+    //해시 태그 사용횟수 감소
+    feed.getHashtags().forEach(
+        feedHashtag -> feedHashtag.getHashtag().decrementUsageCount()
+    );
   }
 
   /**
