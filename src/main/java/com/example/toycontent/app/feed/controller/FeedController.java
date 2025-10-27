@@ -57,9 +57,10 @@ public class FeedController {
   @Operation(summary = "피드 목록 조회 (커서 페이징)", description = "인피니티 스크롤용 커서 기반 API")
   @GetMapping("/scroll")
   public ResponseEntity<ApiResponse<FeedCursorResponse>> getFeedsWithCursor(
-      @ParameterObject @ModelAttribute FeedSearchCondition condition) {
+      @ParameterObject @ModelAttribute FeedSearchCondition condition,
+      @CurrentUserId Long userId) {
 
-    FeedCursorResponse feeds = feedService.getFeedsWithCursor(condition);
+    FeedCursorResponse feeds = feedService.getFeedsWithCursor(condition, userId);
     return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 

@@ -3,6 +3,7 @@ package com.example.toycontent.app.feed.repository.querydsl.impl;
 import static com.example.toycontent.app.feed.domain.QFeed.feed;
 import static com.example.toycontent.app.feed.domain.QFeedAttachmentFile.feedAttachmentFile;
 import static com.example.toycontent.app.feed.domain.QFeedHashtag.feedHashtag;
+import static com.example.toycontent.app.feed.domain.QFeedReaction.feedReaction;
 import static com.example.toycontent.app.hashtag.domain.QHashtag.hashtag;
 import static com.example.toycontent.app.product.domain.QProductAttachmentFile.productAttachmentFile;
 
@@ -11,6 +12,7 @@ import com.example.toycontent.app.feed.controller.dto.FeedSearchCondition;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.QFeed;
 import com.example.toycontent.app.feed.domain.QFeedAttachmentFile;
+import com.example.toycontent.app.feed.domain.QFeedReaction;
 import com.example.toycontent.app.feed.repository.querydsl.FeedRepositoryCustom;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.querydsl.core.types.Projections;
@@ -37,7 +39,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
 
   @Override
   public List<Feed> findFeedsWithCursor(FeedSearchCondition condition) {
-    // 1. Feed만 조회 (limit 정확하게 적용)
+    //Feed만 조회 (limit 정확하게 적용)
     List<Feed> feeds = queryFactory
         .selectFrom(feed)
         .distinct()
@@ -53,7 +55,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
       return feeds;
     }
 
-    fetchAssociations(feeds);
+    fetchAssociations(feeds, condition.getReaderId());
 
     return feeds;
   }
@@ -61,7 +63,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
   /**
    * 연관 데이터 배치 조회
    */
-  private void fetchAssociations(List<Feed> feeds) {
+  private void fetchAssociations(List<Feed> feeds, Long readerId) {
     List<Long> feedIds = feeds.stream()
         .map(Feed::getId)
         .toList();
@@ -81,6 +83,13 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
             feedAttachmentFile.isPrimary.isTrue()
         )
         .fetch();
+
+    queryFactory
+        .selectFrom(feedReaction)
+        .where(
+            feedReaction.feed.id.in(feedIds),
+            feedReaction.userId.eq(readerId)
+        );
   }
 
 
