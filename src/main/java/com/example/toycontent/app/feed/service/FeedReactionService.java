@@ -48,7 +48,7 @@ public class FeedReactionService {
     feedReactionRepository.save(reaction);
     feedRepository.save(feed);
 
-    return FeedReactionResponse.ReactionResult.added(type);
+    return FeedReactionResponse.ReactionResult.added(type, feed.getLikeCount(), feed.getHotCount());
   }
 
   /**
@@ -61,7 +61,7 @@ public class FeedReactionService {
     feedReactionRepository.delete(reaction);
     feedRepository.save(feed);
 
-    return FeedReactionResponse.ReactionResult.removed(type);
+    return FeedReactionResponse.ReactionResult.removed(type, feed.getLikeCount(), feed.getHotCount());
   }
 
   /**
