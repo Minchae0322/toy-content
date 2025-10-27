@@ -61,15 +61,6 @@ public class FeedReactionResponse {
           .build();
     }
 
-    public static ReactionResult changed(FeedReactionType reactionType, int likeCount, int hotCount) {
-      return ReactionResult.builder()
-          .reactionType(reactionType)
-          .action("changed")
-          .message("리액션이 변경되었습니다.")
-          .likeCount(likeCount)
-          .hotCount(hotCount)
-          .build();
-    }
   }
 
   @Getter
