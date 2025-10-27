@@ -68,11 +68,14 @@ public class FeedService {
   /**
    * 피드 목록 조회 (커서 페이징) - 인피니티 스크롤용
    */
-  public FeedResponse.FeedCursorResponse getFeedsWithCursor(FeedSearchCondition condition) {
-
+  public FeedResponse.FeedCursorResponse getFeedsWithCursor(FeedSearchCondition condition, Long userId) {
     // size+1개를 조회해서 다음 페이지 존재 여부 확인
     Integer requestSize = condition.getSize();
     condition.setSize(requestSize + 1);
+
+    //조회자가 있을 경우, 사용자 리액션 여부 확인
+    Optional.ofNullable(userId)
+        .ifPresent(condition::setReaderId);
 
     List<Feed> feeds = feedRepository.findFeedsWithCursor(condition);
 

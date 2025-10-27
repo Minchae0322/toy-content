@@ -1,6 +1,7 @@
 package com.example.toycontent.app.feed.controller.dto;
 
 import com.example.toycontent.app.common.enumuration.FeedEvaluation;
+import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse.UserReactions;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.FeedProduct;
 import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse.ReactionStats;
@@ -66,8 +67,14 @@ public abstract class FeedResponse {
     @Schema(description = "해시태그 목록")
     private List<String> hashtags;
 
-    @Schema(description = "반응 통계")
-    private ReactionStats reactionStats;
+    @Schema(description = "좋아요 수")
+    private Integer likeCount;
+
+    @Schema(description = "핫해요 수")
+    private Integer hotCount;
+
+    @Schema(description = "조회자 리액션 여부")
+    private UserReactions userReactions;
 
     @Schema(description = "구매처", example = "무신사")
     private String buyPlace;
@@ -101,7 +108,9 @@ public abstract class FeedResponse {
           )
           .hashtags(extractHashtags(feed.getHashtags()))
           .buyPlace(feed.getBuyPlace())
-          .reactionStats(ReactionStats.from(feed.getReactions()))
+          .hotCount(feed.getHotCount())
+          .likeCount(feed.getLikeCount())
+          .userReactions(UserReactions.from(feed.getReactions()))
           .feedEvaluation(feed.getEvaluation())
           .createdAt(feed.getCreatedAt())
           .updatedAt(feed.getUpdatedAt())
@@ -160,14 +169,20 @@ public abstract class FeedResponse {
     @Schema(description = "조회수")
     private Integer viewCount;
 
+    @Schema(description = "좋아요 수")
+    private Integer likeCount;
+
+    @Schema(description = "핫해요 수")
+    private Integer hotCount;
+
+    @Schema(description = "조회자 리액션 여부")
+    private UserReactions userReactions;
+
     @Schema(description = "첨부 파일 목록")
     private List<AttachmentFileResponse> attachmentFiles;
 
     @Schema(description = "해시태그 목록")
     private List<HashtagInfo> hashtags;
-
-    @Schema(description = "반응 통계")
-    private ReactionStats reactionStats;
 
     @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
     private FeedEvaluation feedEvaluation;
@@ -195,7 +210,9 @@ public abstract class FeedResponse {
                   .map(AttachmentFileResponse::of)
                   .toList())
           .hashtags(HashtagInfo.fromList(feed.getHashtags()))
-          .reactionStats(ReactionStats.from(feed.getReactions()))
+          .hotCount(feed.getHotCount())
+          .likeCount(feed.getLikeCount())
+          .userReactions(UserReactions.from(feed.getReactions()))
           .feedEvaluation(feed.getEvaluation())
           .createdAt(feed.getCreatedAt())
           .updatedAt(feed.getUpdatedAt())

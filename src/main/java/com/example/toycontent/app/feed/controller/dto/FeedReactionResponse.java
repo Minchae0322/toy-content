@@ -5,6 +5,7 @@ import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedReaction;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,23 +101,26 @@ public class FeedReactionResponse {
    */
   @Getter
   @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @Schema(description = "반응 통계")
   public static class UserReactions {
-    private Boolean hasLike;      // 좋아요 눌렀는지
-    private Boolean hasHot;       // 핫 눌렀는지
-    private Set<FeedReactionType> reactionTypes;  // 전체 리액션 타입들
 
-    public static UserReactions from(FeedReaction reaction) {
-      if (reaction == null) {
+    private boolean hasLike;
+    private boolean hasHot;
+
+    public static UserReactions from(List<FeedReaction> reactions) {
+      if (reactions == null || reactions.isEmpty()) {
         return noReaction();
       }
 
-      boolean isLike = reaction.getReactionType() == FeedReactionType.LIKE;
-      boolean isHot = reaction.getReactionType() == FeedReactionType.HOT;
+      EnumSet<FeedReactionType> reactionTypes = reactions.stream()
+          .map(FeedReaction::getReactionType)
+          .collect(Collectors.toCollection(() -> EnumSet.noneOf(FeedReactionType.class)));
 
       return UserReactions.builder()
-          .hasLike(isLike)
-          .hasHot(isHot)
-          .reactionTypes(Set.of(reaction.getReactionType()))
+          .hasLike(reactionTypes.contains(FeedReactionType.LIKE))
+          .hasHot(reactionTypes.contains(FeedReactionType.HOT))
           .build();
     }
 
@@ -124,7 +128,6 @@ public class FeedReactionResponse {
       return UserReactions.builder()
           .hasLike(false)
           .hasHot(false)
-          .reactionTypes(Set.of())
           .build();
     }
   }

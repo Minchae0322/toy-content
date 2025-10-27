@@ -1,5 +1,6 @@
 package com.example.toycontent.app.feed.controller.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
@@ -32,4 +33,9 @@ public class FeedSearchCondition {
 
   @Schema(description = "Size")
   private Integer size;
+
+  @JsonIgnore
+  @Schema(description = "조회자 아이디", hidden = true)
+  private Long readerId;
+
 }
