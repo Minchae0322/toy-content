@@ -17,37 +17,57 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+@Schema(description = "피드 리액션 응답")
 public class FeedReactionResponse {
 
   @Getter
   @Builder
+  @Schema(description = "리액션 처리 결과")
   public static class ReactionResult {
 
+    @Schema(description = "리액션 타입", example = "LIKE")
     private FeedReactionType reactionType;
-    private String action; // "added", "removed", "changed"
+
+    @Schema(description = "수행된 액션", example = "added", allowableValues = {"added", "removed", "changed"})
+    private String action;
+
+    @Schema(description = "결과 메시지", example = "리액션이 추가되었습니다.")
     private String message;
 
-    public static ReactionResult added(FeedReactionType reactionType) {
+    @Schema(description = "좋아요 수", example = "42")
+    private Integer likeCount;
+
+    @Schema(description = "핫해요 수", example = "15")
+    private Integer hotCount;
+
+
+    public static ReactionResult added(FeedReactionType reactionType, int likeCount, int hotCount) {
       return ReactionResult.builder()
           .reactionType(reactionType)
           .action("added")
           .message("리액션이 추가되었습니다.")
+          .likeCount(likeCount)
+          .hotCount(hotCount)
           .build();
     }
 
-    public static ReactionResult removed(FeedReactionType reactionType) {
+    public static ReactionResult removed(FeedReactionType reactionType, int likeCount, int hotCount) {
       return ReactionResult.builder()
           .reactionType(reactionType)
           .action("removed")
           .message("리액션이 취소되었습니다.")
+          .likeCount(likeCount)
+          .hotCount(hotCount)
           .build();
     }
 
-    public static ReactionResult changed(FeedReactionType reactionType) {
+    public static ReactionResult changed(FeedReactionType reactionType, int likeCount, int hotCount) {
       return ReactionResult.builder()
           .reactionType(reactionType)
           .action("changed")
           .message("리액션이 변경되었습니다.")
+          .likeCount(likeCount)
+          .hotCount(hotCount)
           .build();
     }
   }
@@ -57,19 +77,19 @@ public class FeedReactionResponse {
   @NoArgsConstructor
   @AllArgsConstructor
   @Builder
-  @Schema(description = "반응 통계")
+  @Schema(description = "피드 리액션 통계")
   public static class ReactionStats {
 
-    @Schema(description = "전체 반응 수")
+    @Schema(description = "전체 리액션 수", example = "57")
     private Long totalCount;
 
-    @Schema(description = "반응 타입별 개수")
+    @Schema(description = "리액션 타입별 개수 (현재는 사용되지 않음)")
     private Map<FeedReaction, Long> countByType = new HashMap<>();
 
-    @Schema(description = "좋아요 수")
+    @Schema(description = "좋아요 수", example = "42")
     private Long likeCount;
 
-    @Schema(description = "최고예요 수")
+    @Schema(description = "핫해요 수", example = "15")
     private Long hotCount;
 
 
@@ -79,6 +99,7 @@ public class FeedReactionResponse {
             .totalCount(0L)
             .countByType(Map.of())
             .likeCount(0L)
+            .hotCount(0L)
             .build();
       }
 
@@ -96,17 +117,17 @@ public class FeedReactionResponse {
     }
   }
 
-  /**
-   * 사용자의 리액션 정보 (좋아요, 핫 모두 포함)
-   */
   @Getter
   @Builder
   @NoArgsConstructor
   @AllArgsConstructor
-  @Schema(description = "반응 통계")
+  @Schema(description = "사용자의 리액션 상태 (좋아요, 최고예요 여부)")
   public static class UserReactions {
 
+    @Schema(description = "좋아요 눌렀는지 여부", example = "true")
     private boolean hasLike;
+
+    @Schema(description = "핫해요 눌렀는지 여부", example = "false")
     private boolean hasHot;
 
     public static UserReactions from(List<FeedReaction> reactions) {
