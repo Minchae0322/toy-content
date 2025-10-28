@@ -1,17 +1,15 @@
 package com.example.toycontent.app.feed.controller.dto;
 
+import com.example.toycontent.app.category.contoller.dto.CategoryResponse.SubCategoryDetail;
 import com.example.toycontent.app.common.enumuration.FeedEvaluation;
 import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse.UserReactions;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.FeedProduct;
-import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse.ReactionStats;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedHashtag;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -145,26 +143,20 @@ public abstract class FeedResponse {
     @Schema(description = "피드 ID")
     private Long feedId;
 
-    @Schema(description = "사용자 ID")
-    private Long userId;
+    @Schema(description = "사용자 정보")
+    private ExternalUserInfo userInfo;
 
     @Schema(description = "상품 정보")
     private ProductResponse.FeedProduct product;
 
-    @Schema(description = "카테고리 ID")
-    private Long categoryId;
-
-    @Schema(description = "카테고리명")
-    private String categoryName;
+    @Schema(description = "서브 카테고리 상세 dto")
+    private SubCategoryDetail subCategoryDetail;
 
     @Schema(description = "리뷰 내용")
     private String review;
 
     @Schema(description = "구매 가격")
     private Integer buyPrice;
-
-    @Schema(description = "정가")
-    private Integer price;
 
     @Schema(description = "조회수")
     private Integer viewCount;
@@ -193,25 +185,23 @@ public abstract class FeedResponse {
     @Schema(description = "수정일시")
     private LocalDateTime updatedAt;
 
-    public static Detail from(Feed feed) {
+    public static Detail from(Feed feed, ExternalUserInfo userInfo) {
       return Detail.builder()
           .feedId(feed.getId())
-          .userId(feed.getUserId())
+          .userInfo(userInfo)
           .product(feed.getProduct() != null ? FeedProduct.of(feed.getProduct()) : null)
-          .categoryId(feed.getCategory() != null ? feed.getCategory().getId() : null)
-          .categoryName(feed.getCategory() != null ? feed.getCategory().getName() : null)
+          .subCategoryDetail(SubCategoryDetail.from(feed.getCategory()))
           .review(feed.getReview())
           .buyPrice(feed.getBuyPrice())
-          .price(feed.getPrice())
           .viewCount(feed.getViewCount())
+          .likeCount(feed.getLikeCount())
+          .hotCount(feed.getHotCount())
           .attachmentFiles(
               feed.getAttachmentFiles()
                   .stream()
                   .map(AttachmentFileResponse::of)
                   .toList())
           .hashtags(HashtagInfo.fromList(feed.getHashtags()))
-          .hotCount(feed.getHotCount())
-          .likeCount(feed.getLikeCount())
           .userReactions(UserReactions.from(feed.getReactions()))
           .feedEvaluation(feed.getEvaluation())
           .createdAt(feed.getCreatedAt())
@@ -311,6 +301,25 @@ public abstract class FeedResponse {
           .size(actualFeeds.size())
           .build();
     }
+  }
+
+  @Getter
+  @Setter
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @Builder
+  @Schema(description = "피드 생성 응답")
+  public static class FeedCreated {
+
+    @Schema(description = "피드 ID")
+    private Long feedId;
+
+    public static FeedCreated of(Feed feed) {
+      return FeedCreated.builder()
+          .feedId(feed.getId())
+          .build();
+    }
+
   }
 
 

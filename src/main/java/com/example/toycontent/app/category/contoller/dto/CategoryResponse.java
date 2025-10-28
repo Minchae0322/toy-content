@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -87,12 +88,6 @@ public class CategoryResponse {
         @Schema(title = "키워드 목록")
         private List<String> keywords;
 
-        @Schema(title = "아이콘 URL")
-        private String iconUrl;
-
-        @Schema(title = "색상 코드")
-        private String colorCode;
-
         @Schema(title = "정렬 순서")
         private Integer sortOrder;
 
@@ -127,6 +122,34 @@ public class CategoryResponse {
 
     }
 
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "카테고리 상세 정보")
+    public static class SubCategoryDetail {
+
+        @Schema(description = "대분류 카테고리 ID", example = "1")
+        private Long categoryId;
+
+        @Schema(description = "소분류 카테고리 ID", example = "10")
+        private Long subCategoryId;
+
+        @Schema(description = "대분류 카테고리 명", example = "전자제품")
+        private String categoryName;
+
+        @Schema(description = "소분류 카테고리 명", example = "노트북")
+        private String subCategoryName;
+
+        public static SubCategoryDetail from(Category category) {
+            return SubCategoryDetail.builder()
+                .categoryId(category.getParent().getId())
+                .categoryName(category.getParent().getName())
+                .subCategoryId(category.getId())
+                .subCategoryName(category.getName())
+                .build();
+        }
+    }
 
 
 }
