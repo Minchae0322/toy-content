@@ -88,6 +88,8 @@ public abstract class ProductResponse {
         @Schema(description = "브랜드명", example = "반다이")
         private String brand;
 
+        private String price;
+
         @Schema(description = "대표 이미지")
         private AttachmentFileResponse thumbnailDto;
 
@@ -96,6 +98,7 @@ public abstract class ProductResponse {
                 .id(product.getId())
                 .name(product.getName())
                 .brand(product.getBrand())
+                .price(product.getPrice())
                 .thumbnailDto(
                     AttachmentFileResponse.of(product.getProductAttachmentFiles().get(0)))
                 .build();

@@ -124,17 +124,20 @@ public class FeedService {
   public FeedResponse.Detail getFeed(Long feedId) {
     Feed feed = findFeedById(feedId);
 
+    ExternalUserInfo userInfo = userCacheService.getUserInfo(feed.getUserId());
+
     // 조회수 증가
     feed.incrementViewCount();
 
-    return FeedResponse.Detail.from(feed);
+    return FeedResponse.Detail.from(feed, userInfo);
+
   }
 
   /**
    * 피드 생성
    */
   @Transactional
-  public FeedResponse.Detail createFeed(FeedRequest.CreateFeed request) {
+  public FeedResponse.FeedCreated createFeed(FeedRequest.CreateFeed request) {
     // 카테고리 조회 및 검증
     Category category = categoryRepository.findById(request.getSubCategoryId())
         .orElseThrow(() -> new RestApiException(FeedErrorCode.CATEGORY_NOT_FOUND));
@@ -163,7 +166,7 @@ public class FeedService {
         .forEach(feed.getHashtags()::add);
 
 
-    return FeedResponse.Detail.from(savedFeed);
+    return FeedResponse.FeedCreated.of(savedFeed);
   }
 
   private Feed toEntity(FeedRequest.CreateFeed request, Category category, Product product) {
@@ -215,7 +218,7 @@ public class FeedService {
    * 피드 수정 (첨부파일은 수정 불가)
    */
   @Transactional
-  public FeedResponse.Detail updateFeed(Long feedId, FeedRequest.UpdateFeed request, Long currentUserId) {
+  public FeedResponse.FeedCreated updateFeed(Long feedId, FeedRequest.UpdateFeed request, Long currentUserId) {
     Feed feed = findFeedById(feedId);
 
     // 권한 확인
@@ -246,7 +249,7 @@ public class FeedService {
         .toList();
     feed.updateHashtags(newHashtags);
 
-    return FeedResponse.Detail.from(feed);
+    return FeedResponse.FeedCreated.of(feed);
   }
 
   /**

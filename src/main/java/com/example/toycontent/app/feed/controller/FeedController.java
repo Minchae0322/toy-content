@@ -107,21 +107,21 @@ public class FeedController {
 
   @Operation(summary = "피드 생성", description = "새로운 피드를 생성합니다.")
   @PostMapping
-  public ResponseEntity<ApiResponse<FeedResponse.Detail>> createFeed(
+  public ResponseEntity<ApiResponse<FeedResponse.FeedCreated>> createFeed(
       @Valid @RequestBody FeedRequest.CreateFeed request) {
 
-    FeedResponse.Detail feed = feedService.createFeed(request);
+    FeedResponse.FeedCreated feed = feedService.createFeed(request);
     return ResponseEntity.ok(ApiResponse.success(feed, "피드가 생성되었습니다."));
   }
 
   @Operation(summary = "피드 수정", description = "기존 피드 정보를 수정합니다.")
   @PutMapping("/{feedId}")
-  public ResponseEntity<ApiResponse<FeedResponse.Detail>> updateFeed(
+  public ResponseEntity<ApiResponse<FeedResponse.FeedCreated>> updateFeed(
       @Parameter(description = "피드 ID") @PathVariable Long feedId,
       @Valid @RequestBody FeedRequest.UpdateFeed request,
       @CurrentUserId Long userId) {
 
-    FeedResponse.Detail feed = feedService.updateFeed(feedId, request, userId);
+    FeedResponse.FeedCreated feed = feedService.updateFeed(feedId, request, userId);
     return ResponseEntity.ok(ApiResponse.success(feed, "피드가 수정되었습니다."));
   }
 

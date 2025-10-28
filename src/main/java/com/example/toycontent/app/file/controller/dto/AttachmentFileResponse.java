@@ -33,14 +33,17 @@ public class AttachmentFileResponse {
     @Schema(description = "content_type")
     private String contentType;
 
+    private Integer order;
+
     public static AttachmentFileResponse of(ProductAttachmentFile attachmentFile) {
         return AttachmentFileResponse.builder()
-                .id(attachmentFile.getId())
-                .orgFileNm(attachmentFile.getOrgFileNm())
-                .fileUrl(attachmentFile.getFileUrl())
-                .fileSize(attachmentFile.getFileSize())
-                .fileExplain(attachmentFile.getFileExplain())
-                .build();
+            .id(attachmentFile.getId())
+            .orgFileNm(attachmentFile.getOrgFileNm())
+            .fileUrl(attachmentFile.getFileUrl())
+            .fileSize(attachmentFile.getFileSize())
+            .fileExplain(attachmentFile.getFileExplain())
+            .order(attachmentFile.getSortOrder())
+            .build();
     }
 
     public static AttachmentFileResponse of(ProductReviewAttachmentFile attachmentFile) {
@@ -50,6 +53,7 @@ public class AttachmentFileResponse {
             .fileUrl(attachmentFile.getFileUrl())
             .fileSize(attachmentFile.getFileSize())
             .fileExplain(attachmentFile.getFileExplain())
+            .order(attachmentFile.getSortOrder())
             .build();
     }
 
@@ -60,6 +64,7 @@ public class AttachmentFileResponse {
             .fileUrl(attachmentFile.getFileUrl())
             .fileSize(attachmentFile.getFileSize())
             .fileExplain(attachmentFile.getFileExplain())
+            .order(attachmentFile.getSortOrder())
             .build();
     }
 
