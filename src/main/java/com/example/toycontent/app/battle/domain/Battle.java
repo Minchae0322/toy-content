@@ -142,7 +142,7 @@ public class Battle extends BaseTimeEntity {
   private List<BattleVote> votes = new ArrayList<>();
 
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
-  private List<BattleParticipation> participations = new ArrayList<>();
+  private List<BattleParticipation> battleParticipationsList = new ArrayList<>();
 
 
 
