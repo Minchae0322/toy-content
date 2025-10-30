@@ -7,12 +7,15 @@ import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.ResultVisibility;
 import com.example.toycontent.app.common.enumuration.VoteType;
+import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -36,7 +39,7 @@ public abstract class BattleResponse {
   }
 
   @Schema(description = "배틀 목록 조회 응답")
-  @Getter
+  @Data
   @Builder
   @NoArgsConstructor
   @AllArgsConstructor
@@ -54,11 +57,8 @@ public abstract class BattleResponse {
     @Schema(description = "배틀 상태", example = "ACTIVE")
     private BattleStatus status;
 
-    @Schema(description = "생성자 닉네임", example = "스니커헤드123")
-    private String creatorNickname;
-
-    @Schema(description = "생성자 레벨", example = "15")
-    private Integer creatorLevel;
+    @Schema(description = "생성자 Dto", example = "스니커헤드123")
+    private ExternalUserInfo creatorUserInfo;
 
     @Schema(description = "아이템 추가 권한 타입", example = "CREATOR_ONLY")
     private ItemAddPermissionType itemAddPermissionType;
@@ -81,10 +81,10 @@ public abstract class BattleResponse {
     @Schema(description = "생성일", example = "2025-01-25T14:30:00")
     private LocalDateTime createdAt;
 
-    @Schema(description = "썸네일 이미지 URL")
-    private String thumbnailUrl;
+    @Schema(description = "대표 이미지")
+    private AttachmentFileResponse thumbnailDto;
 
-    @Schema(description = "상위 아이템 이미지 목록 (최대 4개)")
+    @Schema(description = "상위 아이템 이미지 목록 ((최대 4개) 대표이미지가 없으면)")
     private List<String> topItemImages;
 
     public static BattleList from(Battle battle) {
@@ -275,7 +275,6 @@ public abstract class BattleResponse {
           .productId(item.getProduct() != null ? item.getProduct().getId() : null)
           .name(item.getName())
           .brand(item.getBrand())
-          .emoji(item.getCustomEmoji())
           .imageUrl(item.getCustomImageUrl())
           .voteCount(item.getVoteCount())
           .isCustomItem(item.isCustomItem())

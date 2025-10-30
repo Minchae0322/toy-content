@@ -3,6 +3,7 @@ package com.example.toycontent.app.battle.service;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest.ItemRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
+import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.domain.*;
 import com.example.toycontent.app.battle.repository.*;
@@ -24,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.User;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -165,24 +167,15 @@ public class BattleService {
   }
 
   /**
-   * 큐레이션 배틀 아이템 검증 및 추가
-   */
-  private void validateAndAddCuratedItems(Battle battle, List<BattleRequest.ItemRequest> items) {
-    if (items == null || items.size() < MIN_ITEMS) {
-      throw new RestApiException(BattleErrorCode.INSUFFICIENT_BATTLE_ITEMS);
-    }
-    if (items.size() > MAX_ITEMS) {
-      throw new RestApiException(BattleErrorCode.TOO_MANY_BATTLE_ITEMS);
-    }
-    addInitialItems(battle, items);
-  }
-
-  /**
    * 배틀 목록 조회
    */
   public Page<BattleResponse.BattleList> getBattles(BattleSearchCondition condition, Pageable pageable) {
-    return battleRepository.findBattlesWithFilters(category, type, status, sort, pageable)
-        .map(BattleResponse.BattleList::from);
+    List<BattleList> battleLists = battleRepository.findBattlesWithSearchCondition(condition,
+        pageable);
+
+    Long totalCount = battleRepository.countBattlesWithSearchCondition(condition);
+
+    return new PageImpl<>(battleLists, pageable, totalCount);
   }
 
   /**
@@ -198,34 +191,6 @@ public class BattleService {
     return BattleResponse.BattleDetail.from(battle, userId);
   }
 
-  /**
-   * 내가 생성한 배틀 목록
-   */
-  public Page<BattleResponse.BattleList> getMyBattles(Long userId, String status, Pageable pageable) {
-    return battleRepository.findByCreatorIdAndStatusOrderByCreatedAtDesc(
-            userId, status, pageable)
-        .map(BattleResponse.BattleList::from);
-  }
-
-  /**
-   * 배틀 통계 조회
-   */
-  public BattleResponse.Statistics getBattleStatistics(Long battleId, Long userId) {
-    Battle battle = getBattleById(battleId);
-
-    // 생성자만 통계 조회 가능
-    if (!battle.getCreatorId().equals(userId)) {
-      throw new RestApiException(BattleErrorCode.NOT_BATTLE_CREATOR);
-    }
-
-    // return battleStatisticsService.getStatistics(battle);
-    return BattleResponse.Statistics.builder()
-        .battleId(battleId)
-        .totalParticipants(battle.getTotalParticipants())
-        .totalVotes(battle.getTotalVotes())
-        .totalViews(battle.getTotalViews())
-        .build();
-  }
 
   /**
    * 배틀 아이템 추가 (큐레이션 배틀, 진행 중 추가)
