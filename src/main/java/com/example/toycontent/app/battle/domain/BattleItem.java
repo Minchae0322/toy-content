@@ -62,10 +62,6 @@ public class BattleItem extends BaseTimeEntity {
   @Comment("커스텀 브랜드")
   private String customBrand;
 
-  @Column(length = 10)
-  @Comment("커스텀 이모지")
-  private String customEmoji;
-
   @Column(length = 500)
   @Comment("커스텀 이미지 URL")
   private String customImageUrl;

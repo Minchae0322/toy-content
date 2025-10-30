@@ -1,5 +1,7 @@
 package com.example.toycontent.app.file.domain.dto;
 
+import com.example.toycontent.app.battle.domain.Battle;
+import com.example.toycontent.app.battle.domain.BattleAttachmentFile;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.domain.ProductAttachmentFile;
 import com.example.toycontent.app.product.domain.ProductReview;
@@ -48,6 +50,20 @@ public abstract class AttachmentFileRequest {
     public ProductAttachmentFile toEntity(Product product, int ord, boolean isPrimary) {
       return ProductAttachmentFile.builder()
           .product(product)
+          .attachFileId(this.fileId)
+          .fileUrl(this.storedPath)
+          .orgFileNm(this.originName)
+          .fileSize(this.fileSize)
+          .contentType(this.contentType)
+          .fileExplain(this.fileExplain)
+          .sortOrder(ord)
+          .isPrimary(isPrimary)
+          .build();
+    }
+
+    public BattleAttachmentFile toEntity(Battle battle, int ord, boolean isPrimary) {
+      return BattleAttachmentFile.builder()
+          .battle(battle)
           .attachFileId(this.fileId)
           .fileUrl(this.storedPath)
           .orgFileNm(this.originName)
