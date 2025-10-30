@@ -144,31 +144,6 @@ public abstract class BattleRequest {
     private Integer rank;
   }
 
-  @Schema(description = "공지 등록 요청")
-  @Getter
-  @Builder
-  @NoArgsConstructor
-  @AllArgsConstructor
-  public static class AddNotice {
-
-    @Schema(description = "공지 내용", example = "마감 임박! 오늘 자정 종료됩니다")
-    @NotBlank(message = "공지 내용을 입력해주세요")
-    @Size(min = 10, max = 200, message = "공지는 10~200자 사이여야 합니다")
-    private String message;
-  }
-
-  @Schema(description = "배틀 조기 종료 요청")
-  @Getter
-  @Builder
-  @NoArgsConstructor
-  @AllArgsConstructor
-  public static class CloseBattle {
-
-    @Schema(description = "종료 사유", example = "부적절한 콘텐츠 대량 등록으로 인한 조기 종료")
-    @NotBlank(message = "종료 사유를 입력해주세요")
-    @Size(min = 10, max = 200, message = "종료 사유는 10~200자 사이여야 합니다")
-    private String reason;
-  }
 
   @Schema(description = "신고 요청")
   @Getter

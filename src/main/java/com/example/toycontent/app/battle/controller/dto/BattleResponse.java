@@ -21,23 +21,6 @@ import lombok.NoArgsConstructor;
 
 public abstract class BattleResponse {
 
-  @Schema(description = "배틀 생성 권한 검증 응답")
-  @Getter
-  @Builder
-  @NoArgsConstructor
-  @AllArgsConstructor
-  public static class CreationValidation {
-
-    @Schema(description = "생성 가능 여부", example = "true")
-    private Boolean canCreate;
-
-    @Schema(description = "불가능한 경우 사유 코드", example = "INSUFFICIENT_LEVEL")
-    private String reason;
-
-    @Schema(description = "사용자에게 보여줄 메시지", example = "Level 5부터 배틀을 만들 수 있어요. 현재 Level 3")
-    private String message;
-  }
-
   @Schema(description = "배틀 목록 조회 응답")
   @Data
   @Builder

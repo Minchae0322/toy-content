@@ -85,7 +85,7 @@ public class BattleService {
 
     createBattleAttachmentFiles(request.getThumbnailAttachmentInfo(), battle);
 
-    createBattleItems(userId, battle, request);
+    createBattleItems(userId, battle, request.getItems());
 
     return BattleResponse.BattleDetail.from(battle, userId);
   }
@@ -124,8 +124,8 @@ public class BattleService {
   /**
    * 배틀 아이템 생성 및 저장
    */
-  private void createBattleItems(Long userId, Battle battle, BattleRequest.CreateBattle request) {
-    List<BattleItem> battleItems = request.getItems().stream()
+  private void createBattleItems(Long userId, Battle battle, List<ItemRequest> request) {
+    List<BattleItem> battleItems = request.stream()
         .map(itemRequest -> {
           Product product = productRepository.findById(itemRequest.getProductId())
               .orElse(null);
@@ -198,13 +198,9 @@ public class BattleService {
   @Transactional
   public void addBattleItems(Long battleId, Long userId, BattleRequest.AddBattleItems request) {
     Battle battle = getBattleById(battleId);
-
     // 생성자 권한 확인
-    validateBattleCreator(battle, userId);
-
-    // 큐레이션 배틀만 가능
-    if (battle.getType() != BattleType.CURATED) {
-      throw new RestApiException(BattleErrorCode.INVALID_BATTLE_TYPE);
+    if (ItemAddPermissionType.CREATOR_ONLY.equals(battle.getItemAddPermissionType())) {
+      validateBattleCreator(battle, userId);
     }
 
     // 최대 3개까지만 추가 가능
@@ -218,11 +214,8 @@ public class BattleService {
       throw new RestApiException(BattleErrorCode.MAX_ITEMS_EXCEEDED);
     }
 
-    // 아이템 추가 (NEW 뱃지 72시간)
-    LocalDateTime newBadgeExpiresAt = LocalDateTime.now().plusHours(72);
-    addItemsWithNewBadge(battle, request.getItems(), newBadgeExpiresAt);
+    createBattleItems(userId, battle, request.getItems());
 
-    log.info("배틀 아이템 추가 완료: battleId={}, addedCount={}", battleId, request.getItems().size());
   }
 
   /**
@@ -231,6 +224,7 @@ public class BattleService {
   @Transactional
   public void excludeBattleItem(Long battleId, Long itemId, Long userId) {
     Battle battle = getBattleById(battleId);
+
     validateBattleCreator(battle, userId);
 
     BattleItem item = battleItemRepository.findById(itemId)
@@ -249,9 +243,6 @@ public class BattleService {
 
     // 투표 수 재계산
     // battle.recalculateVotes();
-
-    log.info("배틀 아이템 제외 처리: battleId={}, itemId={}, invalidatedVotes={}",
-        battleId, itemId, votes.size());
   }
 
   /**
@@ -331,49 +322,11 @@ public class BattleService {
 
     votes.forEach(vote -> {
       vote.softDelete();
-      vote.getBattleItem().decrementVote();
+     // vote.getBattleItem().decrementVote();
     });
 
     log.info("배틀 투표 취소: battleId={}, userId={}, canceledCount={}",
         battleId, userId, votes.size());
-  }
-
-  /**
-   * 배틀 공지 등록
-   */
-  @Transactional
-  public void addNotice(Long battleId, Long userId, BattleRequest.AddNotice request) {
-    Battle battle = getBattleById(battleId);
-    validateBattleCreator(battle, userId);
-
-    // 공지 저장 (24시간 노출)
-    // battleNoticeService.createNotice(battle, request.getMessage());
-
-    // 참여자들에게 푸시 알림
-    // notificationService.notifyBattleNotice(battle, request.getMessage());
-
-    log.info("배틀 공지 등록: battleId={}, creatorId={}", battleId, userId);
-  }
-
-  /**
-   * 배틀 조기 종료
-   */
-  @Transactional
-  public void closeBattle(Long battleId, Long userId, BattleRequest.CloseBattle request) {
-    Battle battle = getBattleById(battleId);
-    validateBattleCreator(battle, userId);
-
-    if (battle.getStatus() != BattleStatus.ACTIVE) {
-      throw new RestApiException(BattleErrorCode.BATTLE_NOT_ACTIVE);
-    }
-
-    // 배틀 종료 처리
-    // battle.close(request.getReason());
-
-    // 모든 참여자에게 푸시 알림
-    // notificationService.notifyBattleClosed(battle, request.getReason());
-
-    log.info("배틀 조기 종료: battleId={}, reason={}", battleId, request.getReason());
   }
 
   /**
@@ -383,17 +336,13 @@ public class BattleService {
   public void reportBattleItem(Long battleId, Long itemId, Long userId, BattleRequest.Report request) {
     Battle battle = getBattleById(battleId);
 
-    if (battle.getType() != BattleType.OPEN) {
-      throw new RestApiException(BattleErrorCode.INVALID_BATTLE_TYPE);
-    }
-
     BattleItem item = battleItemRepository.findById(itemId)
         .orElseThrow(() -> new RestApiException(BattleErrorCode.BATTLE_ITEM_NOT_FOUND));
 
-    // 중복 신고 방지
+    /*// 중복 신고 방지
     if (battleItemReportRepository.existsByBattleItemAndReporterId(item, userId)) {
       throw new RestApiException(BattleErrorCode.ALREADY_REPORTED);
-    }
+    }*/
 
     // 신고 저장
     // BattleItemReport report = BattleItemReport.builder()
@@ -436,19 +385,7 @@ public class BattleService {
     }
   }
 
-  private void addItemsWithNewBadge(Battle battle, List<BattleRequest.ItemRequest> items, LocalDateTime expiresAt) {
-    int currentMaxOrder = battleItemRepository.findByBattleOrderByDisplayOrder(battle).stream()
-        .mapToInt(BattleItem::getDisplayOrder)
-        .max()
-        .orElse(-1);
 
-    for (int i = 0; i < items.size(); i++) {
-      BattleRequest.ItemRequest itemReq = items.get(i);
-      BattleItem item = createBattleItem(battle, itemReq, currentMaxOrder + i + 1);
-      // item.setNewBadgeExpiresAt(expiresAt);
-      battleItemRepository.save(item);
-    }
-  }
 
   private BattleItem createBattleItem(Battle battle, BattleRequest.ItemRequest request, int order) {
     BattleItem.BattleItemBuilder builder = BattleItem.builder()
@@ -464,7 +401,6 @@ public class BattleService {
       // 커스텀 아이템
       builder.customName(request.getCustomName())
           .customBrand(request.getCustomBrand())
-          .customEmoji(request.getCustomEmoji())
           .customImageUrl(request.getCustomImageUrl());
     }
 
