@@ -12,7 +12,8 @@ import lombok.NoArgsConstructor;
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum ResultVisibility {
   REALTIME("REALTIME", "실시간 공개"),
-  AFTER_END("AFTER_END", "종료 후 공개");
+  ;
+  
 
   private String title;
   private String description;

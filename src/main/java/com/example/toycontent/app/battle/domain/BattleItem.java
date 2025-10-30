@@ -43,7 +43,7 @@ public class BattleItem extends BaseTimeEntity {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "battle_id", nullable = false)
+  @JoinColumn(name = "battle_id", nullable = true)
   @Comment("배틀")
   private Battle battle;
 
@@ -78,7 +78,7 @@ public class BattleItem extends BaseTimeEntity {
 
   @Builder.Default
   @Column(nullable = false)
-  @Comment("표시 순서 (큐레이션 배틀용)")
+  @Comment("표시 순서")
   private Integer displayOrder = 0;
 
   // ========== 상태 관리 ==========
@@ -87,14 +87,6 @@ public class BattleItem extends BaseTimeEntity {
   @Column(nullable = false, length = 20)
   @Comment("아이템 상태 (ACTIVE: 활성, UNDER_REVIEW: 검토중, EXCLUDED: 제외됨)")
   private BattleItemStatus status;
-
-  @Builder.Default
-  @Column(nullable = false)
-  @Comment("신규 아이템 여부 (배틀 시작 후 추가된 아이템)")
-  private Boolean isNew = false;
-
-  @Comment("NEW 뱃지 표시 종료 시간 (추가 후 72시간)")
-  private LocalDateTime newUntil;
 
   // ========== 통계 ==========
 
@@ -111,17 +103,6 @@ public class BattleItem extends BaseTimeEntity {
   @Builder.Default
   @Comment("삭제 여부")
   private Boolean isDeleted = false;
-
-  // ========== 비즈니스 메서드 ==========
-
-  /**
-   * 신규 아이템으로 표시
-   * 72시간 동안 NEW 뱃지 표시
-   */
-  public void markAsNew() {
-    this.isNew = true;
-    this.newUntil = LocalDateTime.now().plusHours(72);
-  }
 
   /**
    * 투표 수 증가
@@ -189,15 +170,6 @@ public class BattleItem extends BaseTimeEntity {
     return product == null;
   }
 
-  /**
-   * NEW 뱃지 표시 여부 확인
-   */
-  public boolean shouldShowNewBadge() {
-    if (!isNew || newUntil == null) {
-      return false;
-    }
-    return LocalDateTime.now().isBefore(newUntil);
-  }
 
   /**
    * 활성 상태 여부 확인

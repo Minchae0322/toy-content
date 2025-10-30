@@ -1,9 +1,9 @@
 package com.example.toycontent.app.battle.domain;
 
+import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseTimeEntity;
-import com.example.toycontent.app.common.enumuration.BattleCategory;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
-import com.example.toycontent.app.common.enumuration.BattleType;
+import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.ResultVisibility;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import jakarta.persistence.CascadeType;
@@ -12,9 +12,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
@@ -46,7 +49,6 @@ public class Battle extends BaseTimeEntity {
   @Comment("배틀 ID")
   private Long id;
 
-  // 기본 정보
   @Column(nullable = false, length = 50)
   @Comment("배틀 제목")
   private String title;
@@ -55,22 +57,20 @@ public class Battle extends BaseTimeEntity {
   @Comment("배틀 설명")
   private String description;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 20)
+  @JoinColumn(name = "category_id")
+  @ManyToOne(fetch = FetchType.LAZY)
   @Comment("카테고리")
-  private BattleCategory category;
+  private Category category;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 20)
-  @Comment("배틀 타입")
-  private BattleType type;
+  @Column(nullable = false, length = 30)
+  @Comment("아이템 추가 권한 타입")
+  private ItemAddPermissionType itemAddPermissionType;
 
-  // 생성자
   @Column(name = "creator_id", nullable = false)
   @Comment("생성자 ID")
   private Long creatorId;
 
-  // 기간 설정
   @Column(nullable = false)
   @Comment("시작일")
   private LocalDateTime startDate;
@@ -96,25 +96,13 @@ public class Battle extends BaseTimeEntity {
   @Builder.Default
   @Column(nullable = false)
   @Comment("중복 제품 허용 여부")
-  private Boolean allowDuplicateProducts = false;
+  private Boolean allowDuplicateProducts = true;
 
-  // 리워드 설정
-  @Column(length = 200)
-  @Comment("추가 리워드")
-  private String additionalReward;
-
-  @Builder.Default
-  @Column(nullable = false)
-  @Comment("추가 리워드 여부")
-  private Boolean hasAdditionalReward = false;
-
-  // 상태
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   @Comment("배틀 상태")
   private BattleStatus status;
 
-  // 통계
   @Builder.Default
   @Column(nullable = false)
   @Comment("총 참여자 수")
@@ -134,7 +122,6 @@ public class Battle extends BaseTimeEntity {
   @Comment("삭제 여부")
   private Boolean isDeleted = false;
 
-  // 연관 관계
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<BattleItem> items = new ArrayList<>();
 
@@ -144,6 +131,7 @@ public class Battle extends BaseTimeEntity {
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<BattleParticipation> battleParticipationsList = new ArrayList<>();
 
-
+  @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<BattleAttachmentFile> battleAttachmentFiles = new ArrayList<>();
 
 }

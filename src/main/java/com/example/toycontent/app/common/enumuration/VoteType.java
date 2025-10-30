@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 public enum VoteType {
   SINGLE("SINGLE", "1인 1표"),
   MULTIPLE("MULTIPLE", "1인 3표"),
-  UNLIMITED("UNLIMITED", "무제한 투표");
+  ;
 
   private String title;
   private String description;
