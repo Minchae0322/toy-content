@@ -1,14 +1,28 @@
 package com.example.toycontent.app.battle.service;
 
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
+import com.example.toycontent.app.battle.controller.dto.BattleRequest.ItemRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
+import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.domain.*;
 import com.example.toycontent.app.battle.repository.*;
+import com.example.toycontent.app.category.domain.Category;
+import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.*;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
+import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
+import com.example.toycontent.app.feed.domain.Feed;
+import com.example.toycontent.app.feed.domain.FeedAttachmentFile;
+import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
+import com.example.toycontent.app.product.domain.Product;
+import com.example.toycontent.app.product.repository.ProductRepository;
+import java.time.temporal.ChronoUnit;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,65 +39,32 @@ public class BattleService {
   private final BattleRepository battleRepository;
   private final BattleItemRepository battleItemRepository;
   private final BattleVoteRepository battleVoteRepository;
-  private final BattleParticipationRepository battleParticipationRepository;
-  private final BattleItemReportRepository battleItemReportRepository;
+  private final CategoryRepository categoryRepository;
+  private final ProductRepository productRepository;
+  private final BattleAttachmentFileRepository battleAttachmentFileRepository;
 
-  // TODO: 실제 서비스 구현 필요
-  // private final UserService userService;
-  // private final ProductService productService;
-  // private final RewardService rewardService;
-  // private final NotificationService notificationService;
-  // private final BattleStatisticsService battleStatisticsService;
-  // private final BattleNoticeService battleNoticeService;
 
   private static final int REQUIRED_LEVEL = 5;
-  private static final int MAX_ACTIVE_BATTLES = 3;
-  private static final int MAX_DAILY_CREATIONS = 2;
+  private static final int MAX_ACTIVE_BATTLES = 5;
+  private static final int MAX_DAILY_CREATIONS = 3;
   private static final int MIN_ITEMS = 2;
   private static final int MAX_ITEMS = 20;
   private static final int MAX_ADDITIONAL_ITEMS = 3;
   private static final int AUTO_REVIEW_REPORT_COUNT = 3;
 
-  /**
-   * 배틀 생성 권한 검증
-   */
-  public BattleResponse.CreationValidation validateCreation(Long userId) {
-    // User user = userService.getUserById(userId);
-
-    // Level 5 미만 체크
-    // if (user.getLevel() < REQUIRED_LEVEL) {
-    //   return BattleResponse.CreationValidation.builder()
-    //       .canCreate(false)
-    //       .reason("INSUFFICIENT_LEVEL")
-    //       .message(String.format("Level %d부터 배틀을 만들 수 있어요. 현재 Level %d",
-    //           REQUIRED_LEVEL, user.getLevel()))
-    //       .build();
-    // }
-
+  public void validateCreation(Long userId) {
     // 동시 진행 배틀 수 체크
     long activeCount = battleRepository.countByCreatorIdAndStatus(userId, BattleStatus.ACTIVE);
     if (activeCount >= MAX_ACTIVE_BATTLES) {
-      return BattleResponse.CreationValidation.builder()
-          .canCreate(false)
-          .reason("MAX_ACTIVE_BATTLES")
-          .message("동시에 최대 3개까지만 진행할 수 있어요")
-          .build();
+      throw new RestApiException(BattleErrorCode.MAX_ACTIVE_BATTLES);
     }
 
     // 24시간 내 생성 횟수 체크
     LocalDateTime dayAgo = LocalDateTime.now().minusHours(24);
     long dailyCount = battleRepository.countByCreatorIdAndCreatedAtAfter(userId, dayAgo);
     if (dailyCount >= MAX_DAILY_CREATIONS) {
-      return BattleResponse.CreationValidation.builder()
-          .canCreate(false)
-          .reason("DAILY_LIMIT_EXCEEDED")
-          .message("하루에 최대 2개까지 만들 수 있어요")
-          .build();
+      throw new RestApiException(BattleErrorCode.DAILY_LIMIT_EXCEEDED);
     }
-
-    return BattleResponse.CreationValidation.builder()
-        .canCreate(true)
-        .build();
   }
 
   /**
@@ -91,70 +72,115 @@ public class BattleService {
    */
   @Transactional
   public BattleResponse.BattleDetail createBattle(Long userId, BattleRequest.CreateBattle request) {
-    // 권한 검증
-    BattleResponse.CreationValidation validation = validateCreation(userId);
-    if (!validation.getCanCreate()) {
-      throw new RestApiException(BattleErrorCode.BATTLE_CREATION_NOT_ALLOWED);
-    }
+    validateCreation(userId);
+    validateBattlePeriod(request.getStartDate(), request.getEndDate());
 
-    // 기간 검증 (최소 7일, 최대 31일)
-    long days = java.time.temporal.ChronoUnit.DAYS.between(
-        request.getStartDate(), request.getEndDate());
-    if (days < 7 || days > 31) {
-      throw new RestApiException(BattleErrorCode.INVALID_BATTLE_PERIOD);
-    }
+    Category category = categoryRepository.findById(request.getCategoryId())
+        .orElseThrow(() -> new RestApiException(CategoryErrorCode.CATEGORY_NOT_FOUND));
 
-    // 배틀 생성
-    Battle battle = Battle.builder()
-        .title(request.getTitle())
-        .description(request.getDescription())
-        // .category(categoryRepository.findById(request.getCategoryId()).orElseThrow())
-        .type(request.getType())
-        .creatorId(userId)
-        .startDate(request.getStartDate())
-        .endDate(request.getEndDate())
-        .participationStartDate(request.getParticipationStartDate())
-        .voteType(request.getVoteType())
-        .resultVisibility(request.getResultVisibility())
-        .allowDuplicateProducts(request.getAllowDuplicateProducts())
-        .status(BattleStatus.SCHEDULED)
-        .build();
-
+    Battle battle = createBattleEntity(userId, request, category);
     battleRepository.save(battle);
 
-    // 큐레이션 배틀인 경우 아이템 추가
-    if (request.getType() == BattleType.CURATED) {
-      if (request.getItems() == null || request.getItems().size() < MIN_ITEMS) {
-        throw new RestApiException(BattleErrorCode.INSUFFICIENT_BATTLE_ITEMS);
-      }
-      if (request.getItems().size() > MAX_ITEMS) {
-        throw new RestApiException(BattleErrorCode.TOO_MANY_BATTLE_ITEMS);
-      }
+    createBattleAttachmentFiles(request.getThumbnailAttachmentInfo(), battle);
 
-      addInitialItems(battle, request.getItems());
-    }
-
-    // 오픈 배틀의 추천 아이템 (선택사항, 최대 5개)
-    if (request.getType() == BattleType.OPEN &&
-        request.getSuggestedItems() != null &&
-        !request.getSuggestedItems().isEmpty()) {
-      addSuggestedItems(battle, request.getSuggestedItems());
-    }
-
-    // 생성 리워드 지급 (+50 EXP)
-    // rewardService.rewardBattleCreation(userId);
-
-    log.info("배틀 생성 완료: battleId={}, creatorId={}, type={}",
-        battle.getId(), userId, battle.getType());
+    createBattleItems(userId, battle, request);
 
     return BattleResponse.BattleDetail.from(battle, userId);
   }
 
   /**
+   * 배틀 기간 검증
+   */
+  private void validateBattlePeriod(LocalDateTime startDate, LocalDateTime endDate) {
+    long days = ChronoUnit.DAYS.between(startDate, endDate);
+    
+    //우선은 기한 제한 없이
+    /*if (days < 7 || days > 31) {
+      throw new RestApiException(BattleErrorCode.INVALID_BATTLE_PERIOD);
+    }*/
+  }
+
+  /**
+   * 배틀 엔티티 생성
+   */
+  private Battle createBattleEntity(Long userId, BattleRequest.CreateBattle request, Category category) {
+    return Battle.builder()
+        .title(request.getTitle())
+        .description(request.getDescription())
+        .category(category)
+        .creatorId(userId)
+        .startDate(request.getStartDate())
+        .endDate(request.getEndDate())
+        .participationStartDate(request.getParticipationStartDate())
+        .voteType(request.getVoteType())
+        .allowDuplicateProducts(request.getAllowDuplicateProducts())
+        .status(BattleStatus.ACTIVE)
+        .build();
+  }
+
+
+  /**
+   * 배틀 아이템 생성 및 저장
+   */
+  private void createBattleItems(Long userId, Battle battle, BattleRequest.CreateBattle request) {
+    List<BattleItem> battleItems = request.getItems().stream()
+        .map(itemRequest -> {
+          Product product = productRepository.findById(itemRequest.getProductId())
+              .orElse(null);
+
+          return BattleItem.builder()
+              .battle(battle)
+              .product(product)
+              .registerId(userId)
+              .customName(itemRequest.getCustomName())
+              .customBrand(itemRequest.getCustomBrand())
+              .customImageUrl(itemRequest.getCustomImageUrl())
+              .build();
+        })
+        .toList();
+
+    battleItemRepository.saveAll(battleItems);
+  }
+
+  /**
+   * 제품 첨부파일(대표 이미지 + 상세 이미지) 생성
+   * - 썸네일(대표 이미지)와 상세 이미지 파일을 각각 엔티티로 변환 후 일괄 저장
+   */
+  private void createBattleAttachmentFiles(AttachmentInfo thumbnailAttachmentInfo,
+      Battle battle) {
+    // 대표 이미지 파일 생성
+    BattleAttachmentFile primaryImage = createAttachmentFile(thumbnailAttachmentInfo, battle, 0, true);
+
+    // 대표 이미지 저장
+    battleAttachmentFileRepository.save(primaryImage);
+  }
+
+  /**
+   * 개별 첨부파일 생성 헬퍼 메서드
+   * - AttachmentInfo → ProductAttachmentFile 변환
+   * - 순서(order)와 대표 여부(isPrimary) 설정 포함
+   */
+  private BattleAttachmentFile createAttachmentFile(AttachmentInfo info, Battle battle, int order, boolean isPrimary) {
+    return info.toEntity(battle, order, isPrimary);
+  }
+
+  /**
+   * 큐레이션 배틀 아이템 검증 및 추가
+   */
+  private void validateAndAddCuratedItems(Battle battle, List<BattleRequest.ItemRequest> items) {
+    if (items == null || items.size() < MIN_ITEMS) {
+      throw new RestApiException(BattleErrorCode.INSUFFICIENT_BATTLE_ITEMS);
+    }
+    if (items.size() > MAX_ITEMS) {
+      throw new RestApiException(BattleErrorCode.TOO_MANY_BATTLE_ITEMS);
+    }
+    addInitialItems(battle, items);
+  }
+
+  /**
    * 배틀 목록 조회
    */
-  public Page<BattleResponse.BattleList> getBattles(String category, String type,
-      String status, String sort, Pageable pageable) {
+  public Page<BattleResponse.BattleList> getBattles(BattleSearchCondition condition, Pageable pageable) {
     return battleRepository.findBattlesWithFilters(category, type, status, sort, pageable)
         .map(BattleResponse.BattleList::from);
   }
@@ -441,19 +467,6 @@ public class BattleService {
     for (int i = 0; i < items.size(); i++) {
       BattleRequest.ItemRequest itemReq = items.get(i);
       BattleItem item = createBattleItem(battle, itemReq, i);
-      battleItemRepository.save(item);
-    }
-  }
-
-  private void addSuggestedItems(Battle battle, List<BattleRequest.ItemRequest> items) {
-    // 최대 5개까지만
-    List<BattleRequest.ItemRequest> limitedItems = items.stream()
-        .limit(5)
-        .toList();
-
-    for (BattleRequest.ItemRequest itemReq : limitedItems) {
-      BattleItem item = createBattleItem(battle, itemReq, -1); // 추천 아이템은 displayOrder -1
-      // item.markAsSuggested();
       battleItemRepository.save(item);
     }
   }

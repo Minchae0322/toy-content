@@ -1,7 +1,9 @@
 package com.example.toycontent.app.battle.controller;
 
+
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
+import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.service.BattleService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.response.ApiResponse;
@@ -15,19 +17,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "BattleController", description = "배틀 API")
 @RestController
-@RequestMapping("/api/v1/battles")
+@RequestMapping("/battles")
 @RequiredArgsConstructor
 public class BattleController {
 
@@ -35,10 +29,9 @@ public class BattleController {
 
   @Operation(summary = "배틀 생성 권한 체크")
   @GetMapping("/creation/validation")
-  public ResponseEntity<ApiResponse<BattleResponse.CreationValidation>> validateCreation(
-      @CurrentUserId Long userId) {
-    BattleResponse.CreationValidation response = battleService.validateCreation(userId);
-    return ResponseEntity.ok(ApiResponse.success(response));
+  public ResponseEntity<ApiResponse<Void>> validateCreation(@CurrentUserId Long userId) {
+    battleService.validateCreation(userId);
+    return ResponseEntity.ok(ApiResponse.success(null, "생성 가능합니다."));
   }
 
   @Operation(summary = "배틀 생성")
@@ -53,12 +46,9 @@ public class BattleController {
   @Operation(summary = "배틀 목록 조회")
   @GetMapping
   public ResponseEntity<ApiResponse<Page<BattleResponse.BattleList>>> getBattles(
-      @Parameter(description = "카테고리") @RequestParam(required = false) String category,
-      @Parameter(description = "배틀 타입") @RequestParam(required = false) String type,
-      @Parameter(description = "배틀 상태") @RequestParam(required = false) String status,
-      @Parameter(description = "정렬 기준") @RequestParam(required = false) String sort,
+      @ParameterObject BattleSearchCondition condition,
       @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
-    Page<BattleResponse.BattleList> response = battleService.getBattles(category, type, status, sort, pageable);
+    Page<BattleResponse.BattleList> response = battleService.getBattles(condition, pageable);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
@@ -88,36 +78,6 @@ public class BattleController {
       @CurrentUserId Long userId) {
     BattleResponse.Statistics response = battleService.getBattleStatistics(battleId, userId);
     return ResponseEntity.ok(ApiResponse.success(response));
-  }
-
-  @Operation(summary = "배틀 아이템 추가 (큐레이션 배틀)")
-  @PostMapping("/{battleId}/items")
-  public ResponseEntity<ApiResponse<Void>> addBattleItems(
-      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
-      @CurrentUserId Long userId,
-      @Valid @RequestBody BattleRequest.AddBattleItems request) {
-    battleService.addBattleItems(battleId, userId, request);
-    return ResponseEntity.ok(ApiResponse.success(null, "아이템이 추가되었습니다."));
-  }
-
-  @Operation(summary = "배틀 아이템 제외 (생성자 전용)")
-  @PatchMapping("/{battleId}/items/{itemId}/exclude")
-  public ResponseEntity<ApiResponse<Void>> excludeBattleItem(
-      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
-      @Parameter(description = "아이템 ID") @PathVariable Long itemId,
-      @CurrentUserId Long userId) {
-    battleService.excludeBattleItem(battleId, itemId, userId);
-    return ResponseEntity.ok(ApiResponse.success(null, "아이템이 제외되었습니다."));
-  }
-
-  @Operation(summary = "배틀 아이템 승인 (검토 중 → 활성)")
-  @PatchMapping("/{battleId}/items/{itemId}/approve")
-  public ResponseEntity<ApiResponse<Void>> approveBattleItem(
-      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
-      @Parameter(description = "아이템 ID") @PathVariable Long itemId,
-      @CurrentUserId Long userId) {
-    battleService.approveBattleItem(battleId, itemId, userId);
-    return ResponseEntity.ok(ApiResponse.success(null, "아이템이 승인되었습니다."));
   }
 
   @Operation(summary = "배틀 투표")
@@ -157,16 +117,5 @@ public class BattleController {
       @Valid @RequestBody BattleRequest.CloseBattle request) {
     battleService.closeBattle(battleId, userId, request);
     return ResponseEntity.ok(ApiResponse.success(null, "배틀이 종료되었습니다."));
-  }
-
-  @Operation(summary = "배틀 아이템 신고")
-  @PostMapping("/{battleId}/items/{itemId}/report")
-  public ResponseEntity<ApiResponse<Void>> reportBattleItem(
-      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
-      @Parameter(description = "아이템 ID") @PathVariable Long itemId,
-      @CurrentUserId Long userId,
-      @Valid @RequestBody BattleRequest.Report request) {
-    battleService.reportBattleItem(battleId, itemId, userId, request);
-    return ResponseEntity.ok(ApiResponse.success(null, "신고가 접수되었습니다."));
   }
 }

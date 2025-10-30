@@ -3,6 +3,7 @@ package com.example.toycontent.app.battle.controller.dto;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.ResultVisibility;
 import com.example.toycontent.app.common.enumuration.VoteType;
+import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -59,31 +60,19 @@ public abstract class BattleRequest {
     @NotNull(message = "투표 방식을 선택해주세요")
     private VoteType voteType;
 
-    @Schema(description = "결과 공개 시점", example = "REAL_TIME")
-    @NotNull(message = "결과 공개 시점을 선택해주세요")
-    private ResultVisibility resultVisibility;
-
     @Schema(description = "중복 제품 허용 여부", example = "true")
     @Builder.Default
     private Boolean allowDuplicateProducts = true;
 
-    @Schema(description = "큐레이션 배틀용 아이템 목록 (2~20개)")
+    @Schema(description = "배틀 아이템 목록 (2~20개)")
     @Valid
     @Size(min = 2, max = 20, message = "아이템은 2~20개 사이여야 합니다")
     private List<ItemRequest> items;
 
-    @Schema(description = "오픈 배틀용 추천 아이템 (최대 5개, 선택사항)")
-    @Valid
-    @Size(max = 5, message = "추천 아이템은 최대 5개까지 가능합니다")
-    private List<ItemRequest> suggestedItems;
+    @NotNull(message = "대표이미지는 필수 입니다.")
+    @Schema(description = "대표이미지")
+    private AttachmentFileRequest.AttachmentInfo thumbnailAttachmentInfo;
 
-    @Schema(description = "최소 참여 레벨", example = "3")
-    @Min(value = 0, message = "레벨 제한은 0 이상이어야 합니다")
-    private Integer minParticipantLevel;
-
-    @Schema(description = "최대 참여자 수", example = "100")
-    @Max(value = 200, message = "최대 참여 수는 200 이하여야 합니다")
-    private Integer maxParticipants;
   }
 
   @Schema(description = "배틀 아이템 요청")
