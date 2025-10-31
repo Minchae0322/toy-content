@@ -10,6 +10,7 @@ import com.example.toycontent.app.battle.repository.BattleRepository;
 import com.example.toycontent.app.battle.repository.BattleVoteRepository;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
+import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.product.domain.Product;
@@ -143,8 +144,6 @@ public class BattleItemService {
     item.approve();
   }
 
-
-
   /**
    * 배틀 아이템 제외 처리
    */
@@ -161,10 +160,178 @@ public class BattleItemService {
     }
 
     item.exclude();
+  }
 
-    // 해당 아이템에 투표한 모든 투표 무효 처리
-    List<BattleVote> votes = battleVoteRepository.findByBattleItemAndIsDeletedFalse(item);
-    votes.forEach(BattleVote::softDelete);
+  /**
+   * 배틀 아이템 투표
+   */
+  @Transactional
+  public void vote(Long battleId, Long currentUserId, BattleRequest.Vote request) {
+    Battle battle = getBattleByIdOrElseThrow(battleId);
+
+    validateAndHandleExistingVotes(battle, currentUserId, request);
+
+    List<BattleVote> votes = createVotes(battle, currentUserId, request.getVotes());
+    battleVoteRepository.saveAll(votes);
+
+    updateVoteStatistics(battle, votes, true);
+  }
+
+  /**
+   * 투표 검증 및 기존 투표 처리
+   */
+  private void validateAndHandleExistingVotes(Battle battle, Long userId, BattleRequest.Vote request) {
+    List<BattleRequest.VoteItem> voteItems = request.getVotes();
+    int existingVoteCount = battleVoteRepository.countByBattleAndUserId(battle,
+        userId);
+
+    if (VoteType.SINGLE.equals(battle.getVoteType())) {
+      validateSingleVote(voteItems, existingVoteCount);
+      return;
+    }
+
+    // MULTIPLE 타입
+    validateMultipleVote(voteItems);
+    handleExistingVotesIfPresent(battle, userId, existingVoteCount);
+  }
+
+  /**
+   * 1인 1표 검증
+   */
+  private void validateSingleVote(List<BattleRequest.VoteItem> voteItems, int existingVoteCount) {
+    if (existingVoteCount > 0) {
+      throw new RestApiException(BattleErrorCode.ALREADY_VOTED);
+    }
+
+    if (voteItems.size() != 1 || voteItems.get(0).getRank() != 1) {
+      throw new RestApiException(BattleErrorCode.INVALID_VOTE_COUNT);
+    }
+  }
+
+  /**
+   * 1인 3표 검증
+   */
+  private void validateMultipleVote(List<BattleRequest.VoteItem> voteItems) {
+    List<Integer> ranks = voteItems.stream()
+        .map(BattleRequest.VoteItem::getRank)
+        .sorted()
+        .toList();
+
+    for (int i = 0; i < ranks.size(); i++) {
+      if (ranks.get(i) != i + 1) {
+        throw new RestApiException(BattleErrorCode.INVALID_RANK_SEQUENCE);
+      }
+    }
+  }
+
+  /**
+   * 기존 투표 처리 (수정 로직)
+   */
+  private void handleExistingVotesIfPresent(Battle battle, Long currentUserId, int existingVoteCount) {
+    if (existingVoteCount == 0) {
+      return;
+    }
+
+    List<BattleVote> existingVotes = battleVoteRepository.findByBattleAndUserId(
+        battle, currentUserId);
+    updateVoteStatistics(battle, existingVotes, false);
+
+    battle.getVotes().removeAll(existingVotes);
+    battleVoteRepository.deleteAll(existingVotes);
+
+  }
+
+  /**
+   * 투표 통계 업데이트
+   */
+  private void updateVoteStatistics(Battle battle, List<BattleVote> votes, boolean isAdd) {
+    int delta = isAdd ? 1 : -1;
+
+    battle.incrementTotalParticipants(delta);
+
+    int voteCountDelta = (battle.getVoteType() == VoteType.SINGLE)
+        ? delta
+        : votes.size() * delta;
+    battle.incrementTotalVotes(voteCountDelta);
+
+    votes.stream()
+        .map(BattleVote::getBattleItem)
+        .distinct()
+        .forEach(item -> item.incrementVoteCount(delta));
+  }
+
+
+
+
+
+  /**
+   * 배틀 아이템 투표 취소
+   */
+  @Transactional
+  public void cancelVote(Long battleId, Long userId) {
+    Battle battle = getBattleByIdOrElseThrow(battleId);
+
+    List<BattleVote> votes = battleVoteRepository.findByBattleAndUserId(
+        battle, userId);
+
+    if (votes.isEmpty()) {
+      throw new RestApiException(BattleErrorCode.VOTE_NOT_FOUND);
+    }
+
+    // 비정규화 컬럼 업데이트 (취소 전에 먼저)
+    updateVoteStatistics(battle, votes, false);
+
+    battle.getVotes().removeAll(votes);
+    battleVoteRepository.deleteAll(votes);
+
+  }
+
+
+  private List<BattleVote> createVotes(Battle battle, Long userId,
+      List<BattleRequest.VoteItem> voteItems) {
+    return voteItems.stream()
+        .map(voteItem -> {
+          BattleItem item = battleItemRepository.findById(voteItem.getItemId())
+              .orElseThrow(() -> new RestApiException(BattleErrorCode.BATTLE_ITEM_NOT_FOUND));
+
+          // 해당 배틀의 아이템인지 확인
+          if (!item.getBattle().getId().equals(battle.getId())) {
+            throw new RestApiException(BattleErrorCode.INVALID_BATTLE_ITEM);
+          }
+
+          // 활성 상태인지 확인
+          if (item.getStatus() != BattleItemStatus.ACTIVE) {
+            throw new RestApiException(BattleErrorCode.INVALID_ITEM_STATUS);
+          }
+
+          int point = calculatePoint(battle.getVoteType(), voteItem.getRank());
+
+          return BattleVote.builder()
+              .battle(battle)
+              .battleItem(item)
+              .userId(userId)
+              .rank(voteItem.getRank())
+              .score(point)
+              .build();
+        })
+        .toList();
+  }
+
+  /**
+   * 투표 타입과 순위에 따른 점수 계산
+   */
+  private int calculatePoint(VoteType voteType, int rank) {
+    if (voteType == VoteType.SINGLE) {
+      return 1; // 1인 1표는 무조건 1점
+    }
+
+    // 1인 3표 (랭킹)
+    return switch (rank) {
+      case 1 -> 3;
+      case 2 -> 2;
+      case 3 -> 1;
+      default -> throw new RestApiException(BattleErrorCode.INVALID_RANK);
+    };
   }
 
 

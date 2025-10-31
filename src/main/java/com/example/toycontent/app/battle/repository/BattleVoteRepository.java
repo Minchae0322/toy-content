@@ -8,9 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BattleVoteRepository extends JpaRepository<BattleVote, Long> {
 
-  List<BattleVote> findByBattleItemAndIsDeletedFalse(BattleItem item);
+  List<BattleVote> findByBattleItem(BattleItem item);
 
-  List<BattleVote> findByBattleAndUserIdAndIsDeletedFalse(Battle battle, Long userId);
+  List<BattleVote> findByBattleAndUserId(Battle battle, Long userId);
 
   Boolean existsByBattleIdAndUserId(Long battleId, Long userId);
+
+  int countByBattleAndUserId(Battle battle, Long userId);
 }
