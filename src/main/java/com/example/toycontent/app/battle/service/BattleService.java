@@ -3,6 +3,7 @@ package com.example.toycontent.app.battle.service;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest.ItemRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
+import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleItemInfo;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.domain.Battle;
@@ -198,25 +199,24 @@ public class BattleService {
     Battle battle = getBattleById(battleId);
     ExternalUserInfo userInfo = userCacheService.getUserInfo(battle.getCreatorId());
 
-    boolean isCreator = Optional.ofNullable(currentUserId)
-        .filter(battle.getCreatorId()::equals)
-        .isPresent();
-
-    boolean isHasVoted = Optional.ofNullable(currentUserId)
-        .map(userId -> battleVoteRepository.existsByBattleIdAndUserId(battleId, userId))
-        .orElse(false);
-
     battle.incrementViews();
 
-    return BattleResponse.BattleDetail.from(battle, userInfo, isCreator, isHasVoted);
+    List<BattleItem> battleItems = battleItemRepository.findByBattleIdWithBattleVote(
+        battleId, currentUserId);
+
+    List<BattleItemInfo> items = battleItems.stream()
+        .map(item -> BattleItemInfo.from(item, currentUserId))
+        .toList();
+
+    return BattleResponse.BattleDetail.from(battle, userInfo, items);
   }
 
 
   /**
-   * 배틀 아이템 추가 (큐레이션 배틀, 진행 중 추가)
+   * 배틀 아이템 추가
    */
   @Transactional
-  public void addBattleItems(Long battleId, Long userId, BattleRequest.AddBattleItems request) {
+  public void requestAddBattleItems(Long battleId, Long userId, BattleRequest.AddBattleItems request) {
     Battle battle = getBattleById(battleId);
     // 생성자 권한 확인
     if (ItemAddPermissionType.CREATOR_ONLY.equals(battle.getItemAddPermissionType())) {
