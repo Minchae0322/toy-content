@@ -123,9 +123,6 @@ public abstract class BattleResponse {
     @Schema(description = "투표 타입", example = "SINGLE")
     private VoteType voteType;
 
-    @Schema(description = "중복 제품 허용 여부", example = "true")
-    private Boolean allowDuplicateProducts;
-
     @Schema(description = "총 참여자 수", example = "48")
     private Integer totalParticipants;
 
@@ -153,9 +150,7 @@ public abstract class BattleResponse {
           .startDate(battle.getStartDate())
           .endDate(battle.getEndDate())
           .participationStartDate(battle.getParticipationStartDate())
-          .voteType(battle.getVoteType())
-          .allowDuplicateProducts(battle.getAllowDuplicateProducts())
-          .totalParticipants(battle.getTotalParticipants())
+          .voteType(battle.getVoteType()).totalParticipants(battle.getTotalParticipants())
           .totalVotes(battle.getTotalVotes())
           .totalViews(battle.getTotalViews())
           .createdAt(battle.getCreatedAt())
@@ -208,9 +203,6 @@ public abstract class BattleResponse {
     @Schema(description = "투표 수", example = "42")
     private Integer voteCount;
 
-    @Schema(description = "현재 순위", example = "1")
-    private Integer rank;
-
     @Schema(description = "득표율", example = "33.07")
     private Double votePercentage;
 
@@ -245,6 +237,11 @@ public abstract class BattleResponse {
           .reportCount(item.getReportCount())
           .registerId(item.getRegisterId())
           .userBattleVote(userVote)
+          .votePercentage(
+              item.getBattle().getTotalVotes() > 0
+                  ? (double) item.getVoteCount() / item.getBattle().getTotalVotes()
+                  : 0.0
+          )
           .build();
     }
   }

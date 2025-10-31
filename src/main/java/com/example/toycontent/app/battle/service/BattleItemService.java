@@ -2,6 +2,7 @@ package com.example.toycontent.app.battle.service;
 
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest.ItemRequest;
+import com.example.toycontent.app.battle.controller.dto.BattleVoteRequest;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.domain.BattleVote;
@@ -166,7 +167,7 @@ public class BattleItemService {
    * 배틀 아이템 투표
    */
   @Transactional
-  public void vote(Long battleId, Long currentUserId, BattleRequest.Vote request) {
+  public void vote(Long battleId, Long currentUserId, BattleVoteRequest.Vote request) {
     Battle battle = getBattleByIdOrElseThrow(battleId);
 
     validateAndHandleExistingVotes(battle, currentUserId, request);
@@ -180,8 +181,8 @@ public class BattleItemService {
   /**
    * 투표 검증 및 기존 투표 처리
    */
-  private void validateAndHandleExistingVotes(Battle battle, Long userId, BattleRequest.Vote request) {
-    List<BattleRequest.VoteItem> voteItems = request.getVotes();
+  private void validateAndHandleExistingVotes(Battle battle, Long userId, BattleVoteRequest.Vote request) {
+    List<BattleVoteRequest.VoteItem> voteItems = request.getVotes();
     int existingVoteCount = battleVoteRepository.countByBattleAndUserId(battle,
         userId);
 
@@ -198,7 +199,7 @@ public class BattleItemService {
   /**
    * 1인 1표 검증
    */
-  private void validateSingleVote(List<BattleRequest.VoteItem> voteItems, int existingVoteCount) {
+  private void validateSingleVote(List<BattleVoteRequest.VoteItem> voteItems, int existingVoteCount) {
     if (existingVoteCount > 0) {
       throw new RestApiException(BattleErrorCode.ALREADY_VOTED);
     }
@@ -211,9 +212,9 @@ public class BattleItemService {
   /**
    * 1인 3표 검증
    */
-  private void validateMultipleVote(List<BattleRequest.VoteItem> voteItems) {
+  private void validateMultipleVote(List<BattleVoteRequest.VoteItem> voteItems) {
     List<Integer> ranks = voteItems.stream()
-        .map(BattleRequest.VoteItem::getRank)
+        .map(BattleVoteRequest.VoteItem::getRank)
         .sorted()
         .toList();
 
@@ -288,7 +289,7 @@ public class BattleItemService {
 
 
   private List<BattleVote> createVotes(Battle battle, Long userId,
-      List<BattleRequest.VoteItem> voteItems) {
+      List<BattleVoteRequest.VoteItem> voteItems) {
     return voteItems.stream()
         .map(voteItem -> {
           BattleItem item = battleItemRepository.findById(voteItem.getItemId())

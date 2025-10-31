@@ -2,6 +2,7 @@ package com.example.toycontent.app.battle.controller;
 
 
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
+import com.example.toycontent.app.battle.controller.dto.BattleVoteRequest;
 import com.example.toycontent.app.battle.service.BattleItemService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.response.ApiResponse;
@@ -56,7 +57,7 @@ public class BattleItemController {
   public ResponseEntity<ApiResponse<Void>> vote(
       @Parameter(description = "배틀 아이템 ID") @PathVariable Long battleItemId,
       @CurrentUserId Long userId,
-      @Valid @RequestBody BattleRequest.Vote request) {
+      @Valid @RequestBody BattleVoteRequest.Vote request) {
     battleItemService.vote(battleItemId, userId, request);
     return ResponseEntity.ok(ApiResponse.success(null, "투표가 완료되었습니다."));
   }

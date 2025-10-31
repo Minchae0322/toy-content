@@ -1,7 +1,6 @@
 package com.example.toycontent.app.battle.service;
 
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
-import com.example.toycontent.app.battle.controller.dto.BattleRequest.ItemRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleItemInfo;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
@@ -21,7 +20,6 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
-import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.UserCacheService;
@@ -77,7 +75,7 @@ public class BattleService {
     validateCreation(userId);
     validateBattlePeriod(request.getStartDate(), request.getEndDate());
 
-    Category category = categoryRepository.findById(request.getCategoryId())
+    Category category = categoryRepository.findById(request.getSubCategoryId())
         .orElseThrow(() -> new RestApiException(CategoryErrorCode.CATEGORY_NOT_FOUND));
 
     Battle battle = createBattleEntity(userId, request, category);
