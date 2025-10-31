@@ -70,33 +70,4 @@ public class BattleVote extends BaseTimeEntity {
   @Comment("점수 (1위=3점, 2위=2점, 3위=1점)")
   private Integer score = 1;
 
-  @Builder.Default
-  @Comment("삭제 여부")
-  private Boolean isDeleted = false;
-
-  @Comment("삭제 일시")
-  private LocalDateTime deletedAt;
-  
-
-  /**
-   * Soft Delete
-   */
-  public void softDelete() {
-    this.isDeleted = true;
-    this.deletedAt = LocalDateTime.now();
-  }
-
-  /**
-   * 1위 투표 여부 확인
-   */
-  public boolean isFirstPlace() {
-    return rank == 1;
-  }
-
-  /**
-   * 유효한 투표 여부 확인
-   */
-  public boolean isValid() {
-    return !isDeleted && rank >= 1 && rank <= 3;
-  }
 }

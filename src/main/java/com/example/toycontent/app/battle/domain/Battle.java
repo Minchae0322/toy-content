@@ -132,8 +132,19 @@ public class Battle extends BaseTimeEntity {
   private List<BattleAttachmentFile> battleAttachmentFiles = new ArrayList<>();
 
 
-  public void incrementViews() {
-    this.totalViews++;
+  public void incrementTotalVotes(int delta) {
+    this.totalVotes += delta;
   }
+
+  public void incrementTotalParticipants(int delta) {
+    this.totalParticipants += delta;
+  }
+
+  public void incrementTotalViews() {
+    this.totalViews++;
+
+  }
+
+
 
 }

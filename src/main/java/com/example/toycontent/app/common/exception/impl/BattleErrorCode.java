@@ -44,7 +44,12 @@ public enum BattleErrorCode implements ErrorCode {
   VOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "투표 내역을 찾을 수 없습니다."),
   INVALID_VOTE_PERIOD(HttpStatus.BAD_REQUEST, "투표 기간이 아닙니다."),
   ALREADY_VOTED(HttpStatus.BAD_REQUEST, "이미 투표했습니다."),
+  VOTE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "투표 가능 횟수를 초과했습니다."),
   INVALID_VOTE_COUNT(HttpStatus.BAD_REQUEST, "투표 수가 유효하지 않습니다."),
+  INVALID_RANK(HttpStatus.BAD_REQUEST, "순위가 유효하지 않습니다."),
+  DUPLICATE_RANK(HttpStatus.BAD_REQUEST, "중복된 순위로 투표할 수 없습니다."),
+  INVALID_RANK_SEQUENCE(HttpStatus.BAD_REQUEST, "순위는 1위부터 순서대로 선택해야 합니다."),
+  INVALID_VOTE_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 투표 타입입니다."),
   INVALID_VOTE_RANK(HttpStatus.BAD_REQUEST, "투표 순위가 유효하지 않습니다."),
   DUPLICATE_VOTE_RANK(HttpStatus.BAD_REQUEST, "중복된 순위로 투표할 수 없습니다."),
 

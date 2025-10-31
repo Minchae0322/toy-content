@@ -187,4 +187,9 @@ public class BattleItem extends BaseTimeEntity {
   public boolean canVote() {
     return isActive() && status == BattleItemStatus.ACTIVE;
   }
+
+  // BattleItem.java
+  public void incrementVoteCount(int delta) {
+    this.voteCount += delta;
+  }
 }

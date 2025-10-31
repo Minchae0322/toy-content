@@ -113,7 +113,7 @@ public class BattleService {
     Battle battle = getBattleByIdOrElseThrow(battleId);
     ExternalUserInfo userInfo = userCacheService.getUserInfo(battle.getCreatorId());
 
-    battle.incrementViews();
+    battle.incrementTotalViews();
 
     // 생성자는 모든 상태의 아이템 조회, 일반 사용자는 활성화된 아이템만 조회
     BattleItemStatus status = isCreator(battle, currentUserId)
