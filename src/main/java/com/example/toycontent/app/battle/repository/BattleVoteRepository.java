@@ -11,4 +11,6 @@ public interface BattleVoteRepository extends JpaRepository<BattleVote, Long> {
   List<BattleVote> findByBattleItemAndIsDeletedFalse(BattleItem item);
 
   List<BattleVote> findByBattleAndUserIdAndIsDeletedFalse(Battle battle, Long userId);
+
+  Boolean existsByBattleIdAndUserId(Long battleId, Long userId);
 }

@@ -30,8 +30,25 @@ public class CurrentUserIdArgumentResolver implements HandlerMethodArgumentResol
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new IllegalStateException("인증되지 않은 사용자입니다.");
+        // required 속성 가져오기
+        CurrentUserId annotation = parameter.getParameterAnnotation(CurrentUserId.class);
+        boolean required = annotation != null && annotation.required();
+
+        // 인증되지 않은 경우
+        if (authentication == null || !authentication.isAuthenticated()
+            || "anonymousUser".equals(authentication.getPrincipal())) {
+            if (required) {
+                throw new IllegalStateException("인증되지 않은 사용자입니다.");
+            }
+            return null;  // required=false면 null 반환
+        }
+
+        // Principal 타입 체크
+        if (!(authentication.getPrincipal() instanceof CustomUserDetails)) {
+            if (required) {
+                throw new IllegalStateException("올바른 인증 정보가 아닙니다.");
+            }
+            return null;
         }
 
         CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
@@ -40,6 +57,11 @@ public class CurrentUserIdArgumentResolver implements HandlerMethodArgumentResol
             return principal.getUserId();
         }
 
-        throw new IllegalStateException("인증 정보에서 사용자를 찾을 수 없습니다.");
+        // userId가 null인 경우
+        if (required) {
+            throw new IllegalStateException("인증 정보에서 사용자를 찾을 수 없습니다.");
+        }
+
+        return null;
     }
 }

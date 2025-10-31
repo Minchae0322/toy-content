@@ -30,6 +30,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.envers.NotAudited;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Getter
@@ -88,11 +89,6 @@ public class Battle extends BaseTimeEntity {
   @Comment("투표 타입")
   private VoteType voteType;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 20)
-  @Comment("결과 공개 시점")
-  private ResultVisibility resultVisibility;
-
   @Builder.Default
   @Column(nullable = false)
   @Comment("중복 제품 허용 여부")
@@ -116,6 +112,7 @@ public class Battle extends BaseTimeEntity {
   @Builder.Default
   @Column(nullable = false)
   @Comment("총 조회 수")
+  @NotAudited
   private Integer totalViews = 0;
 
   @Builder.Default
@@ -133,5 +130,10 @@ public class Battle extends BaseTimeEntity {
 
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<BattleAttachmentFile> battleAttachmentFiles = new ArrayList<>();
+
+
+  public void incrementViews() {
+    this.totalViews++;
+  }
 
 }

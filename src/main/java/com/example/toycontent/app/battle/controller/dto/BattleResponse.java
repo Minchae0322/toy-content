@@ -2,6 +2,7 @@ package com.example.toycontent.app.battle.controller.dto;
 
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.category.contoller.dto.CategoryResponse.SubCategoryDetail;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
@@ -9,6 +10,7 @@ import com.example.toycontent.app.common.enumuration.ResultVisibility;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
@@ -35,7 +37,7 @@ public abstract class BattleResponse {
     private String title;
 
     @Schema(description = "카테고리명", example = "스니커즈")
-    private String categoryName;
+    private SubCategoryDetail subCategoryDetail;
 
     @Schema(description = "배틀 상태", example = "ACTIVE")
     private BattleStatus status;
@@ -70,20 +72,9 @@ public abstract class BattleResponse {
     @Schema(description = "상위 아이템 이미지 목록 ((최대 4개) 대표이미지가 없으면)")
     private List<String> topItemImages;
 
-    public static BattleList from(Battle battle) {
-      return BattleList.builder()
-          .id(battle.getId())
-          .title(battle.getTitle())
-          .categoryName(battle.getCategory().getName())
-          .status(battle.getStatus())
-          .totalParticipants(battle.getTotalParticipants())
-          .totalVotes(battle.getTotalVotes())
-          .totalViews(battle.getTotalViews())
-          .startDate(battle.getStartDate())
-          .endDate(battle.getEndDate())
-          .createdAt(battle.getCreatedAt())
-          .build();
-    }
+    @Schema(hidden = true)
+    @JsonIgnore
+    private Long creatorId;
   }
 
   @Schema(description = "배틀 상세 조회 응답")
@@ -103,16 +94,13 @@ public abstract class BattleResponse {
     private String description;
 
     @Schema(description = "카테고리명", example = "스니커즈")
-    private String categoryName;
+    private SubCategoryDetail subCategoryDetail;
 
     @Schema(description = "배틀 상태", example = "ACTIVE")
     private BattleStatus status;
 
-    @Schema(description = "생성자 ID", example = "123")
-    private Long creatorId;
-
-    @Schema(description = "생성자 닉네임", example = "스니커헤드123")
-    private String creatorNickname;
+    @Schema(description = "생성자 정보", example = "스니커헤드123")
+    private ExternalUserInfo creatorUserInfo;
 
     @NotNull(message = "아이템 추가 권한 타입을 선택해주세요")
     private ItemAddPermissionType itemAddPermissionType;
@@ -131,9 +119,6 @@ public abstract class BattleResponse {
 
     @Schema(description = "투표 타입", example = "SINGLE")
     private VoteType voteType;
-
-    @Schema(description = "결과 공개 시점", example = "REAL_TIME")
-    private ResultVisibility resultVisibility;
 
     @Schema(description = "중복 제품 허용 여부", example = "true")
     private Boolean allowDuplicateProducts;
@@ -162,34 +147,41 @@ public abstract class BattleResponse {
     @Schema(description = "현재 사용자가 투표했는지 여부", example = "true")
     private Boolean hasVoted;
 
-    @Schema(description = "현재 사용자가 참여 가능한지 여부", example = "true")
-    private Boolean canParticipate;
-
-    @Schema(description = "공지사항")
-    private String notice;
-
-    @Schema(description = "D-Day (남은 일수)", example = "7")
-    private Integer dDay;
-
-    public static BattleDetail from(Battle battle, Long userId) {
+    public static BattleDetail from(Battle battle, ExternalUserInfo userInfo, boolean isCreator, boolean isHasVoted) {
       return BattleDetail.builder()
           .id(battle.getId())
           .title(battle.getTitle())
           .description(battle.getDescription())
-          .categoryName(battle.getCategory().getName())
+          .subCategoryDetail(SubCategoryDetail.from(battle.getCategory()))
+          .creatorUserInfo(userInfo)
           .status(battle.getStatus())
-          .creatorId(battle.getCreatorId())
           .startDate(battle.getStartDate())
           .endDate(battle.getEndDate())
           .participationStartDate(battle.getParticipationStartDate())
           .voteType(battle.getVoteType())
-          .resultVisibility(battle.getResultVisibility())
           .allowDuplicateProducts(battle.getAllowDuplicateProducts())
           .totalParticipants(battle.getTotalParticipants())
           .totalVotes(battle.getTotalVotes())
           .totalViews(battle.getTotalViews())
           .createdAt(battle.getCreatedAt())
-          .isCreator(battle.getCreatorId().equals(userId))
+          .build();
+    }
+  }
+
+
+  @Data
+  @Schema(description = "배틀 생성 응답")
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class BattleCreateResponse {
+
+    @Schema(description = "배틀 ID", example = "1")
+    private Long id;
+
+    public static BattleCreateResponse from(Battle battle) {
+      return BattleCreateResponse.builder()
+          .id(battle.getId())
           .build();
     }
   }
