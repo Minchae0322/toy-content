@@ -89,11 +89,6 @@ public class Battle extends BaseTimeEntity {
   @Comment("투표 타입")
   private VoteType voteType;
 
-  @Builder.Default
-  @Column(nullable = false)
-  @Comment("중복 제품 허용 여부")
-  private Boolean allowDuplicateProducts = true;
-
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   @Comment("배틀 상태")
