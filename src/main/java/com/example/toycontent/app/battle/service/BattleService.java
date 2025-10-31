@@ -157,7 +157,6 @@ public class BattleService {
         .endDate(request.getEndDate())
         .participationStartDate(request.getParticipationStartDate())
         .voteType(request.getVoteType())
-        .allowDuplicateProducts(request.getAllowDuplicateProducts())
         .status(BattleStatus.ACTIVE)
         .build();
   }
