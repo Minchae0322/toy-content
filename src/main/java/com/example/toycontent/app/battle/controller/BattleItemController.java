@@ -27,7 +27,7 @@ public class BattleItemController {
       @Parameter(description = "배틀 ID") @PathVariable Long battleId,
       @CurrentUserId Long userId,
       @Valid @RequestBody BattleRequest.AddBattleItems request) {
-    battleService.addBattleItems(battleId, userId, request);
+    battleService.requestAddBattleItems(battleId, userId, request);
     return ResponseEntity.ok(ApiResponse.success(null, "아이템이 추가되었습니다."));
   }
 

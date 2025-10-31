@@ -14,8 +14,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -99,6 +101,11 @@ public class BattleItem extends BaseTimeEntity {
   @Builder.Default
   @Comment("삭제 여부")
   private Boolean isDeleted = false;
+
+
+  @Builder.Default
+  @OneToMany(fetch = FetchType.LAZY, mappedBy = "battleItem")
+  private List<BattleVote> battleVotes = new ArrayList<>();
 
   /**
    * 투표 수 증가

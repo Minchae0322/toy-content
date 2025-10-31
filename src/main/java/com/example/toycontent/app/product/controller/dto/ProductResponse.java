@@ -110,6 +110,39 @@ public abstract class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(description = "배틀 아이템 상품 응답")
+    public static class BattleItemProduct {
+        @Schema(description = "상품 ID", example = "1")
+        private Long id;
+
+        @Schema(description = "상품명", example = "건담 로봇")
+        private String name;
+
+        @Schema(description = "브랜드명", example = "반다이")
+        private String brand;
+
+        private String price;
+
+        @Schema(description = "대표 이미지")
+        private AttachmentFileResponse thumbnailDto;
+
+        public static BattleItemProduct of(Product product) {
+            return BattleItemProduct.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .brand(product.getBrand())
+                .price(product.getPrice())
+                .thumbnailDto(
+                    AttachmentFileResponse.of(product.getProductAttachmentFiles().get(0)))
+                .build();
+        }
+
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Schema(description = "상품 상세 응답")
     public static class ProductDetail {
         @Schema(description = "상품 ID", example = "1")
