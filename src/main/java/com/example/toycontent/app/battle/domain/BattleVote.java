@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -73,13 +74,16 @@ public class BattleVote extends BaseTimeEntity {
   @Comment("삭제 여부")
   private Boolean isDeleted = false;
 
-  // ========== 비즈니스 메서드 ==========
+  @Comment("삭제 일시")
+  private LocalDateTime deletedAt;
+  
 
   /**
    * Soft Delete
    */
   public void softDelete() {
     this.isDeleted = true;
+    this.deletedAt = LocalDateTime.now();
   }
 
   /**

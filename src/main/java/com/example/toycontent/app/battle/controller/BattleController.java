@@ -6,6 +6,7 @@ import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.service.BattleService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
+import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -62,22 +63,4 @@ public class BattleController {
   }
 
 
-  @Operation(summary = "배틀 투표")
-  @PostMapping("/{battleId}/vote")
-  public ResponseEntity<ApiResponse<Void>> vote(
-      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
-      @CurrentUserId Long userId,
-      @Valid @RequestBody BattleRequest.Vote request) {
-    battleService.vote(battleId, userId, request);
-    return ResponseEntity.ok(ApiResponse.success(null, "투표가 완료되었습니다."));
-  }
-
-  @Operation(summary = "배틀 투표 취소")
-  @DeleteMapping("/{battleId}/vote")
-  public ResponseEntity<ApiResponse<Void>> cancelVote(
-      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
-      @CurrentUserId Long userId) {
-    battleService.cancelVote(battleId, userId);
-    return ResponseEntity.ok(ApiResponse.success(null, "투표가 취소되었습니다."));
-  }
 }
