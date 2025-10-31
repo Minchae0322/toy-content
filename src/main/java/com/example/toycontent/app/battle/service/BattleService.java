@@ -5,32 +5,38 @@ import com.example.toycontent.app.battle.controller.dto.BattleRequest.ItemReques
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
-import com.example.toycontent.app.battle.domain.*;
-import com.example.toycontent.app.battle.repository.*;
+import com.example.toycontent.app.battle.domain.Battle;
+import com.example.toycontent.app.battle.domain.BattleAttachmentFile;
+import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.battle.domain.BattleVote;
+import com.example.toycontent.app.battle.repository.BattleAttachmentFileRepository;
+import com.example.toycontent.app.battle.repository.BattleItemRepository;
+import com.example.toycontent.app.battle.repository.BattleRepository;
+import com.example.toycontent.app.battle.repository.BattleVoteRepository;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
-import com.example.toycontent.app.common.enumuration.*;
+import com.example.toycontent.app.common.enumuration.BattleItemStatus;
+import com.example.toycontent.app.common.enumuration.BattleStatus;
+import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
-import com.example.toycontent.app.feed.domain.Feed;
-import com.example.toycontent.app.feed.domain.FeedAttachmentFile;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import com.example.toycontent.external.user.service.UserCacheService;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -43,6 +49,7 @@ public class BattleService {
   private final BattleVoteRepository battleVoteRepository;
   private final CategoryRepository categoryRepository;
   private final ProductRepository productRepository;
+  private final UserCacheService userCacheService;
   private final BattleAttachmentFileRepository battleAttachmentFileRepository;
 
 
@@ -73,7 +80,7 @@ public class BattleService {
    * 배틀 생성
    */
   @Transactional
-  public BattleResponse.BattleDetail createBattle(Long userId, BattleRequest.CreateBattle request) {
+  public BattleResponse.BattleCreateResponse createBattle(Long userId, BattleRequest.CreateBattle request) {
     validateCreation(userId);
     validateBattlePeriod(request.getStartDate(), request.getEndDate());
 
@@ -87,7 +94,23 @@ public class BattleService {
 
     createBattleItems(userId, battle, request.getItems());
 
-    return BattleResponse.BattleDetail.from(battle, userId);
+    return BattleResponse.BattleCreateResponse.from(battle);
+  }
+
+
+  /**
+   * 배틀 목록 조회
+   */
+  public Page<BattleResponse.BattleList> getBattles(BattleSearchCondition condition, Pageable pageable) {
+    List<BattleList> battleLists = battleRepository.findBattlesWithSearchCondition(condition,
+        pageable);
+
+    battleLists.forEach(
+        battle -> battle.setCreatorUserInfo(userCacheService.getUserInfo(battle.getCreatorId())));
+
+    Long totalCount = battleRepository.countBattlesWithSearchCondition(condition);
+
+    return new PageImpl<>(battleLists, pageable, totalCount);
   }
 
   /**
@@ -166,29 +189,26 @@ public class BattleService {
     return info.toEntity(battle, order, isPrimary);
   }
 
-  /**
-   * 배틀 목록 조회
-   */
-  public Page<BattleResponse.BattleList> getBattles(BattleSearchCondition condition, Pageable pageable) {
-    List<BattleList> battleLists = battleRepository.findBattlesWithSearchCondition(condition,
-        pageable);
-
-    Long totalCount = battleRepository.countBattlesWithSearchCondition(condition);
-
-    return new PageImpl<>(battleLists, pageable, totalCount);
-  }
 
   /**
    * 배틀 상세 조회
    */
   @Transactional
-  public BattleResponse.BattleDetail getBattleDetail(Long battleId, Long userId) {
+  public BattleResponse.BattleDetail getBattleDetail(Long battleId, Long currentUserId) {
     Battle battle = getBattleById(battleId);
+    ExternalUserInfo userInfo = userCacheService.getUserInfo(battle.getCreatorId());
 
-    // 조회수 증가
-    // battle.incrementViews();
+    boolean isCreator = Optional.ofNullable(currentUserId)
+        .filter(battle.getCreatorId()::equals)
+        .isPresent();
 
-    return BattleResponse.BattleDetail.from(battle, userId);
+    boolean isHasVoted = Optional.ofNullable(currentUserId)
+        .map(userId -> battleVoteRepository.existsByBattleIdAndUserId(battleId, userId))
+        .orElse(false);
+
+    battle.incrementViews();
+
+    return BattleResponse.BattleDetail.from(battle, userInfo, isCreator, isHasVoted);
   }
 
 

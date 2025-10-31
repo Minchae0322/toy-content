@@ -1,10 +1,16 @@
 package com.example.toycontent.app.battle.repository.querydsl.impl;
 
+import static com.example.toycontent.app.battle.domain.QBattle.battle;
+import static com.example.toycontent.app.battle.domain.QBattleAttachmentFile.battleAttachmentFile;
+import static com.example.toycontent.app.battle.domain.QBattleItem.battleItem;
+import static com.example.toycontent.app.category.domain.QCategory.category;
 import static com.example.toycontent.app.product.domain.QProduct.product;
 
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
+import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.repository.querydsl.BattleRepositoryCustom;
+import com.example.toycontent.app.category.contoller.dto.CategoryResponse.SubCategoryDetail;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.querydsl.core.BooleanBuilder;
@@ -37,10 +43,15 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
 
     // 배틀 기본 정보 조회
     List<BattleResponse.BattleList> content = queryFactory
-        .select(Projections.fields(BattleResponse.BattleList.class,
+        .select(Projections.fields(BattleList.class,
             battle.id,
             battle.title,
-            battle.category.name.as("categoryName"),
+            Projections.fields(SubCategoryDetail.class,
+                category.id.as("subCategoryId"),
+                category.name.as("subCategoryName"),
+                category.parent.id.as("categoryId"),
+                category.parent.name.as("categoryName")
+            ).as("subCategoryDetail"),
             battle.status,
             battle.itemAddPermissionType,
             battle.totalParticipants,
@@ -49,6 +60,7 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
             battle.startDate,
             battle.endDate,
             battle.createdAt,
+            battle.creatorId.as("creatorId"),
             // 썸네일 DTO 매핑
             Projections.fields(AttachmentFileResponse.class,
                 battleAttachmentFile.id,
@@ -62,7 +74,8 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
         .from(battle)
         .leftJoin(battle.battleAttachmentFiles, battleAttachmentFile)
         .on(battleAttachmentFile.isPrimary.isTrue())
-        .where(whereClause)
+        .join(battle.category, category)
+        .join(category.parent)
         .orderBy(getOrderSpecifier(pageable.getSort()))
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize())
@@ -112,7 +125,8 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
 
     // 카테고리 필터
     if (condition.getCategory() != null) {
-      builder.and(battle.category.name.eq(condition.getCategory()));
+      builder.and(battle.category.id.eq(condition.getCategory())
+          .or(battle.category.parent.id.eq(condition.getCategory())));
     }
 
 

@@ -4,11 +4,7 @@ import java.lang.annotation.*;
 
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-@Documented
 public @interface CurrentUserId {
-    /**
-     * JWT 클레임 키 이름 (기본값: "currentUserId")
-     */
-    String value() default "currentUserId";
+    boolean required() default true;  // 기본값은 필수
 }
 
