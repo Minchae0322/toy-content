@@ -21,7 +21,7 @@ import org.springframework.util.StringUtils;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class UserInfoCacheService {
+public class UserCacheStore {
 
   private final RedisTemplate<String, String> redisTemplate;
   private final ObjectMapper objectMapper;
