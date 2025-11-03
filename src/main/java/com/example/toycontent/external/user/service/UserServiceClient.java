@@ -34,24 +34,30 @@ public class UserServiceClient {
     }
 
     return userIds.stream()
-        .map(this::getUserInfoOrElseCache)
+        .map(this::getUserInfoOrElseFetchAndCache)
         .toList();
   }
 
-  public ExternalUserInfo getUserInfoOrElseCache(Long userId) {
+  public ExternalUserInfo getUserInfoOrElseFetchAndCache(Long userId) {
     if (userId == null || userId <= 0) {
       throw new RestApiException(UserErrorCode.USER_NOT_INVALID);
     }
 
     return userInfoCacheService.getCachedUserInfos(userId)
-        .orElseGet(() -> fetchAndCacheUserInfo(userId));
+        .orElseGet(() -> {
+          try {
+            return fetchAndCacheUserInfo(userId);
+          } catch (Exception e) {
+            return createFallbackUserInfo(userId);
+          }
+        });
   }
 
   /**
    * 사용자 닉네임만 조회 (간단한 버전)
    */
   public String getUserNickname(Long userId) {
-    ExternalUserInfo externalUserInfo = getUserInfoOrElseCache(userId);
+    ExternalUserInfo externalUserInfo = getUserInfoOrElseFetchAndCache(userId);
     return externalUserInfo != null ? externalUserInfo.getNickname() : "사용자" + userId;
   }
 
@@ -80,33 +86,32 @@ public class UserServiceClient {
    * 외부 서비스에서 사용자 정보 조회 후 캐시 저장
    */
   private ExternalUserInfo fetchAndCacheUserInfo(Long userId) {
-    ExternalUserInfo externalUserInfo = userServiceWebClient.get()
-        .uri("/api/external/users/{userId}", userId)
-        .retrieve()
-        .onStatus(
-            status -> status.value() == 404,
-            response -> Mono.error(new RestApiException(UserErrorCode.USER_NOT_EXIST))
-        )
-        .onStatus(
-            HttpStatusCode::is4xxClientError,
-            response -> Mono.error(new RestApiException(UserErrorCode.LOGIN_FAILED))
-        )
-        .onStatus(
-            HttpStatusCode::is5xxServerError,
-            response -> Mono.error(new RestApiException(UserErrorCode.USER_SERVICE_ERROR))
-        )
-        .bodyToMono(ExternalUserInfo.class)
-        .timeout(TIMEOUT)
-        .doOnError(error -> log.error("[User service] 서비스 호출 실패: userId={}, error={}", userId,
-            error.getMessage()))
-        .block();
+    try {
+      ExternalUserInfo externalUserInfo = userServiceWebClient.get()
+          .uri("/api/external/users/{userId}", userId)
+          .retrieve()
+          .onStatus(
+              HttpStatusCode::isError,
+              response -> Mono.empty() // 예외 대신 빈 값
+          )
+          .bodyToMono(ExternalUserInfo.class)
+          .timeout(TIMEOUT)
+          .doOnError(error ->
+              log.error("사용자 정보 조회 실패: userId={}", userId, error))
+          .onErrorReturn(createFallbackUserInfo(userId))
+          .block();
 
-    if (externalUserInfo == null) {
-      throw new RestApiException(UserErrorCode.USER_NOT_EXIST);
+      if (externalUserInfo != null) {
+        userInfoCacheService.cacheUserInfo(externalUserInfo);
+        return externalUserInfo;
+      }
+
+      return createFallbackUserInfo(userId);
+
+    } catch (Exception e) {
+      log.error("외부 서비스 호출 중 예외: userId={}", userId, e);
+      return createFallbackUserInfo(userId);
     }
-
-    boolean success = userInfoCacheService.cacheUserInfo(externalUserInfo);
-    return externalUserInfo;
   }
 
   /**

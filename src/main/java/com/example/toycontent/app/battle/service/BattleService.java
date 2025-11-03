@@ -11,7 +11,6 @@ import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.repository.BattleAttachmentFileRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.battle.repository.BattleRepository;
-import com.example.toycontent.app.battle.repository.BattleVoteRepository;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
@@ -20,9 +19,8 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
-import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
-import com.example.toycontent.external.user.service.UserCacheService;
+import com.example.toycontent.external.user.service.ExternalUserService;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -44,7 +42,7 @@ public class BattleService {
   private final BattleRepository battleRepository;
   private final BattleItemRepository battleItemRepository;
   private final CategoryRepository categoryRepository;
-  private final UserCacheService userCacheService;
+  private final ExternalUserService externalUserService;
   private final BattleAttachmentFileRepository battleAttachmentFileRepository;
 
   private static final int MAX_ACTIVE_BATTLES = 10;
@@ -94,7 +92,7 @@ public class BattleService {
     List<BattleList> battleLists = battleRepository.findBattlesWithSearchCondition(condition, pageable);
 
     battleLists.forEach(
-        battle -> battle.setCreatorUserInfo(userCacheService.getUserInfo(battle.getCreatorId())));
+        battle -> battle.setCreatorUserInfo(externalUserService.getUserInfo(battle.getCreatorId())));
 
     Long totalCount = battleRepository.countBattlesWithSearchCondition(condition);
 
@@ -107,7 +105,7 @@ public class BattleService {
   @Transactional
   public BattleResponse.BattleDetail getBattleDetail(Long battleId, Long currentUserId) {
     Battle battle = getBattleByIdOrElseThrow(battleId);
-    ExternalUserInfo userInfo = userCacheService.getUserInfo(battle.getCreatorId());
+    ExternalUserInfo userInfo = externalUserService.getUserInfo(battle.getCreatorId());
 
     battle.incrementTotalViews();
 
