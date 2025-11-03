@@ -19,11 +19,11 @@ import reactor.core.publisher.Mono;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class UserServiceClient {
+public class ExternalUserApiClient {
   private static final Duration TIMEOUT = Duration.ofSeconds(3);
 
   private final WebClient userServiceWebClient;
-  private final UserInfoCacheService userInfoCacheService;
+  private final UserCacheStore userCacheStore;
 
   /**
    * 여러 사용자 정보 일괄 조회 (List 반환)
@@ -43,7 +43,7 @@ public class UserServiceClient {
       throw new RestApiException(UserErrorCode.USER_NOT_INVALID);
     }
 
-    return userInfoCacheService.getCachedUserInfos(userId)
+    return userCacheStore.getCachedUserInfos(userId)
         .orElseGet(() -> {
           try {
             return fetchAndCacheUserInfo(userId);
@@ -65,21 +65,21 @@ public class UserServiceClient {
    * 캐시 무효화 (단일 사용자)
    */
   public void invalidateUserCache(Long userId) {
-    userInfoCacheService.evictUserCache(userId);
+    userCacheStore.evictUserCache(userId);
   }
 
   /**
    * 캐시 무효화 (여러 사용자)
    */
   public void invalidateUserCacheBatch(List<Long> userIds) {
-    userInfoCacheService.evictUserCacheBatch(userIds);
+    userCacheStore.evictUserCacheBatch(userIds);
   }
 
   /**
    * 전체 사용자 캐시 무효화 (패턴 기반)
    */
   public void invalidateAllUserCache() {
-    userInfoCacheService.evictUserCacheByPattern("*");
+    userCacheStore.evictUserCacheByPattern("*");
   }
 
   /**
@@ -102,7 +102,7 @@ public class UserServiceClient {
           .block();
 
       if (externalUserInfo != null) {
-        userInfoCacheService.cacheUserInfo(externalUserInfo);
+        userCacheStore.cacheUserInfo(externalUserInfo);
         return externalUserInfo;
       }
 
