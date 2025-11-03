@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,15 +14,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "scheduler.hot-score", name = "enable", havingValue = "true")
 public class BattleHotScoreScheduler {
 
   private final BattleRepository battleRepository;
 
 
   /**
-   * 30분마다 시간 가중치 재계산
+   * 시간 가중치 재계산
+   * YAML의 scheduler.hot-score.time-weight-update.cron 값 사용
    */
-  @Scheduled(cron = "0 0 * * * *")
+  @Scheduled(cron = "${scheduler.hot-score.time-weight-update.cron}")
+  @ConditionalOnProperty(
+      prefix = "scheduler.hot-score.time-weight-update",
+      name = "enabled",
+      havingValue = "true"
+  )
   @Transactional
   public void updateTimeWeightedHotScores() {
     long startTime = System.currentTimeMillis();
@@ -34,9 +42,15 @@ public class BattleHotScoreScheduler {
   }
 
   /**
-   * 매일 새벽 3시에 전체 재계산
+   * 전체 재계산
+   * YAML의 scheduler.hot-score.full-recalculate.cron 값 사용
    */
-  @Scheduled(cron = "0 0 3 * * *")
+  @Scheduled(cron = "${scheduler.hot-score.full-recalculate.cron}")
+  @ConditionalOnProperty(
+      prefix = "scheduler.hot-score.full-recalculate",
+      name = "enabled",
+      havingValue = "true"
+  )
   @Transactional
   public void fullRecalculateHotScores() {
     long startTime = System.currentTimeMillis();

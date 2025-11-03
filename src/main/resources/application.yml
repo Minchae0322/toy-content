@@ -63,3 +63,14 @@ file:
 
 jwt:
   secret: __REDACTED__
+
+
+scheduler:
+  hot-score:
+    enable: true
+    time-weight-update:
+      cron: "0 0 * * * *"  # 매 시간 정각
+      enabled: true
+    full-recalculate:
+      cron: "0 0 3 * * *"  # 매일 새벽 3시
+      enabled: true
