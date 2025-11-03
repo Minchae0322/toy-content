@@ -45,7 +45,9 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .distinct()
         .where(
             cursorIdLt(condition.getCursor()),
-            categoryEq(condition.getCategoryId())
+            categoryEq(condition.getCategoryId()),
+            creatorIdEq(condition.getCreatorId()),
+            feed.isDeleted.isFalse()
         )
         .orderBy(feed.id.desc())
         .limit(condition.getSize())
@@ -179,6 +181,11 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
 
   private BooleanExpression categoryEq(Long categoryId) {
     return categoryId != null ? feed.category.id.eq(categoryId) : null;
+  }
+
+
+  private BooleanExpression creatorIdEq(Long creatorId) {
+    return creatorId != null ? feed.userId.eq(creatorId) : null;
   }
 
 }

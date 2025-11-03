@@ -191,6 +191,7 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
         case "createdAt" -> orders.add(new OrderSpecifier<>(direction, battle.createdAt));
         case "updatedAt" -> orders.add(new OrderSpecifier<>(direction, battle.updatedAt));
         case "hotScore" -> orders.add(new OrderSpecifier<>(direction, battle.hotScore));
+        case "endDate" -> orders.add(new OrderSpecifier<>(direction, battle.endDate));
         default -> orders.add(new OrderSpecifier<>(Order.DESC, battle.createdAt)); // 기본 정렬
       }
     }
