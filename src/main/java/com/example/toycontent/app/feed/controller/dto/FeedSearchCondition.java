@@ -28,6 +28,9 @@ public class FeedSearchCondition {
   @Parameter(description = "해시태그 목록")
   private List<String> hashtags;
 
+  @Parameter(description = "피드 유저 아이디")
+  private Long creatorId;
+
   @Parameter(description = "커서 (마지막 조회한 피드 ID)")
   private Long cursor;
 
