@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Builder
-@NoArgsConstructor  // 이것만 추가하면 됨
+@NoArgsConstructor
 @AllArgsConstructor
 public class AttachmentFileResponse {
 

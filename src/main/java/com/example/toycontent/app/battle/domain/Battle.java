@@ -21,6 +21,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -114,6 +115,17 @@ public class Battle extends BaseTimeEntity {
   @Comment("삭제 여부")
   private Boolean isDeleted = false;
 
+  @Builder.Default
+  @Column(nullable = false, columnDefinition = "DOUBLE DEFAULT 0.0")
+  @Comment("핫 스코어 (캐시)")
+  @NotAudited
+  private Double hotScore = 0.0;
+
+  @Column
+  @Comment("핫 스코어 마지막 계산 시각")
+  @NotAudited
+  private LocalDateTime hotScoreUpdatedAt;
+
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<BattleItem> items = new ArrayList<>();
 
@@ -140,6 +152,27 @@ public class Battle extends BaseTimeEntity {
 
   }
 
+  /**
+   * 핫 스코어 업데이트 (외부 호출용 - 스케줄러)
+   */
+  public void updateHotScore() {
+    this.hotScore = calculateHotScore();
+    this.hotScoreUpdatedAt = LocalDateTime.now();
+  }
+
+  /**
+   * 핫 스코어 계산
+   */
+  public double calculateHotScore() {
+    // 기본 인기도 점수
+    double baseScore = (totalVotes * 2.0) + (totalParticipants * 3.0) + (totalViews * 0.1);
+
+    // 시간 가중치 (최근일수록 높은 점수)
+    long hoursSinceStart = ChronoUnit.HOURS.between(startDate, LocalDateTime.now());
+    double timeDecay = Math.pow(hoursSinceStart + 2, 1.5); // +2는 0으로 나누기 방지
+
+    return baseScore / timeDecay;
+  }
 
 
 }
