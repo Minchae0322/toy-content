@@ -28,6 +28,11 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          batch_size: 50  # 50개씩 묶어서 배치 실행
+          order_inserts: true
+          order_updates: true  # 같은 테이블 업데이트를 묶음
+
   messages:
     basename: messages
 

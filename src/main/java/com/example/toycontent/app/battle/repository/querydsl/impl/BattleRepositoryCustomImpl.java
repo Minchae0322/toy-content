@@ -9,9 +9,11 @@ import static com.example.toycontent.app.product.domain.QProduct.product;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
+import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.repository.querydsl.BattleRepositoryCustom;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse.SubCategoryDetail;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
+import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
@@ -20,6 +22,7 @@ import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -114,6 +117,32 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
         .fetchOne();
   }
 
+  @Override
+  public List<Battle> findBattlesNeedingTimeWeightUpdate(LocalDateTime activeThreshold) {
+
+    return queryFactory
+        .selectFrom(battle)
+        .where(
+            battle.isDeleted.eq(false),
+            battle.status.eq(BattleStatus.ACTIVE),
+            battle.status.eq(BattleStatus.ACTIVE)
+                .and(battle.hotScoreUpdatedAt.lt(activeThreshold))
+                .or(battle.hotScoreUpdatedAt.isNull())
+        )
+        .fetch();
+  }
+
+  @Override
+  public List<Battle> findActiveAndUpcomingBattles() {
+    return queryFactory
+        .selectFrom(battle)
+        .where(
+            battle.isDeleted.eq(false),
+            battle.status.eq(BattleStatus.ACTIVE)
+        )
+        .fetch();
+  }
+
   /**
    * 검색 조건 생성
    */
@@ -159,15 +188,16 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
       String property = order.getProperty();
 
       switch (property) {
-        case "createdAt" -> orders.add(new OrderSpecifier<>(direction, product.createdAt));
-        case "updatedAt" -> orders.add(new OrderSpecifier<>(direction, product.updatedAt));
-        default -> orders.add(new OrderSpecifier<>(Order.DESC, product.createdAt)); // 기본 정렬
+        case "createdAt" -> orders.add(new OrderSpecifier<>(direction, battle.createdAt));
+        case "updatedAt" -> orders.add(new OrderSpecifier<>(direction, battle.updatedAt));
+        case "hotScore" -> orders.add(new OrderSpecifier<>(direction, battle.hotScore));
+        default -> orders.add(new OrderSpecifier<>(Order.DESC, battle.createdAt)); // 기본 정렬
       }
     }
 
     // 정렬 조건이 없으면 기본 정렬 적용
     if (orders.isEmpty()) {
-      orders.add(new OrderSpecifier<>(Order.DESC, product.createdAt));
+      orders.add(new OrderSpecifier<>(Order.DESC, battle.createdAt));
     }
 
     return orders.toArray(new OrderSpecifier[0]);

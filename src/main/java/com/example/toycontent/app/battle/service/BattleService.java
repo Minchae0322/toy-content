@@ -43,13 +43,11 @@ public class BattleService {
   private final BattleItemService battleItemService;
   private final BattleRepository battleRepository;
   private final BattleItemRepository battleItemRepository;
-  private final BattleVoteRepository battleVoteRepository;
   private final CategoryRepository categoryRepository;
-  private final ProductRepository productRepository;
   private final UserCacheService userCacheService;
   private final BattleAttachmentFileRepository battleAttachmentFileRepository;
 
-  private static final int MAX_ACTIVE_BATTLES = 5;
+  private static final int MAX_ACTIVE_BATTLES = 10;
   private static final int MAX_DAILY_CREATIONS = 3;
 
   public void validateCreation(Long userId) {
@@ -147,12 +145,13 @@ public class BattleService {
   /**
    * 배틀 엔티티 생성
    */
-  private Battle createBattleEntity(Long userId, BattleRequest.CreateBattle request, Category category) {
+  private Battle createBattleEntity(Long creatorId, BattleRequest.CreateBattle request, Category category) {
     return Battle.builder()
         .title(request.getTitle())
         .description(request.getDescription())
         .category(category)
-        .creatorId(userId)
+        .itemAddPermissionType(request.getItemAddPermissionType())
+        .creatorId(creatorId)
         .startDate(request.getStartDate())
         .endDate(request.getEndDate())
         .participationStartDate(request.getParticipationStartDate())
