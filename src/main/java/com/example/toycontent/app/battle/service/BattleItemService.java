@@ -17,6 +17,7 @@ import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -83,7 +84,8 @@ public class BattleItemService {
   public void createBattleItems(Long userId, Battle battle, List<ItemRequest> request) {
     List<BattleItem> battleItems = request.stream()
         .map(itemRequest -> {
-          Product product = productRepository.findById(itemRequest.getProductId())
+          Product product = Optional.ofNullable(itemRequest.getProductId())
+              .flatMap(productRepository::findById)
               .orElse(null);
 
           return BattleItem.builder()
