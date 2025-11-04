@@ -12,7 +12,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -37,7 +36,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
         columnNames = {"battle_id", "user_id", "rank"}
     )
 )
-@Comment("배틀 투표")
 public class BattleVote extends BaseTimeEntity {
 
   @Id
@@ -62,12 +60,12 @@ public class BattleVote extends BaseTimeEntity {
 
   @Builder.Default
   @Column(nullable = false)
-  @Comment("순위 (1위/2위/3위, MULTIPLE 투표 타입용)")
-  private Integer rank = 1;
+  @Comment("순위")
+  private Integer voteRank = 1;
 
   @Builder.Default
   @Column(nullable = false)
-  @Comment("점수 (1위=3점, 2위=2점, 3위=1점)")
+  @Comment("점수")
   private Integer score = 1;
 
 }

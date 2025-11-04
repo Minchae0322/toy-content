@@ -37,7 +37,7 @@ public abstract class BattleVoteResponse {
           .voteId(battleVote.getId())
           .itemId(battleVote.getBattleItem().getId())
           .userId(battleVote.getUserId())
-          .rank(battleVote.getRank())
+          .rank(battleVote.getVoteRank())
           .score(battleVote.getScore())
           .build();
     }

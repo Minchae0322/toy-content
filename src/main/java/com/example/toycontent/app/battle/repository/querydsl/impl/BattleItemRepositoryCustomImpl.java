@@ -50,7 +50,6 @@ public class BattleItemRepositoryCustomImpl implements BattleItemRepositoryCusto
     Optional.ofNullable(currentUserId).ifPresent(userId ->
         query.leftJoin(battleItem.battleVotes, battleVote)
             .on(battleVote.userId.eq(userId))
-            .fetchJoin()
     );
 
     return query.fetch();

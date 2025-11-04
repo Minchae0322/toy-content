@@ -313,7 +313,7 @@ public class BattleItemService {
               .battle(battle)
               .battleItem(item)
               .userId(userId)
-              .rank(voteItem.getRank())
+              .voteRank(voteItem.getRank())
               .score(point)
               .build();
         })

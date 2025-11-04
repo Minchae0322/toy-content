@@ -79,6 +79,7 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
         .on(battleAttachmentFile.isPrimary.isTrue())
         .join(battle.category, category)
         .join(category.parent)
+        .where(whereClause)
         .orderBy(getOrderSpecifier(pageable.getSort()))
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize())
