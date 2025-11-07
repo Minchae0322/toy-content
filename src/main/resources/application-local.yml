@@ -1,0 +1,48 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /api
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/content?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: Wjdals12!
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+
+  jpa:
+    show-sql: true  # 로컬에서는 SQL 로그 활성화
+    hibernate:
+      ddl-auto: update  # 로컬에서는 자동 스키마 업데이트
+
+external:
+  user-service:
+    protocol: http
+    host: localhost
+    port: 8081
+    api-key: test
+
+file:
+  upload:
+    path: uploads/
+
+jwt:
+  secret: VlwEyVBsYt9V7zq57TejMnVUyzblYcfPQye08f7MGVA9XkHa
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
