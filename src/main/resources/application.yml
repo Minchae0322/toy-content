@@ -1,11 +1,11 @@
 spring:
   profiles:
-    active: local  # 기본 프로필
+    active: ${SPRING_PROFILES_ACTIVE:local}  # 환경변수로 제어
 
   jpa:
     show-sql: false
     hibernate:
-      ddl-auto: ${DDL_AUTO:validate}
+      ddl-auto: ${DDL_AUTO:update}
     properties:
       hibernate:
         format_sql: true

@@ -30,7 +30,7 @@ spring:
   jpa:
     show-sql: false
     hibernate:
-      ddl-auto: validate  # 개발에서는 validate 권장
+      ddl-auto: update  # 개발에서는 validate 권장
 
 external:
   user-service:
