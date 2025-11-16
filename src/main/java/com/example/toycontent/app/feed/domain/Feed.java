@@ -44,7 +44,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @EntityListeners(AuditingEntityListener.class)
 @Entity
 @Table(name = "TB_FEED", indexes = {
-    @Index(name = "idx_category", columnList = "category_id"),
+    @Index(name = "idx_feed_category", columnList = "category_id"),
     @Index(name = "idx_created_at", columnList = "createdAt"),
     @Index(name = "idx_user_id", columnList = "user_id"),
     @Index(name = "idx_product_id", columnList = "product_id"),  // 추가
