@@ -26,11 +26,11 @@ public abstract class BattleRequest {
 
     @Schema(description = "배틀 제목", example = "2025년 최고의 스니커즈를 찾아라")
     @NotBlank(message = "배틀 제목을 입력해주세요")
-    @Size(min = 15, max = 50, message = "배틀 제목은 15~50자 사이여야 합니다")
+    @Size(min = 1, max = 50, message = "배틀 제목은 15~50자 사이여야 합니다")
     private String title;
 
     @Schema(description = "배틀 설명", example = "올해 출시된 스니커즈 중 디자인, 희소성, 가격을 종합적으로 고려하여 최고의 스니커즈를 선정합니다.")
-    @Size(min = 120, max = 500, message = "배틀 설명은 120~500자 사이여야 합니다")
+    @Size(max = 500, message = "배틀 설명은 120~500자 사이여야 합니다")
     private String description;
 
     @Schema(description = "카테고리 ID", example = "1")
@@ -63,7 +63,6 @@ public abstract class BattleRequest {
     @Size(min = 2, max = 20, message = "아이템은 2~20개 사이여야 합니다")
     private List<ItemRequest> items;
 
-    @NotNull(message = "대표이미지는 필수 입니다.")
     @Schema(description = "대표이미지")
     private AttachmentFileRequest.AttachmentInfo thumbnailAttachmentInfo;
 
