@@ -18,6 +18,9 @@ public enum FeedErrorCode implements ErrorCode {
   CREATOR_NOT_MATCH(HttpStatus.NOT_FOUND, "작성자만 수정할 수 있습니다."),
   INVALID_REVIEW_LENGTH(HttpStatus.BAD_REQUEST,  "리뷰는 1000자 이하로 작성해주세요."),
   REACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "리액션을 찾을 수 없습니다."),
+
+
+  FEED_COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND,  "피드 댓글을 찾을 수 없습니다."),
   ;
 
   private final HttpStatus httpStatus;
