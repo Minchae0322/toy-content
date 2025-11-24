@@ -53,12 +53,12 @@ public class BattleItemController {
   }
 
   @Operation(summary = "배틀 아이템 투표")
-  @PostMapping("/{battleItemId}/vote")
+  @PostMapping("/vote")
   public ResponseEntity<ApiResponse<Void>> vote(
-      @Parameter(description = "배틀 아이템 ID") @PathVariable Long battleItemId,
+      @Parameter(description = "배틀 아이템 ID") @PathVariable Long battleId,
       @CurrentUserId Long userId,
       @Valid @RequestBody BattleVoteRequest.Vote request) {
-    battleItemService.vote(battleItemId, userId, request);
+    battleItemService.vote(battleId, userId, request);
     return ResponseEntity.ok(ApiResponse.success(null, "투표가 완료되었습니다."));
   }
 
