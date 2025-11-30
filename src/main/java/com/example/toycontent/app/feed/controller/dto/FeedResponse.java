@@ -41,11 +41,8 @@ public abstract class FeedResponse {
     @Schema(description = "상품명 (커스텀)")
     private String productName;
 
-    @Schema(description = "카테고리 ID")
-    private Long categoryId;
-
-    @Schema(description = "카테고리명")
-    private String categoryName;
+    @Schema(description = "서브 카테고리 상세 dto")
+    private SubCategoryDetail subCategoryDetail;
 
     @Schema(description = "리뷰 내용 (요약)")
     private String reviewSummary;
@@ -93,6 +90,7 @@ public abstract class FeedResponse {
           .productId(feed.getProduct() != null ? feed.getProduct().getId() : null)
           .productName(
               feed.getProduct() != null ? feed.getProduct().getName() : feed.getProductNameCustom())
+          .subCategoryDetail(SubCategoryDetail.from(feed.getCategory()))
           .reviewSummary(truncateReview(feed.getReview(), 100))
           .buyPrice(feed.getBuyPrice())
           .price(feed.getPrice())

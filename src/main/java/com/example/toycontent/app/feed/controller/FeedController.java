@@ -43,6 +43,7 @@ public class FeedController {
 
   @Operation(summary = "피드 목록 조회 (페이징)", description = "피드 목록을 페이징하여 조회합니다.")
   @GetMapping
+  @Deprecated
   public ResponseEntity<ApiResponse<Page<ListView>>> getFeeds(
       @ParameterObject Pageable pageable,
       @ParameterObject @ModelAttribute FeedSearchCondition condition) {
