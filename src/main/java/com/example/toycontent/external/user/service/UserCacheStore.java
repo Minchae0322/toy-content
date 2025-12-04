@@ -28,6 +28,7 @@ public class UserCacheStore {
 
   // 캐시 설정
   private static final String CACHE_KEY_PREFIX = "user:info:";
+  private static final String USER_FOLLOWING_CACHE_KEY_PREFIX = "user:following:";
   private static final Duration DEFAULT_TTL = Duration.ofMinutes(2);
   private static final Duration FALLBACK_TTL = Duration.ofSeconds(30);
   private static final String FALLBACK_NICKNAME_PREFIX = "사용자";
@@ -147,7 +148,7 @@ public class UserCacheStore {
     if (isFallbackUserInfo(fallbackExternalUserInfo)) {
       boolean result = cacheUserInfo(fallbackExternalUserInfo, FALLBACK_TTL);
       if (result) {
-        log.debug("🔄 폴백 사용자 정보 캐시 저장: userId={}", fallbackExternalUserInfo.getUserId());
+        log.debug("폴백 사용자 정보 캐시 저장: userId={}", fallbackExternalUserInfo.getUserId());
       }
       return result;
     }

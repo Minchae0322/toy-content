@@ -32,7 +32,7 @@ import org.springframework.util.CollectionUtils;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserInfoService {
+public class ExternalUserInfoService {
 
   private final UserCacheStore cacheService;  // Redis 캐시 레이어
   private final ExternalUserApiClient serviceClient;    // API 호출 레이어

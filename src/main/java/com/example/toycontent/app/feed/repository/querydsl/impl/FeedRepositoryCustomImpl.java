@@ -63,8 +63,27 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
   }
 
   @Override
-  public List<Feed> findFollowingFeeds(Following condition) {
-    return List.of();
+  public List<Feed> findFollowingFeeds(Following condition, List<>) {
+    //Feed만 조회 (limit 정확하게 적용)
+    List<Feed> feeds = queryFactory
+        .selectFrom(feed)
+        .distinct()
+        .where(
+
+            cursorIdLt(condition.getCursor()),
+            feed.isDeleted.isFalse()
+        )
+        .orderBy(feed.id.desc())
+        .limit(condition.getSize())
+        .fetch();
+
+    if (feeds.isEmpty()) {
+      return feeds;
+    }
+
+    fetchAssociations(feeds, condition.getReaderId());
+
+    return feeds;
   }
 
   /**
