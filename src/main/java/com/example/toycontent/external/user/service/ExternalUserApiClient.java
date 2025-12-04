@@ -125,7 +125,7 @@ public class ExternalUserApiClient {
    */
   public List<Long> fetchFollowingIds(Long userId) {
     return userServiceWebClient.get()
-        .uri("/api/external/users/{userId}/following/ids", userId)
+        .uri("/api/external/users/{userId}/followings", userId)
         .retrieve()
         .bodyToMono(new ParameterizedTypeReference<List<Long>>() {})
         .timeout(Duration.ofSeconds(3))
