@@ -21,7 +21,7 @@ import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.Attachme
 import com.example.toycontent.app.hashtag.domain.Hashtag;
 import com.example.toycontent.app.hashtag.repository.HashtagRepository;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
-import com.example.toycontent.external.user.service.UserInfoService;
+import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import jakarta.transaction.Transactional;
 import java.util.Collections;
 import java.util.List;
@@ -44,7 +44,7 @@ public class FeedService {
   private final ProductRepository productRepository;
   private final HashtagRepository hashtagRepository;
   private final FeedAttachmentFileRepository feedAttachmentFileRepository;
-  private final UserInfoService userInfoService;
+  private final ExternalUserInfoService externalUserInfoService;
 
   private static final int HOT_FEED_RECENT_DAYS = 7;
 
@@ -59,7 +59,7 @@ public class FeedService {
         feeds.stream()
             .map(feed ->  {
 
-              ExternalUserInfo userInfo = userInfoService.getUserInfo(feed.getUserId());
+              ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
               return FeedResponse.ListView.from(feed, userInfo);
 
             })
@@ -105,7 +105,7 @@ public class FeedService {
   private List<FeedResponse.ListView> toListView(List<Feed> feeds) {
     return feeds.stream()
         .map(feed -> {
-          ExternalUserInfo userInfo = userInfoService.getUserInfo(feed.getUserId());
+          ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
           return FeedResponse.ListView.from(feed, userInfo);
         })
         .toList();
@@ -131,7 +131,7 @@ public class FeedService {
     return feeds.stream()
         .map(feed -> {
 
-          ExternalUserInfo userInfo = userInfoService.getUserInfo(feed.getUserId());
+          ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
           return FeedResponse.ListView.from(feed, userInfo);
 
         })
@@ -144,7 +144,7 @@ public class FeedService {
   public FeedResponse.Detail getFeed(Long feedId) {
     Feed feed = findFeedById(feedId);
 
-    ExternalUserInfo userInfo = userInfoService.getUserInfo(feed.getUserId());
+    ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
 
     // 조회수 증가
     feed.incrementViewCount();

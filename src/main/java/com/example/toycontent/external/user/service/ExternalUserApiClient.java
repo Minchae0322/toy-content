@@ -5,11 +5,15 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.UserErrorCode;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
@@ -52,6 +56,8 @@ public class ExternalUserApiClient {
           }
         });
   }
+
+
 
   /**
    * 사용자 닉네임만 조회 (간단한 버전)
@@ -115,8 +121,23 @@ public class ExternalUserApiClient {
   }
 
   /**
-   * 외부 서비스에서 사용자 정보 일괄 조회
+   * 팔로잉 목록 조회 API 호출
    */
+  public List<Long> fetchFollowingIds(Long userId) {
+    return userServiceWebClient.get()
+        .uri("/api/external/users/{userId}/following/ids", userId)
+        .retrieve()
+        .bodyToMono(new ParameterizedTypeReference<List<Long>>() {})
+        .timeout(Duration.ofSeconds(3))
+        .map(list -> list.stream().distinct().toList())
+        .onErrorReturn(List.of())
+        .defaultIfEmpty(List.of())
+        .block();
+  }
+
+    /**
+     * 외부 서비스에서 사용자 정보 일괄 조회
+     */
   private Map<Long, ExternalUserInfo> fetchUserInfosFromService(List<Long> userIds) {
     try {
       String userIdsParam = String.join(",",
