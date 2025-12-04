@@ -9,7 +9,8 @@ import com.example.toycontent.app.feed.controller.dto.FeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.FeedCursorResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.HotFeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.ListView;
-import com.example.toycontent.app.feed.controller.dto.FeedSearchCondition;
+import com.example.toycontent.app.feed.controller.dto.FeedCondition;
+import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.service.FeedReactionService;
 import com.example.toycontent.app.feed.service.FeedService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,7 +47,7 @@ public class FeedController {
   @Deprecated
   public ResponseEntity<ApiResponse<Page<ListView>>> getFeeds(
       @ParameterObject Pageable pageable,
-      @ParameterObject @ModelAttribute FeedSearchCondition condition) {
+      @ParameterObject @ModelAttribute FeedCondition condition) {
 
     Page<FeedResponse.ListView> feeds = feedService.getFeeds(pageable, condition);
     return ResponseEntity.ok(ApiResponse.success(feeds));
@@ -55,10 +56,20 @@ public class FeedController {
   @Operation(summary = "피드 목록 조회 (커서 페이징)", description = "인피니티 스크롤용 커서 기반 API")
   @GetMapping("/scroll")
   public ResponseEntity<ApiResponse<FeedCursorResponse>> getFeedsWithCursor(
-      @ParameterObject @ModelAttribute FeedSearchCondition condition,
+      @ParameterObject @ModelAttribute Search condition,
       @CurrentUserId Long userId) {
 
     FeedCursorResponse feeds = feedService.getFeedsWithCursor(condition, userId);
+    return ResponseEntity.ok(ApiResponse.success(feeds));
+  }
+
+  @Operation(summary = "팔로잉 피드 조회", description = "팔로우한 사용자의 피드를 조회")
+  @GetMapping("/following")
+  public ResponseEntity<ApiResponse<FeedCursorResponse>> getFollowingFeeds(
+      @ParameterObject @ModelAttribute FeedCondition.Following condition,
+      @CurrentUserId Long userId) {
+
+    FeedCursorResponse feeds = feedService.getFollowingFeeds(condition, userId);
     return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 
@@ -91,7 +102,7 @@ public class FeedController {
   @Operation(summary = "피드 전체 목록 조회", description = "피드 전체 목록을 조회합니다.")
   @GetMapping("/list")
   public ResponseEntity<ApiResponse<List<ListView>>> getFeedList(
-      @ParameterObject @ModelAttribute FeedSearchCondition condition) {
+      @ParameterObject @ModelAttribute FeedCondition condition) {
 
     List<FeedResponse.ListView> feeds = feedService.getFeedList(condition);
     return ResponseEntity.ok(ApiResponse.success(feeds));

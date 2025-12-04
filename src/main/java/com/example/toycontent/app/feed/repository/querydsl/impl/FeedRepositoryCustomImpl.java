@@ -7,8 +7,9 @@ import static com.example.toycontent.app.feed.domain.QFeedReaction.feedReaction;
 import static com.example.toycontent.app.hashtag.domain.QHashtag.hashtag;
 import static com.example.toycontent.app.product.domain.QProductAttachmentFile.productAttachmentFile;
 
+import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.HotFeedResponse;
-import com.example.toycontent.app.feed.controller.dto.FeedSearchCondition;
+import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.QFeed;
 import com.example.toycontent.app.feed.domain.QFeedAttachmentFile;
@@ -19,7 +20,6 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDateTime;
@@ -38,7 +38,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
   private final JPAQueryFactory queryFactory;
 
   @Override
-  public List<Feed> findFeedsWithCursor(FeedSearchCondition condition) {
+  public List<Feed> findFeedsWithCursor(Search condition) {
     //Feed만 조회 (limit 정확하게 적용)
     List<Feed> feeds = queryFactory
         .selectFrom(feed)
@@ -60,6 +60,11 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
     fetchAssociations(feeds, condition.getReaderId());
 
     return feeds;
+  }
+
+  @Override
+  public List<Feed> findFollowingFeeds(Following condition) {
+    return List.of();
   }
 
   /**
@@ -135,6 +140,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
 
     return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
   }
+
 
 
 

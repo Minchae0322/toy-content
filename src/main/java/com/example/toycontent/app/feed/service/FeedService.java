@@ -1,5 +1,8 @@
 package com.example.toycontent.app.feed.service;
 
+import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
+import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
+import com.example.toycontent.app.feed.controller.dto.FeedResponse.FeedCursorResponse;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.app.category.domain.Category;
@@ -8,7 +11,7 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.FeedErrorCode;
 import com.example.toycontent.app.feed.controller.dto.FeedRequest;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse;
-import com.example.toycontent.app.feed.controller.dto.FeedSearchCondition;
+import com.example.toycontent.app.feed.controller.dto.FeedCondition;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedAttachmentFile;
 import com.example.toycontent.app.feed.domain.FeedHashtag;
@@ -48,7 +51,7 @@ public class FeedService {
   /**
    * 피드 목록 조회 (페이징)
    */
-  public Page<FeedResponse.ListView> getFeeds(Pageable pageable, FeedSearchCondition condition) {
+  public Page<FeedResponse.ListView> getFeeds(Pageable pageable, FeedCondition condition) {
     List<Feed> feeds = feedRepository.findFeedsWithSearchCondition(pageable, condition);
     Long totalCount = feedRepository.countFeedsWithSearchCondition(condition);
 
@@ -65,29 +68,47 @@ public class FeedService {
   }
 
   /**
-   * 피드 목록 조회 (커서 페이징) - 인피니티 스크롤용
+   * 피드 목록 조회 (커서 페이징) - 탐색/검색용
    */
-  public FeedResponse.FeedCursorResponse getFeedsWithCursor(FeedSearchCondition condition, Long userId) {
-    // size+1개를 조회해서 다음 페이지 존재 여부 확인
+  public FeedCursorResponse getFeedsWithCursor(Search condition, Long userId) {
     Integer requestSize = condition.getSize();
     condition.setSize(requestSize + 1);
 
-    //조회자가 있을 경우, 사용자 리액션 여부 확인
     Optional.ofNullable(userId)
         .ifPresent(condition::setReaderId);
 
     List<Feed> feeds = feedRepository.findFeedsWithCursor(condition);
 
-    List<FeedResponse.ListView> feedResponses = feeds.stream()
-        .map(feed -> {
+    List<FeedResponse.ListView> feedResponses = toListView(feeds);
 
+    return FeedCursorResponse.of(feedResponses, requestSize);
+  }
+
+  /**
+   * 팔로우한 사용자의 피드 조회 (커서 페이징)
+   */
+  public FeedCursorResponse getFollowingFeeds(Following condition, Long userId) {
+    Integer requestSize = condition.getSize();
+    condition.setSize(requestSize + 1);
+    condition.setReaderId(userId);
+
+    List<Feed> feeds = feedRepository.findFollowingFeeds(condition);
+
+    List<FeedResponse.ListView> feedResponses = toListView(feeds);
+
+    return FeedCursorResponse.of(feedResponses, requestSize);
+  }
+
+  /**
+   * Feed 리스트 -> ListView 변환 (공통 메서드)
+   */
+  private List<FeedResponse.ListView> toListView(List<Feed> feeds) {
+    return feeds.stream()
+        .map(feed -> {
           ExternalUserInfo userInfo = userInfoService.getUserInfo(feed.getUserId());
           return FeedResponse.ListView.from(feed, userInfo);
-
         })
         .toList();
-
-    return FeedResponse.FeedCursorResponse.of(feedResponses, requestSize);
   }
 
   /**
@@ -104,7 +125,7 @@ public class FeedService {
   /**
    * 피드 전체 목록 조회
    */
-  public List<FeedResponse.ListView> getFeedList(FeedSearchCondition condition) {
+  public List<FeedResponse.ListView> getFeedList(FeedCondition condition) {
     List<Feed> feeds = feedRepository.findFeedsWithSearchCondition(condition);
 
     return feeds.stream()
@@ -291,4 +312,6 @@ public class FeedService {
     return feedRepository.findById(feedId)
         .orElseThrow(() -> new RestApiException(FeedErrorCode.FEED_NOT_FOUND));
   }
+
+
 }
