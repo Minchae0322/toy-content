@@ -63,13 +63,13 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
   }
 
   @Override
-  public List<Feed> findFollowingFeeds(Following condition, List<>) {
+  public List<Feed> findFollowingFeeds(Following condition, List<Long> followings) {
     //Feed만 조회 (limit 정확하게 적용)
     List<Feed> feeds = queryFactory
         .selectFrom(feed)
         .distinct()
         .where(
-
+            creatorIdIn(followings),
             cursorIdLt(condition.getCursor()),
             feed.isDeleted.isFalse()
         )
@@ -211,6 +211,10 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
 
   private BooleanExpression creatorIdEq(Long creatorId) {
     return creatorId != null ? feed.userId.eq(creatorId) : null;
+  }
+
+  private BooleanExpression creatorIdIn(List<Long> creatorIds) {
+    return feed.userId.in(creatorIds);
   }
 
 }

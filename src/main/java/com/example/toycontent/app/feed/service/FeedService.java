@@ -21,6 +21,7 @@ import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.Attachme
 import com.example.toycontent.app.hashtag.domain.Hashtag;
 import com.example.toycontent.app.hashtag.repository.HashtagRepository;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import com.example.toycontent.external.user.service.ExternalUserFollowingService;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import jakarta.transaction.Transactional;
 import java.util.Collections;
@@ -45,6 +46,7 @@ public class FeedService {
   private final HashtagRepository hashtagRepository;
   private final FeedAttachmentFileRepository feedAttachmentFileRepository;
   private final ExternalUserInfoService externalUserInfoService;
+  private final ExternalUserFollowingService externalUserFollowingService;;
 
   private static final int HOT_FEED_RECENT_DAYS = 7;
 
@@ -92,7 +94,9 @@ public class FeedService {
     condition.setSize(requestSize + 1);
     condition.setReaderId(userId);
 
-    List<Feed> feeds = feedRepository.findFollowingFeeds(condition);
+    List<Long> followingIds = externalUserFollowingService.getFollowingIds(userId);
+
+    List<Feed> feeds = feedRepository.findFollowingFeeds(condition, followingIds);
 
     List<FeedResponse.ListView> feedResponses = toListView(feeds);
 

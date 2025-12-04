@@ -17,5 +17,5 @@ public interface FeedRepositoryCustom {
    */
   Page<HotFeedResponse> findAllByHotScore(int recentDays, Pageable pageable);
 
-  List<Feed> findFollowingFeeds(Following condition);
+  List<Feed> findFollowingFeeds(Following condition, List<Long> followings);
 }
