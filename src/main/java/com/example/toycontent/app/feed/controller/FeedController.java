@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,21 +38,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "FeedController", description = "피드 API")
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 @RequestMapping(value = "/feeds")
 public class FeedController {
   private final FeedService feedService;
   private final FeedReactionService feedReactionService;
-
-  @Operation(summary = "피드 목록 조회 (페이징)", description = "피드 목록을 페이징하여 조회합니다.")
-  @GetMapping
-  @Deprecated
-  public ResponseEntity<ApiResponse<Page<ListView>>> getFeeds(
-      @ParameterObject Pageable pageable,
-      @ParameterObject @ModelAttribute FeedCondition condition) {
-
-    Page<FeedResponse.ListView> feeds = feedService.getFeeds(pageable, condition);
-    return ResponseEntity.ok(ApiResponse.success(feeds));
-  }
 
   @Operation(summary = "피드 목록 조회 (커서 페이징)", description = "인피니티 스크롤용 커서 기반 API")
   @GetMapping("/scroll")
@@ -63,7 +54,7 @@ public class FeedController {
     return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 
-  @Operation(summary = "팔로잉 피드 조회", description = "팔로우한 사용자의 피드를 조회")
+  @Operation(summary = "팔로잉 피드 조회 (커서 페이징)", description = "팔로우한 사용자의 피드를 조회")
   @GetMapping("/following")
   public ResponseEntity<ApiResponse<FeedCursorResponse>> getFollowingFeeds(
       @ParameterObject @ModelAttribute FeedCondition.Following condition,
@@ -167,6 +158,18 @@ public class FeedController {
 
     feedReactionService.removeReaction(feedId, userId, reactionType);
     return ResponseEntity.ok(ApiResponse.success(null, "리액션이 제거되었습니다."));
+  }
+
+
+  @Operation(summary = "피드 목록 조회 (페이징)", description = "피드 목록을 페이징하여 조회합니다.")
+  @GetMapping
+  @Deprecated
+  public ResponseEntity<ApiResponse<Page<ListView>>> getFeeds(
+      @ParameterObject Pageable pageable,
+      @ParameterObject @ModelAttribute FeedCondition condition) {
+
+    Page<FeedResponse.ListView> feeds = feedService.getFeeds(pageable, condition);
+    return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 
 }

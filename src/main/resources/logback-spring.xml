@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <!-- 콘솔 출력 -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- 피드 전용 로그 파일 -->
+  <appender name="FEED_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>logs/feed.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>logs/feed.%d{yyyy-MM-dd}.log</fileNamePattern>
+      <maxHistory>30</maxHistory>
+    </rollingPolicy>
+    <encoder>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- 피드 컨트롤러 로거 (dev에서만 DEBUG) -->
+  <springProfile name="dev">
+    <logger name="com.example.toycontent.app.feed.controller" level="INFO" additivity="false">
+      <appender-ref ref="FEED_FILE"/>
+      <appender-ref ref="CONSOLE"/>
+    </logger>
+  </springProfile>
+
+  <springProfile name="prod">
+    <logger name="com.example.toycontent.app.feed.controller" level="WARN" additivity="false">
+      <appender-ref ref="FEED_FILE"/>
+    </logger>
+  </springProfile>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+
+</configuration>
