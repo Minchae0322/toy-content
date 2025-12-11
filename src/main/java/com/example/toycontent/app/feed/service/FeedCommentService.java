@@ -29,6 +29,7 @@ public class FeedCommentService {
     FeedComment comment = toFeedComment(feed, request, creatorId);
 
     feedCommentRepository.save(comment);
+    feed.incrementCommentCount();
 
     return FeedCommentResponse.Created.of(comment);
   }
@@ -54,6 +55,8 @@ public class FeedCommentService {
   @Transactional
   public void deleteComment(Long feedId, Long commentId) {
     FeedComment comment = findFeedCommentByIdAndFeedIdOrElseThrow(commentId, feedId);
+
+    comment.getFeed().decrementCommentCount();
 
     comment.delete();
   }

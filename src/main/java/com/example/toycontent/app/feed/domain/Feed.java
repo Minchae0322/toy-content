@@ -214,6 +214,22 @@ public class Feed extends BaseTimeEntity {
   }
 
   /**
+   * 핫 수 증가
+   */
+  public void incrementCommentCount() {
+    this.commentCount++;
+  }
+
+  /**
+   * 핫 수 증가
+   */
+  public void decrementCommentCount() {
+    if (this.commentCount > 0) {
+      this.commentCount--;
+    }
+  }
+
+  /**
    * 리액션 추가 (카운트도 함께 업데이트)
    */
   public FeedReaction addReaction(Long userId, FeedReactionType reactionType) {
