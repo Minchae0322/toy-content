@@ -147,14 +147,23 @@ public abstract class FeedResponse {
     @Schema(description = "상품 정보")
     private ProductResponse.FeedProduct product;
 
+    @Schema(description = "직접 입력한 제품명")
+    private String productNameCustom;
+
     @Schema(description = "서브 카테고리 상세 dto")
     private SubCategoryDetail subCategoryDetail;
 
     @Schema(description = "리뷰 내용")
     private String review;
 
+    @Schema(description = "구매처")
+    private String buyPlace;
+
     @Schema(description = "구매 가격")
     private Integer buyPrice;
+
+    @Schema(description = "정가")
+    private Integer price;
 
     @Schema(description = "조회수")
     private Integer viewCount;
@@ -164,6 +173,9 @@ public abstract class FeedResponse {
 
     @Schema(description = "핫해요 수")
     private Integer hotCount;
+
+    @Schema(description = "댓글 수")
+    private Integer commentCount;
 
     @Schema(description = "조회자 리액션 여부")
     private UserReactions userReactions;
@@ -188,12 +200,16 @@ public abstract class FeedResponse {
           .feedId(feed.getId())
           .userInfo(userInfo)
           .product(feed.getProduct() != null ? FeedProduct.of(feed.getProduct()) : null)
+          .productNameCustom(feed.getProductNameCustom())
           .subCategoryDetail(SubCategoryDetail.from(feed.getCategory()))
           .review(feed.getReview())
+          .buyPlace(feed.getBuyPlace())
           .buyPrice(feed.getBuyPrice())
+          .price(feed.getPrice())
           .viewCount(feed.getViewCount())
           .likeCount(feed.getLikeCount())
           .hotCount(feed.getHotCount())
+          .commentCount(feed.getCommentCount())
           .attachmentFiles(
               feed.getAttachmentFiles()
                   .stream()

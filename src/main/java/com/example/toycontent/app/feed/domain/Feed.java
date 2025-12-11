@@ -53,27 +53,43 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 public class Feed extends BaseTimeEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Comment("피드 ID")
   private Long id;
 
+  // ===== 작성자 정보 =====
   @Column(nullable = false)
-  @Comment("사용자 ID")
+  @Comment("작성자 ID")
   private Long userId;
 
+  // ===== 제품 정보 =====
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "product_id")
+  @Comment("연결된 제품 (선택)")
   private Product product;
 
-  @Column(length = 200)
+  @Column(length = 200, name = "product_name_custom")
+  @Comment("직접 입력한 제품명")
   private String productNameCustom;
 
-  @JoinColumn(name = "category_id")
   @ManyToOne(fetch = FetchType.LAZY)
-  @Comment("제품 카테고리 (음료, 스낵, 베이커리 등)")
+  @JoinColumn(name = "category_id")
+  @Comment("제품 카테고리")
   private Category category;
 
+  // ===== 리뷰 내용 =====
   @Column(nullable = false, length = 1000)
-  @Comment("리뷰 내용")
+  @Comment("한줄평 (10~100자)")
   private String review;
+
+  @Enumerated(EnumType.STRING)
+  @Column(length = 20, name = "evaluation")
+  @Comment("제품 평가 (BEST/GOOD/OKAY/BAD)")
+  private FeedEvaluation evaluation;
+
+  // ===== 구매 정보 =====
+  @Column(length = 100, name = "buy_place")
+  @Comment("구매처")
+  private String buyPlace;
 
   @Column(name = "buy_price")
   @Comment("구매 가격")
@@ -83,14 +99,34 @@ public class Feed extends BaseTimeEntity {
   @Comment("정가")
   private Integer price;
 
+  // ===== 통계 =====
   @Column(nullable = false)
   @Builder.Default
+  @Comment("조회수")
+  @NotAudited
+  private Integer viewCount = 0;
+
+  @Column(nullable = false)
+  @Builder.Default
+  @Comment("좋아요 수")
   private Integer likeCount = 0;
 
   @Column(nullable = false)
   @Builder.Default
+  @Comment("HOT 리액션 수")
   private Integer hotCount = 0;
 
+  @Column(nullable = false)
+  @Builder.Default
+  @Comment("댓글 수")
+  private Integer commentCount = 0;
+
+  @Column(nullable = false)
+  @Builder.Default
+  @Comment("신고 누적 수")
+  private Integer reportCount = 0;
+
+  // ===== 삭제 처리 =====
   @Column(nullable = false, name = "del_yn")
   @Builder.Default
   @Comment("삭제 여부")
@@ -100,34 +136,20 @@ public class Feed extends BaseTimeEntity {
   @Comment("삭제 일시")
   private LocalDateTime deletedAt;
 
-  @Column(nullable = false)
-  @Comment("조회수")
-  @NotAudited
-  @Builder.Default
-  private Integer viewCount = 0;
-
-  @Column(length = 100, name = "buy_place")
-  @Comment("구매처")
-  private String buyPlace;
-
-  @Enumerated(EnumType.STRING)
-  @Column(length = 20, name = "evaluation")
-  @Comment("제품 평가 (BEST/GOOD/OKAY/BAD)")
-  private FeedEvaluation evaluation;
-
+  // ===== 연관 관계 =====
   @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
-  @Comment("상품 이미지 목록")
+  @Comment("첨부 이미지 목록 (최대 5장)")
   private List<FeedAttachmentFile> attachmentFiles = new ArrayList<>();
 
   @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
-  @Comment("피드-해시태그 연결 목록")
+  @Comment("해시태그 목록 (최대 5개)")
   private List<FeedHashtag> hashtags = new ArrayList<>();
 
   @OneToMany(mappedBy = "feed")
+  @Comment("리액션 목록")
   private List<FeedReaction> reactions;
-
 
   /**
    * 피드 정보 업데이트 (첨부파일 제외)

@@ -154,7 +154,6 @@ public class FeedService {
     feed.incrementViewCount();
 
     return FeedResponse.Detail.from(feed, userInfo);
-
   }
 
   /**
@@ -196,15 +195,14 @@ public class FeedService {
   private Feed toEntity(FeedRequest.CreateFeed request, Category category, Product product) {
     return Feed.builder()
         .userId(request.getUserId())
+        .product(product)
         .productNameCustom(request.getProductNameCustom())
         .category(category)
         .review(request.getReview())
-        .product(product)
+        .evaluation(request.getEvaluation())
+        .buyPlace(request.getBuyPlace())
         .buyPrice(request.getBuyPrice())
         .price(request.getPrice())
-        .buyPlace(request.getBuyPlace())
-        .viewCount(0)
-        .evaluation(request.getEvaluation())
         .build();
   }
 
