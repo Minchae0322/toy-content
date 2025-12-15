@@ -6,11 +6,14 @@ import com.example.toycontent.app.common.exception.impl.FeedErrorCode;
 import com.example.toycontent.app.feed.controller.dto.FeedCommentRequest.CommentCreate;
 import com.example.toycontent.app.feed.controller.dto.FeedCommentRequest.CommentUpdate;
 import com.example.toycontent.app.feed.controller.dto.FeedCommentResponse;
+import com.example.toycontent.app.feed.controller.dto.FeedCommentResponse.CommentItem;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedComment;
 import com.example.toycontent.app.feed.repository.FeedCommentRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,12 @@ public class FeedCommentService {
 
   private final FeedRepository feedRepository;
   private final FeedCommentRepository feedCommentRepository;
+
+
+  @Transactional
+  public Page<CommentItem> getComments(Long feedId, Pageable pageable) {
+    return feedCommentRepository.findByFeedIdAndDeletedFalse(feedId, pageable);
+  }
 
   @Transactional
   public FeedCommentResponse.Created createComment(Long feedId, CommentCreate request, Long creatorId) {
@@ -65,5 +74,7 @@ public class FeedCommentService {
     return feedCommentRepository.findByIdAndFeedId(commentId, feedId)
         .orElseThrow(() -> new RestApiException(FeedErrorCode.FEED_COMMENT_NOT_FOUND));
   }
+
+
 }
 

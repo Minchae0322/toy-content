@@ -40,6 +40,12 @@ public class FeedComment extends BaseTimeEntity {
   @Comment("사용자 ID")
   private Long creatorId;
 
+  @Column(name = "creator_nickname")
+  private String creatorNickname;
+
+  @Column(name = "creator_profile_url")
+  private String creatorProfileUrl;
+
   @Column(name = "content", nullable = false, length = 200)
   private String content;
 

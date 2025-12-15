@@ -4,12 +4,18 @@ import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.response.ApiResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedCommentRequest;
 import com.example.toycontent.app.feed.controller.dto.FeedCommentResponse;
+import com.example.toycontent.app.feed.controller.dto.FeedCommentResponse.CommentItem;
 import com.example.toycontent.app.feed.service.FeedCommentService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -23,6 +29,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class FeedCommentController {
 
   private final FeedCommentService feedCommentService;
+
+  @Operation(summary = "댓글 목록 조회", description = "피드의 댓글 목록을 조회합니다.")
+  @GetMapping
+  public ResponseEntity<ApiResponse<Page<CommentItem>>> getComments(
+      @PathVariable Long feedId,
+      @ParameterObject @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+
+    Page<CommentItem> commentList =
+        feedCommentService.getComments(feedId, pageable);
+
+    return ResponseEntity.ok(ApiResponse.success(commentList));
+  }
 
   @Operation(summary = "댓글 생성", description = "피드에 댓글을 생성합니다.")
   @PostMapping
@@ -57,4 +75,5 @@ public class FeedCommentController {
     feedCommentService.deleteComment(feedId, commentId);
     return ResponseEntity.ok(ApiResponse.success(null, "댓글이 삭제되었습니다."));
   }
+
 }
