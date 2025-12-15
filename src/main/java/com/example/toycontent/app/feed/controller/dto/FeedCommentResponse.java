@@ -4,13 +4,17 @@ import com.example.toycontent.app.feed.domain.FeedComment;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 public abstract class FeedCommentResponse {
 
   @Data
   @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
   @Schema(name = "CommentResponse", description = "댓글 응답 DTO")
   public static class CommentItem {
     @Schema(description = "댓글 ID", example = "150")
