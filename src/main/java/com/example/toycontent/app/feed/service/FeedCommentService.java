@@ -11,6 +11,9 @@ import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedComment;
 import com.example.toycontent.app.feed.repository.FeedCommentRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import com.example.toycontent.external.user.service.ExternalUserInfoService;
+import com.example.toycontent.external.user.service.UserCacheStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,7 +26,7 @@ public class FeedCommentService {
 
   private final FeedRepository feedRepository;
   private final FeedCommentRepository feedCommentRepository;
-
+  private final ExternalUserInfoService externalUserInfoService;
 
   @Transactional
   public Page<CommentItem> getComments(Long feedId, Pageable pageable) {
@@ -35,7 +38,9 @@ public class FeedCommentService {
     Feed feed = feedRepository.findById(feedId)
         .orElseThrow(() -> new RestApiException(FeedErrorCode.FEED_NOT_FOUND));
 
-    FeedComment comment = toFeedComment(feed, request, creatorId);
+    ExternalUserInfo externalUserInfo = externalUserInfoService.getUserInfo(feed.getUserId());
+
+    FeedComment comment = toFeedComment(feed, request, creatorId, externalUserInfo);
 
     feedCommentRepository.save(comment);
     feed.incrementCommentCount();
@@ -43,10 +48,13 @@ public class FeedCommentService {
     return FeedCommentResponse.Created.of(comment);
   }
 
-  private FeedComment toFeedComment(Feed feed, CommentCreate create, Long creatorId) {
+  private FeedComment toFeedComment(Feed feed, CommentCreate create, Long creatorId, ExternalUserInfo externalUserInfo) {
     return FeedComment.builder()
         .content(create.getContent())
         .creatorId(creatorId)
+        .creatorNickname(externalUserInfo.getNickname())
+        .creatorProfileUrl(externalUserInfo.getProfileImageFile() != null
+            ? externalUserInfo.getProfileImageFile().getFileUrl() : null)
         .feed(feed)
         .deleted(false)
         .build();
