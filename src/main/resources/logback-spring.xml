@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-  <!-- 콘솔 출력 -->
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+  <!-- 콘솔 출력 (색상 적용) -->
   <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
-      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+      <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{36}) - %msg%n</pattern>
     </encoder>
   </appender>
 
