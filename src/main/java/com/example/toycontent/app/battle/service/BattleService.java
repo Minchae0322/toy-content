@@ -2,6 +2,7 @@ package com.example.toycontent.app.battle.service;
 
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
+import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleItemInfo;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
@@ -99,6 +100,11 @@ public class BattleService {
     return new PageImpl<>(battleLists, pageable, totalCount);
   }
 
+  public List<BattleHotList> getHotBattleList() {
+
+    return battleRepository.findHotBattlesWithSearchCondition();
+  }
+
   /**
    * 배틀 상세 조회
    */
@@ -177,6 +183,7 @@ public class BattleService {
     return battleRepository.findById(battleId)
         .orElseThrow(() -> new RestApiException(BattleErrorCode.BATTLE_NOT_FOUND));
   }
+
 
 
 }

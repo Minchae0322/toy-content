@@ -7,6 +7,7 @@ import static com.example.toycontent.app.category.domain.QCategory.category;
 import static com.example.toycontent.app.product.domain.QProduct.product;
 
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
+import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.domain.Battle;
@@ -94,6 +95,57 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
     // 한 번의 쿼리로 모든 상위 아이템 이미지 조회
     if (!battleIdsWithoutThumbnail.isEmpty()) {
       Map<Long, List<String>> topImagesMap = fetchTopItemImagesForBattles(battleIdsWithoutThumbnail);
+
+      // 매핑
+      content.forEach(battleList -> {
+        if (battleList.getThumbnailDto() == null) {
+          battleList.setTopItemImages(topImagesMap.getOrDefault(battleList.getId(), List.of()));
+        }
+      });
+    }
+
+    return content;
+  }
+
+  @Override
+  public List<BattleResponse.BattleHotList> findHotBattlesWithSearchCondition() {
+
+    // 배틀 기본 정보 조회
+    List<BattleResponse.BattleHotList> content = queryFactory
+        .select(Projections.fields(BattleHotList.class,
+            battle.id,
+            battle.title,
+            battle.totalParticipants,
+            battle.totalVotes,
+            battle.totalViews,
+            // 썸네일 DTO 매핑
+            Projections.fields(AttachmentFileResponse.class,
+                battleAttachmentFile.id,
+                battleAttachmentFile.orgFileNm,
+                battleAttachmentFile.fileUrl,
+                battleAttachmentFile.fileSize,
+                battleAttachmentFile.fileExplain,
+                battleAttachmentFile.contentType
+            ).as("thumbnailDto")
+        ))
+        .from(battle)
+        .leftJoin(battle.battleAttachmentFiles, battleAttachmentFile)
+        .on(battleAttachmentFile.isPrimary.isTrue())
+        .orderBy(battle.hotScore.desc())
+        .offset(0)
+        .limit(10)
+        .fetch();
+
+    // 썸네일이 없는 배틀 ID 수집
+    List<Long> battleIdsWithoutThumbnail = content.stream()
+        .filter(battleList -> battleList.getThumbnailDto() == null)
+        .map(BattleResponse.BattleHotList::getId)
+        .toList();
+
+    // 한 번의 쿼리로 모든 상위 아이템 이미지 조회
+    if (!battleIdsWithoutThumbnail.isEmpty()) {
+      Map<Long, List<String>> topImagesMap = fetchTopItemImagesForBattles(
+          battleIdsWithoutThumbnail);
 
       // 매핑
       content.forEach(battleList -> {
