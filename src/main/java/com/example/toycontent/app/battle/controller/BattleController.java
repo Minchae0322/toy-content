@@ -3,6 +3,7 @@ package com.example.toycontent.app.battle.controller;
 
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
+import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.service.BattleService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -54,6 +56,13 @@ public class BattleController {
       @ParameterObject BattleSearchCondition condition,
       @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
     Page<BattleResponse.BattleList> response = battleService.getBattles(condition, pageable);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @Operation(summary = "배틀 핫 목록 조회")
+  @GetMapping("/hot")
+  public ResponseEntity<ApiResponse<List<BattleHotList>>> getHotBattleList() {
+    List<BattleResponse.BattleHotList> response = battleService.getHotBattleList();
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 

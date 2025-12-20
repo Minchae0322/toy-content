@@ -1,5 +1,6 @@
 package com.example.toycontent.app.battle.repository.querydsl;
 
+import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.domain.Battle;
@@ -11,6 +12,7 @@ public interface BattleRepositoryCustom {
 
   List<BattleList> findBattlesWithSearchCondition(BattleSearchCondition condition, Pageable pageable);
 
+  List<BattleHotList> findHotBattlesWithSearchCondition();
   Long countBattlesWithSearchCondition(BattleSearchCondition condition);
 
   List<Battle> findBattlesNeedingTimeWeightUpdate(LocalDateTime activeThreshold);

@@ -31,6 +31,35 @@ public abstract class BattleResponse {
   @Builder
   @NoArgsConstructor
   @AllArgsConstructor
+  public static class BattleHotList {
+    @Schema(description = "배틀 ID", example = "1")
+    private Long id;
+
+    @Schema(description = "배틀 제목", example = "2025년 최고의 스니커즈를 찾아라")
+    private String title;
+
+    @Schema(description = "대표 이미지")
+    private AttachmentFileResponse thumbnailDto;
+
+    @Schema(description = "상위 아이템 이미지 목록 ((최대 4개) 대표이미지가 없으면)")
+    private List<String> topItemImages;
+
+    @Schema(description = "총 참여자 수", example = "48")
+    private Integer totalParticipants;
+
+    @Schema(description = "총 투표 수", example = "127")
+    private Integer totalVotes;
+
+    @Schema(description = "총 조회 수", example = "523")
+    private Integer totalViews;
+
+  }
+
+  @Schema(description = "배틀 목록 조회 응답")
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
   public static class BattleList {
 
     @Schema(description = "배틀 ID", example = "1")
