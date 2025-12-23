@@ -62,6 +62,21 @@
     <appender-ref ref="FILE"/>
   </appender>
 
+  <!-- local 프로파일 -->
+  <springProfile name="local">
+    <logger name="com.example.toycontent" level="INFO" additivity="false">
+      <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="com.example.toycontent.app.feed" level="INFO" additivity="false">
+      <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+  </springProfile>
+
   <!-- dev 프로파일 -->
   <springProfile name="dev">
     <logger name="com.example.toycontent" level="DEBUG" additivity="false">
@@ -84,29 +99,21 @@
   <!-- prod 프로파일 -->
   <springProfile name="prod">
     <logger name="com.example.toycontent" level="INFO" additivity="false">
+      <appender-ref ref="CONSOLE"/>
       <appender-ref ref="ASYNC_FILE"/>
       <appender-ref ref="ERROR_FILE"/>
     </logger>
 
     <logger name="com.example.toycontent.app.feed" level="INFO" additivity="false">
+      <appender-ref ref="CONSOLE"/>
       <appender-ref ref="FEED_FILE"/>
       <appender-ref ref="ERROR_FILE"/>
     </logger>
 
     <root level="WARN">
+      <appender-ref ref="CONSOLE"/>
       <appender-ref ref="ASYNC_FILE"/>
       <appender-ref ref="ERROR_FILE"/>
-    </root>
-  </springProfile>
-
-  <!-- local 프로파일 -->
-  <springProfile name="local">
-    <logger name="com.example.toycontent" level="INFO" additivity="false">
-      <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <root level="INFO">
-      <appender-ref ref="CONSOLE"/>
     </root>
   </springProfile>
 
