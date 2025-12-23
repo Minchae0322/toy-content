@@ -3,6 +3,8 @@ package com.example.toycontent.app.feed.service;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.FeedCursorResponse;
+import com.example.toycontent.app.feed.domain.FeedReaction;
+import com.example.toycontent.app.feed.repository.FeedReactionRepository;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.app.category.domain.Category;
@@ -26,7 +28,9 @@ import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import jakarta.transaction.Transactional;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
@@ -46,28 +50,12 @@ public class FeedService {
   private final HashtagRepository hashtagRepository;
   private final FeedAttachmentFileRepository feedAttachmentFileRepository;
   private final ExternalUserInfoService externalUserInfoService;
-  private final ExternalUserFollowingService externalUserFollowingService;;
+  private final ExternalUserFollowingService externalUserFollowingService;
+  private final FeedReactionRepository feedReactionRepository;
 
   private static final int HOT_FEED_RECENT_DAYS = 7;
 
-  /**
-   * 피드 목록 조회 (페이징)
-   */
-  public Page<FeedResponse.ListView> getFeeds(Pageable pageable, FeedCondition condition) {
-    List<Feed> feeds = feedRepository.findFeedsWithSearchCondition(pageable, condition);
-    Long totalCount = feedRepository.countFeedsWithSearchCondition(condition);
 
-    return new PageImpl<>(
-        feeds.stream()
-            .map(feed ->  {
-
-              ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
-              return FeedResponse.ListView.from(feed, userInfo);
-
-            })
-            .toList(),
-        pageable, totalCount);
-  }
 
   /**
    * 피드 목록 조회 (커서 페이징) - 탐색/검색용
@@ -81,10 +69,27 @@ public class FeedService {
 
     List<Feed> feeds = feedRepository.findFeedsWithCursor(condition);
 
-    List<FeedResponse.ListView> feedResponses = toListView(feeds);
+    Map<Long, List<FeedReaction>> userReactionsMap = getUserReactionsByFeedId(feeds, userId);
+
+    List<FeedResponse.ListView> feedResponses = toListView(feeds, userReactionsMap);
 
     return FeedCursorResponse.of(feedResponses, requestSize);
   }
+
+  private Map<Long, List<FeedReaction>> getUserReactionsByFeedId(List<Feed> feeds, Long userId) {
+    return Optional.ofNullable(userId)
+        .map(currentUserId -> {
+          List<Long> feedsId = feeds.stream()
+              .map(Feed::getId)
+              .toList();
+
+          return feedReactionRepository.findByFeedIdsAndUserId(feedsId, currentUserId)
+              .stream()
+              .collect(Collectors.groupingBy(reaction -> reaction.getFeed().getId()));
+
+        }).orElse(Collections.emptyMap());
+  }
+
 
   /**
    * 팔로우한 사용자의 피드 조회 (커서 페이징)
@@ -98,7 +103,9 @@ public class FeedService {
 
     List<Feed> feeds = feedRepository.findFollowingFeeds(condition, followingIds);
 
-    List<FeedResponse.ListView> feedResponses = toListView(feeds);
+    Map<Long, List<FeedReaction>> userReactionsMap = getUserReactionsByFeedId(feeds, userId);
+
+    List<FeedResponse.ListView> feedResponses = toListView(feeds, userReactionsMap);
 
     return FeedCursorResponse.of(feedResponses, requestSize);
   }
@@ -106,11 +113,11 @@ public class FeedService {
   /**
    * Feed 리스트 -> ListView 변환 (공통 메서드)
    */
-  private List<FeedResponse.ListView> toListView(List<Feed> feeds) {
+  private List<FeedResponse.ListView> toListView(List<Feed> feeds, Map<Long, List<FeedReaction>> userReactionsMap) {
     return feeds.stream()
         .map(feed -> {
           ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
-          return FeedResponse.ListView.from(feed, userInfo);
+          return FeedResponse.ListView.from(feed, userInfo, userReactionsMap.get(feed.getId()));
         })
         .toList();
   }
@@ -129,31 +136,29 @@ public class FeedService {
   /**
    * 피드 전체 목록 조회
    */
-  public List<FeedResponse.ListView> getFeedList(FeedCondition condition) {
+  public List<FeedResponse.ListView> getFeedList(FeedCondition condition, Long userId) {
     List<Feed> feeds = feedRepository.findFeedsWithSearchCondition(condition);
+    Map<Long, List<FeedReaction>> userReactionsMap = getUserReactionsByFeedId(feeds, userId);
 
-    return feeds.stream()
-        .map(feed -> {
-
-          ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
-          return FeedResponse.ListView.from(feed, userInfo);
-
-        })
-        .toList();
+    return toListView(feeds, userReactionsMap);
   }
 
   /**
    * 피드 단건 조회
    */
-  public FeedResponse.Detail getFeed(Long feedId) {
+  public FeedResponse.Detail getFeed(Long feedId, Long userId) {
     Feed feed = findFeedById(feedId);
+
+    List<FeedReaction> usersReactions = Optional.ofNullable(userId)
+        .map(currentUserId -> feedReactionRepository.findByFeedIdAndUserId(feedId, currentUserId))
+        .orElse(Collections.emptyList());
 
     ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
 
     // 조회수 증가
     feed.incrementViewCount();
 
-    return FeedResponse.Detail.from(feed, userInfo);
+    return FeedResponse.Detail.from(feed, userInfo, usersReactions);
   }
 
   /**

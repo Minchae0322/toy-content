@@ -3,6 +3,7 @@ package com.example.toycontent.app.feed.controller.dto;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse.SubCategoryDetail;
 import com.example.toycontent.app.common.enumuration.FeedEvaluation;
 import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse.UserReactions;
+import com.example.toycontent.app.feed.domain.FeedReaction;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.FeedProduct;
 import com.example.toycontent.app.feed.domain.Feed;
@@ -83,7 +84,7 @@ public abstract class FeedResponse {
     @Schema(description = "수정일시")
     private LocalDateTime updatedAt;
 
-    public static ListView from(Feed feed, ExternalUserInfo userInfo) {
+    public static ListView from(Feed feed, ExternalUserInfo userInfo, List<FeedReaction> userReactions) {
       return ListView.builder()
           .feedId(feed.getId())
           .userInfo(userInfo)
@@ -106,7 +107,7 @@ public abstract class FeedResponse {
           .buyPlace(feed.getBuyPlace())
           .hotCount(feed.getHotCount())
           .likeCount(feed.getLikeCount())
-          .userReactions(UserReactions.from(feed.getReactions()))
+          .userReactions(UserReactions.from(userReactions))
           .feedEvaluation(feed.getEvaluation())
           .createdAt(feed.getCreatedAt())
           .updatedAt(feed.getUpdatedAt())
@@ -195,7 +196,7 @@ public abstract class FeedResponse {
     @Schema(description = "수정일시")
     private LocalDateTime updatedAt;
 
-    public static Detail from(Feed feed, ExternalUserInfo userInfo) {
+    public static Detail from(Feed feed, ExternalUserInfo userInfo, List<FeedReaction> currentUserReactions) {
       return Detail.builder()
           .feedId(feed.getId())
           .userInfo(userInfo)
@@ -216,7 +217,7 @@ public abstract class FeedResponse {
                   .map(AttachmentFileResponse::of)
                   .toList())
           .hashtags(HashtagInfo.fromList(feed.getHashtags()))
-          .userReactions(UserReactions.from(feed.getReactions()))
+          .userReactions(UserReactions.from(currentUserReactions))
           .feedEvaluation(feed.getEvaluation())
           .createdAt(feed.getCreatedAt())
           .updatedAt(feed.getUpdatedAt())
