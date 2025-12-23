@@ -23,17 +23,6 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
   Optional<Feed> findByIdWithPessimisticLock(@Param("id") Long id);
 
   /**
-   * 검색 조건에 따른 피드 목록 조회 (페이징)
-   */
-  @Query("SELECT f FROM Feed f " +
-      "LEFT JOIN FETCH f.category " +
-      "LEFT JOIN FETCH f.product " +
-      "WHERE (:#{#condition.keyword} IS NULL OR f.review LIKE %:#{#condition.keyword}% OR f.productNameCustom LIKE %:#{#condition.keyword}%) " +
-      "AND (:#{#condition.categoryId} IS NULL OR f.category.id = :#{#condition.categoryId}) " +
-      "AND (:#{#condition.userId} IS NULL OR f.userId = :#{#condition.userId})")
-  List<Feed> findFeedsWithSearchCondition(Pageable pageable, @Param("condition") FeedCondition condition);
-
-  /**
    * 검색 조건에 따른 피드 목록 조회 (전체)
    */
   @Query("SELECT f FROM Feed f " +

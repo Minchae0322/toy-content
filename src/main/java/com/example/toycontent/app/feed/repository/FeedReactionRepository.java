@@ -42,4 +42,5 @@ public interface FeedReactionRepository extends JpaRepository<FeedReaction, Long
       @Param("feedIds") List<Long> feedIds,
       @Param("userId") Long userId
   );
+
 }

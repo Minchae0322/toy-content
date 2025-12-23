@@ -93,18 +93,20 @@ public class FeedController {
   @Operation(summary = "피드 전체 목록 조회", description = "피드 전체 목록을 조회합니다.")
   @GetMapping("/list")
   public ResponseEntity<ApiResponse<List<ListView>>> getFeedList(
-      @ParameterObject @ModelAttribute FeedCondition condition) {
+      @ParameterObject @ModelAttribute FeedCondition condition,
+      @CurrentUserId(required = false) Long userId) {
 
-    List<FeedResponse.ListView> feeds = feedService.getFeedList(condition);
+    List<FeedResponse.ListView> feeds = feedService.getFeedList(condition, userId);
     return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 
   @Operation(summary = "피드 단건 조회", description = "특정 피드의 상세 정보를 조회합니다.")
   @GetMapping("/{feedId}")
   public ResponseEntity<ApiResponse<FeedResponse.Detail>> getFeed(
-      @Parameter(description = "피드 ID") @PathVariable Long feedId) {
+      @Parameter(description = "피드 ID") @PathVariable Long feedId,
+      @CurrentUserId(required = false) Long userId) {
 
-    FeedResponse.Detail feed = feedService.getFeed(feedId);
+    FeedResponse.Detail feed = feedService.getFeed(feedId, userId);
     return ResponseEntity.ok(ApiResponse.success(feed));
   }
 
@@ -158,18 +160,6 @@ public class FeedController {
 
     feedReactionService.removeReaction(feedId, userId, reactionType);
     return ResponseEntity.ok(ApiResponse.success(null, "리액션이 제거되었습니다."));
-  }
-
-
-  @Operation(summary = "피드 목록 조회 (페이징)", description = "피드 목록을 페이징하여 조회합니다.")
-  @GetMapping
-  @Deprecated
-  public ResponseEntity<ApiResponse<Page<ListView>>> getFeeds(
-      @ParameterObject Pageable pageable,
-      @ParameterObject @ModelAttribute FeedCondition condition) {
-
-    Page<FeedResponse.ListView> feeds = feedService.getFeeds(pageable, condition);
-    return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 
 }
