@@ -44,14 +44,21 @@ public class ExternalUserApiClient {
 
   public ExternalUserInfo getUserInfoOrElseFetchAndCache(Long userId) {
     if (userId == null || userId <= 0) {
+      log.info("[외부사용자 조회] 유효하지 않은 userId: {}", userId);
       throw new RestApiException(UserErrorCode.USER_NOT_INVALID);
     }
 
     return userCacheStore.getCachedUserInfos(userId)
+        .map(cachedInfo -> {
+          log.info("[외부사용자 조회] 캐시 히트 - userId: {}", userId);
+          return cachedInfo;
+        })
         .orElseGet(() -> {
+          log.info("[외부사용자 조회] 캐시 미스 - userId: {}, 외부 API 호출합니다.", userId);
           try {
             return fetchAndCacheUserInfo(userId);
           } catch (Exception e) {
+            log.warn("[외부사용자 조회] 외부 API 호출 실패 - userId: {}, 대체 정보 반환", userId, e);
             return createFallbackUserInfo(userId);
           }
         });
