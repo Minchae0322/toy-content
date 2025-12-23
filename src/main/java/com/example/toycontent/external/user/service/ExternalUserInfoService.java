@@ -51,12 +51,19 @@ public class ExternalUserInfoService {
    */
   public ExternalUserInfo getUserInfo(Long userId) {
     if (userId == null) {
+      log.info("[외부사용자 조회] userId가 null 입니다. 대체 사용자 정보를 반환합니다.");
       return createFallbackUserInfo(null);
     }
 
-    // 캐시 조회 시도
     return cacheService.getCachedUserInfos(userId)
-        .orElseGet(() -> serviceClient.getUserInfoOrElseFetchAndCache(userId));
+        .map(cachedInfo -> {
+          log.info("[외부사용자 조회] 캐시 히트 - userId: {}", userId);
+          return cachedInfo;
+        })
+        .orElseGet(() -> {
+          log.info("[외부사용자 조회] 캐시 미스 - userId: {}, 서비스에서 조회합니다.", userId);
+          return serviceClient.getUserInfoOrElseFetchAndCache(userId);
+        });
   }
 
   /**

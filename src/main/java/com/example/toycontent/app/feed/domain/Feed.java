@@ -44,11 +44,19 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @EntityListeners(AuditingEntityListener.class)
 @Entity
 @Table(name = "TB_FEED", indexes = {
+    // 기존 인덱스
     @Index(name = "idx_feed_category", columnList = "category_id"),
-    @Index(name = "idx_created_at", columnList = "createdAt"),
     @Index(name = "idx_user_id", columnList = "user_id"),
-    @Index(name = "idx_product_id", columnList = "product_id"),  // 추가
-    @Index(name = "idx_del_yn", columnList = "del_yn")
+    @Index(name = "idx_product_id", columnList = "product_id"),
+
+    // 커서 페이징용 복합 인덱스 (핵심)
+    @Index(name = "idx_feed_cursor", columnList = "del_yn, id DESC"),
+
+    // 카테고리별 조회용
+    @Index(name = "idx_feed_category_cursor", columnList = "del_yn, category_id, id DESC"),
+
+    // 사용자별 피드 조회용
+    @Index(name = "idx_feed_user_cursor", columnList = "del_yn, user_id, id DESC")
 })
 public class Feed extends BaseTimeEntity {
   @Id

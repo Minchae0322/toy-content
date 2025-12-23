@@ -99,4 +99,15 @@
     </root>
   </springProfile>
 
+  <!-- local 프로파일 -->
+  <springProfile name="local">
+    <logger name="com.example.toycontent" level="INFO" additivity="false">
+      <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+  </springProfile>
+
 </configuration>
