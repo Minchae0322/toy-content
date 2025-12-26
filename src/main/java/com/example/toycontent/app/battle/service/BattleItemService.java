@@ -309,6 +309,9 @@ public class BattleItemService {
 
           int point = calculatePoint(battle.getVoteType(), voteItem.getRank());
 
+          item.incrementVote();
+          item.addScore(point);
+
           return BattleVote.builder()
               .battle(battle)
               .battleItem(item)
