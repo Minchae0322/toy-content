@@ -95,6 +95,12 @@ public class BattleItem extends BaseTimeEntity {
 
   @Builder.Default
   @Column(nullable = false)
+  @Comment("총 점수 (SINGLE: 투표당 1점, MULTIPLE: 1위=3점, 2위=2점, 3위=1점)")
+  private Integer totalScore = 0;
+
+
+  @Builder.Default
+  @Column(nullable = false)
   @Comment("신고 수 (3회 이상 시 자동 검토중 상태)")
   private Integer reportCount = 0;
 
@@ -112,6 +118,25 @@ public class BattleItem extends BaseTimeEntity {
    */
   public void incrementVote() {
     this.voteCount++;
+  }
+
+
+  /**
+   * 점수 추가
+   * - SINGLE 투표: 1점
+   * - MULTIPLE 투표: 1위=3점, 2위=2점, 3위=1점
+   * @param score 추가할 점수
+   */
+  public void addScore(int score) {
+    this.totalScore += score;
+  }
+
+  /**
+   * 점수 차감 (투표 취소 시)
+   * @param score 차감할 점수
+   */
+  public void subtractScore(int score) {
+    this.totalScore = Math.max(0, this.totalScore - score);
   }
 
   /**

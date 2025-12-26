@@ -161,6 +161,7 @@ public abstract class BattleResponse {
     @Schema(description = "총 조회 수", example = "523")
     private Integer totalViews;
 
+
     @Schema(description = "생성일", example = "2025-01-25T14:30:00")
     private LocalDateTime createdAt;
 
@@ -235,6 +236,9 @@ public abstract class BattleResponse {
     @Schema(description = "득표율", example = "33.07")
     private Double votePercentage;
 
+    @Schema(description = "득표 스코어", example = "22")
+    private Integer totalScore;
+
     @Schema(description = "아이템 상태", example = "ACTIVE")
     private BattleItemStatus status;
 
@@ -262,6 +266,7 @@ public abstract class BattleResponse {
           .customBrand(item.getCustomBrand())
           .customImageUrl(item.getCustomImageUrl())
           .voteCount(item.getVoteCount())
+          .totalScore(item.getTotalScore())
           .status(item.getStatus())
           .reportCount(item.getReportCount())
           .registerId(item.getRegisterId())
@@ -273,6 +278,7 @@ public abstract class BattleResponse {
           )
           .build();
     }
+
   }
 }
 

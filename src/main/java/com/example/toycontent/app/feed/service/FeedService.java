@@ -54,9 +54,7 @@ public class FeedService {
   private final FeedReactionRepository feedReactionRepository;
 
   private static final int HOT_FEED_RECENT_DAYS = 7;
-
-
-
+  
   /**
    * 피드 목록 조회 (커서 페이징) - 탐색/검색용
    */
