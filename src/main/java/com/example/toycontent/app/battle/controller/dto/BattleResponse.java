@@ -251,7 +251,7 @@ public abstract class BattleResponse {
     private Long registerId;
 
     @Schema(description = "사용자 투표 정보")
-    private List<UserBattleVote> userBattleVote;
+    private UserBattleVote userBattleVote;
 
     public static BattleItemInfo from(BattleItem item) {
       return BattleItemInfo.builder()
@@ -266,10 +266,10 @@ public abstract class BattleResponse {
           .status(item.getStatus())
           .reportCount(item.getReportCount())
           .registerId(item.getRegisterId())
-          .userBattleVote(
-              item.getBattleVotes().stream()
-                  .map(UserBattleVote::from)
-                  .toList())
+          .userBattleVote(item.getBattleVotes().stream()
+              .findFirst()
+              .map(UserBattleVote::from)
+              .orElse(null))
           .votePercentage(
               item.getBattle().getTotalVotes() > 0
                   ? (double) item.getVoteCount() / item.getBattle().getTotalVotes()

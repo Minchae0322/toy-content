@@ -64,6 +64,7 @@ public class BattleItemController {
 
   @Operation(summary = "배틀 아이템 투표 취소")
   @DeleteMapping("/{battleItemId}/vote")
+  @Deprecated
   public ResponseEntity<ApiResponse<Void>> cancelVote(
       @Parameter(description = "배틀 아이템 ID") @PathVariable Long battleItemId,
       @CurrentUserId Long userId) {
