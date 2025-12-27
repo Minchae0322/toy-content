@@ -185,17 +185,17 @@ public class BattleItemService {
    */
   private void validateAndHandleExistingVotes(Battle battle, Long userId, BattleVoteRequest.Vote request) {
     List<BattleVoteRequest.VoteItem> voteItems = request.getVotes();
-    int existingVoteCount = battleVoteRepository.countByBattleAndUserId(battle,
+    List<BattleVote> existingVotes = battleVoteRepository.findByBattle_IdAndUserId(battle.getId(),
         userId);
 
     if (VoteType.SINGLE.equals(battle.getVoteType())) {
-      validateSingleVote(voteItems, existingVoteCount);
+      validateSingleVote(voteItems, existingVotes.size());
       return;
     }
 
     // MULTIPLE 타입
     validateMultipleVote(voteItems);
-    handleExistingVotesIfPresent(battle, userId, existingVoteCount);
+    handleExistingVotesIfPresent(battle, existingVotes);
   }
 
   /**
@@ -230,13 +230,11 @@ public class BattleItemService {
   /**
    * 기존 투표 처리 (수정 로직)
    */
-  private void handleExistingVotesIfPresent(Battle battle, Long currentUserId, int existingVoteCount) {
-    if (existingVoteCount == 0) {
+  private void handleExistingVotesIfPresent(Battle battle,  List<BattleVote> existingVotes) {
+    if (existingVotes.isEmpty()) {
       return;
     }
 
-    List<BattleVote> existingVotes = battleVoteRepository.findByBattleAndUserId(
-        battle, currentUserId);
     updateVoteStatistics(battle, existingVotes, false);
 
     battle.getVotes().removeAll(existingVotes);
@@ -257,10 +255,37 @@ public class BattleItemService {
         : votes.size() * delta;
     battle.incrementTotalVotes(voteCountDelta);
 
-    votes.stream()
-        .map(BattleVote::getBattleItem)
-        .distinct()
-        .forEach(item -> item.incrementVoteCount(delta));
+    // voteCount 및 totalScore 업데이트
+    votes.forEach(vote -> {
+      BattleItem item = vote.getBattleItem();
+      item.incrementVoteCount(delta);
+
+      int score = calculateScore(battle.getVoteType(), vote.getVoteRank());
+      if (isAdd) {
+        item.addScore(score);
+      } else {
+        item.subtractScore(score);
+      }
+    });
+  }
+
+  /**
+   * 투표 타입과 순위에 따른 점수 계산
+   * - SINGLE: 1점
+   * - MULTIPLE: 1위=3점, 2위=2점, 3위=1점
+   */
+  private int calculateScore(VoteType voteType, Integer rank) {
+    if (voteType == VoteType.SINGLE) {
+      return 1;
+    }
+
+    // MULTIPLE 타입
+    return switch (rank) {
+      case 1 -> 3;
+      case 2 -> 2;
+      case 3 -> 1;
+      default -> 0;
+    };
   }
 
 
@@ -307,7 +332,7 @@ public class BattleItemService {
             throw new RestApiException(BattleErrorCode.INVALID_ITEM_STATUS);
           }
 
-          int point = calculatePoint(battle.getVoteType(), voteItem.getRank());
+          int point = calculateScore(battle.getVoteType(), voteItem.getRank());
 
           item.incrementVote();
           item.addScore(point);
@@ -321,23 +346,6 @@ public class BattleItemService {
               .build();
         })
         .toList();
-  }
-
-  /**
-   * 투표 타입과 순위에 따른 점수 계산
-   */
-  private int calculatePoint(VoteType voteType, int rank) {
-    if (voteType == VoteType.SINGLE) {
-      return 1; // 1인 1표는 무조건 1점
-    }
-
-    // 1인 3표 (랭킹)
-    return switch (rank) {
-      case 1 -> 3;
-      case 2 -> 2;
-      case 3 -> 1;
-      default -> throw new RestApiException(BattleErrorCode.INVALID_RANK);
-    };
   }
 
 
