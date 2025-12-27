@@ -15,4 +15,6 @@ public interface BattleVoteRepository extends JpaRepository<BattleVote, Long> {
   Boolean existsByBattleIdAndUserId(Long battleId, Long userId);
 
   int countByBattleAndUserId(Battle battle, Long userId);
+
+  List<BattleVote> findByBattle_IdAndUserId(Long battleId, Long userId);
 }
