@@ -81,6 +81,7 @@ public class BattleItemService {
   /**
    * 배틀 아이템 생성 및 저장
    */
+  @Transactional
   public void createBattleItems(Long userId, Battle battle, List<ItemRequest> request) {
     List<BattleItem> battleItems = request.stream()
         .map(itemRequest -> {
@@ -239,7 +240,6 @@ public class BattleItemService {
 
     battle.getVotes().removeAll(existingVotes);
     battleVoteRepository.deleteAll(existingVotes);
-
   }
 
   /**
@@ -288,10 +288,6 @@ public class BattleItemService {
     };
   }
 
-
-
-
-
   /**
    * 배틀 아이템 투표 취소
    */
@@ -333,9 +329,6 @@ public class BattleItemService {
           }
 
           int point = calculateScore(battle.getVoteType(), voteItem.getRank());
-
-          item.incrementVote();
-          item.addScore(point);
 
           return BattleVote.builder()
               .battle(battle)
