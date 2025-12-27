@@ -3,6 +3,7 @@ package com.example.toycontent.app.battle.controller.dto;
 import com.example.toycontent.app.battle.controller.dto.BattleVoteResponse.UserBattleVote;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.battle.domain.BattleVote;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse.SubCategoryDetail;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -249,15 +251,9 @@ public abstract class BattleResponse {
     private Long registerId;
 
     @Schema(description = "사용자 투표 정보")
-    private UserBattleVote userBattleVote;
+    private List<UserBattleVote> userBattleVote;
 
-    public static BattleItemInfo from(BattleItem item, Long currentUserId) {
-      UserBattleVote userVote = Optional.ofNullable(currentUserId)
-          .flatMap(userId -> item.getBattleVotes().stream()
-              .findFirst()
-              .map(UserBattleVote::from))
-          .orElse(null);
-
+    public static BattleItemInfo from(BattleItem item) {
       return BattleItemInfo.builder()
           .id(item.getId())
           .battleItemProduct(
@@ -270,12 +266,14 @@ public abstract class BattleResponse {
           .status(item.getStatus())
           .reportCount(item.getReportCount())
           .registerId(item.getRegisterId())
-          .userBattleVote(userVote)
+          .userBattleVote(
+              item.getBattleVotes().stream()
+                  .map(UserBattleVote::from)
+                  .toList())
           .votePercentage(
               item.getBattle().getTotalVotes() > 0
                   ? (double) item.getVoteCount() / item.getBattle().getTotalVotes()
-                  : 0.0
-          )
+                  : 0.0)
           .build();
     }
 

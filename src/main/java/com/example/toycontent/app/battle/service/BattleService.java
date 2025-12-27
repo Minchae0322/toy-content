@@ -6,12 +6,15 @@ import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHot
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleItemInfo;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
+import com.example.toycontent.app.battle.controller.dto.BattleVoteResponse.UserBattleVote;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleAttachmentFile;
 import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.battle.domain.BattleVote;
 import com.example.toycontent.app.battle.repository.BattleAttachmentFileRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.battle.repository.BattleRepository;
+import com.example.toycontent.app.battle.repository.BattleVoteRepository;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
@@ -24,7 +27,9 @@ import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -45,6 +50,8 @@ public class BattleService {
   private final CategoryRepository categoryRepository;
   private final ExternalUserInfoService externalUserInfoService;
   private final BattleAttachmentFileRepository battleAttachmentFileRepository;
+  private final BattleVoteRepository battleVoteRepository;
+
 
   private static final int MAX_ACTIVE_BATTLES = 10;
   private static final int MAX_DAILY_CREATIONS = 3;
@@ -110,9 +117,11 @@ public class BattleService {
    */
   @Transactional
   public BattleResponse.BattleDetail getBattleDetail(Long battleId, Long currentUserId) {
+    // 배틀 조회 및 생성자 정보 가져오기
     Battle battle = getBattleByIdOrElseThrow(battleId);
     ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(battle.getCreatorId());
 
+    // 조회수 증가
     battle.incrementTotalViews();
 
     // 생성자는 모든 상태의 아이템 조회, 일반 사용자는 활성화된 아이템만 조회
@@ -120,11 +129,13 @@ public class BattleService {
         ? null
         : BattleItemStatus.ACTIVE;
 
+    // 배틀 아이템 목록 조회 (조회 사용자 투표 정보 포함)
     List<BattleItem> battleItems = battleItemRepository.findByBattleIdWithBattleVote(
         battleId, currentUserId, status);
 
+    // DTO 변환
     List<BattleItemInfo> items = battleItems.stream()
-        .map(item -> BattleItemInfo.from(item, currentUserId))
+        .map(BattleItemInfo::from)
         .toList();
 
     return BattleResponse.BattleDetail.from(battle, userInfo, items);
