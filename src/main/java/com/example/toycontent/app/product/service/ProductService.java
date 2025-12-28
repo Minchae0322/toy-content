@@ -1,6 +1,10 @@
 package com.example.toycontent.app.product.service;
 
 
+import com.example.toycontent.app.battle.domain.Battle;
+import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.battle.repository.BattleItemRepository;
+import com.example.toycontent.app.battle.repository.BattleRepository;
 import com.example.toycontent.app.common.dto.CursorResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.ListView;
@@ -10,6 +14,8 @@ import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.product.controller.dto.ProductReactionResponse.ProductUserReaction;
 import com.example.toycontent.app.product.controller.dto.ProductRequest;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
+import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductBattle;
+import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductBattleItem;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductCreate;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductDetail;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductFeed;
@@ -37,9 +43,11 @@ import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +69,8 @@ public class ProductService {
     private final ProductReviewAttachmentFileRepository productReviewAttachmentFileRepository;
     private final FeedRepository feedRepository;
     private final ExternalUserInfoService externalUserInfoService;
+    private final BattleRepository battleRepository;
+    private final BattleItemRepository battleItemRepository;
 
     /**
      * 제품 등록
@@ -226,7 +236,7 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public CursorResponse<ProductFeed> findProductFeeds(Long productId, Long userId, Long cursor,
+    public CursorResponse<ProductFeed> findProductFeeds(Long productId,  Long cursor,
         Integer requestSize) {
 
         Product product = getProductById(productId);
@@ -240,7 +250,7 @@ public class ProductService {
     }
 
     /**
-     * Feed 리스트 -> ProductFeed 변환 (공통 메서드)
+     * Feed 리스트 -> ProductFeed 변환
      */
     private List<ProductResponse.ProductFeed> toListView(List<Feed> feeds) {
         return feeds.stream()
@@ -249,6 +259,28 @@ public class ProductService {
                 return ProductResponse.ProductFeed.from(feed, userInfo);
             })
             .toList();
+    }
+
+
+    @Transactional(readOnly = true)
+    public CursorResponse<ProductBattle> findProductBattles(Long productId, Long cursor, int size) {
+        Product product = getProductById(productId);
+
+        List<Battle> battlesContainingProduct = battleRepository.findBattlesContainingProduct(
+            product.getId(), cursor, size + 1);
+
+        List<Long> battleIds = battlesContainingProduct.stream().map(Battle::getId).toList();
+        List<BattleItem> allItems = battleItemRepository.findItemsByBattleIds(battleIds);
+
+        Map<Long, List<BattleItem>> itemsByBattle = allItems.stream()
+            .collect(Collectors.groupingBy(bi -> bi.getBattle().getId(), LinkedHashMap::new,
+                Collectors.toList()));
+
+        List<ProductBattle> content = battlesContainingProduct.stream()
+            .map(battle -> ProductBattle.from(battle, itemsByBattle.get(battle.getId()), productId))
+            .toList();
+
+        return CursorResponse.of(content, size, ProductBattle::getBattleId);
     }
 
 

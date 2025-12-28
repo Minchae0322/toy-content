@@ -2,6 +2,9 @@ package com.example.toycontent.app.product.controller.dto;
 
 import static com.example.toycontent.app.common.utils.TagParsingUtil.parseToList;
 
+import com.example.toycontent.app.battle.domain.Battle;
+import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.product.controller.dto.ProductReactionResponse.ProductUserReaction;
 import com.example.toycontent.app.product.domain.Product;
@@ -16,6 +19,10 @@ import jakarta.persistence.Column;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -301,6 +308,94 @@ public abstract class ProductResponse {
 
     }
 
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "상품 배틀 응답")
+    public static class ProductBattle {
+        @Schema(description = "상품 ID", example = "1")
+        private Long productId;
+
+        @Schema(description = "배틀 ID (커서로 사용)", example = "100")
+        private Long battleId;
+
+        @Schema(description = "배틀 제목", example = "오늘의 추천 상품")
+        private String battleTitle;
+
+        @Schema(description = "배틀 종료 일시", example = "2025-01-15T18:00:00")
+        private LocalDateTime endDate;
+
+        @Schema(description = "배틀 상태", example = "IN_PROGRESS")
+        private BattleStatus status;
+
+        @Schema(description = "배틀 참여 상품 목록")
+        private List<ProductBattleItem> battleItems;
+
+        public static ProductBattle from(Battle battle, List<BattleItem> items, Long productId) {
+            // 득표수 기준 상위 3개 아이템 ID 추출 (items는 이미 voteCount DESC 정렬됨)
+            Set<Long> top3Ids = items.stream()
+                .limit(3)
+                .map(BattleItem::getId)
+                .collect(Collectors.toSet());
+
+            // 각 아이템의 순위 매핑 (1위부터 시작)
+            AtomicInteger rankCounter = new AtomicInteger(1);
+            Map<Long, Integer> rankMap = items.stream()
+                .collect(Collectors.toMap(BattleItem::getId, bi -> rankCounter.getAndIncrement()));
+
+            // TOP 3 + 현재 상품 필터링 (현재 상품이 4위 이하여도 포함)
+            List<ProductBattleItem> battleItems = items.stream()
+                .filter(item -> top3Ids.contains(item.getId())
+                    || item.getProduct().getId().equals(productId))
+                .map(bi -> ProductBattleItem.from(bi, rankMap.get(bi.getId()), productId))
+                .toList();
+
+            return ProductBattle.builder()
+                .productId(productId)
+                .battleId(battle.getId())
+                .battleTitle(battle.getTitle())
+                .endDate(battle.getEndDate())
+                .status(battle.getStatus())
+                .battleItems(battleItems)
+                .build();
+        }
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "배틀 참여 상품 정보")
+    public static class ProductBattleItem {
+        @Schema(description = "배틀 아이템 ID", example = "1")
+        private Long battleItemId;
+
+        @Schema(description = "상품명", example = "나이키 에어맥스 90")
+        private String productName;
+
+        private Integer rank;
+
+        @Schema(description = "현재 조회 중인 상품 여부", example = "true")
+        private Boolean isCurrentProduct;
+
+        @Schema(description = "득표율 (%)", example = "33.07")
+        private Double votePercentage;
+
+        public static ProductBattleItem from(BattleItem battleItem, Integer rank, Long productId) {
+            return ProductBattleItem.builder()
+                .battleItemId(battleItem.getId())
+                .rank(rank)
+                .productName(battleItem.getProduct().getName())
+                .isCurrentProduct(battleItem.getProduct().getId().equals(productId))
+                .votePercentage(battleItem.getBattle().getTotalVotes() > 0
+                    ? (double) battleItem.getVoteCount() / battleItem.getBattle().getTotalVotes()
+                    : 0.0)
+                .build();
+        }
+
+    }
 
     @Data
     @Builder
