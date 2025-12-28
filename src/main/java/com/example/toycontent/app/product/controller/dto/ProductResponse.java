@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -334,23 +335,24 @@ public abstract class ProductResponse {
         private List<ProductBattleItem> battleItems;
 
         public static ProductBattle from(Battle battle, List<BattleItem> items, Long productId) {
-            // 득표수 기준 상위 3개 아이템 ID 추출 (items는 이미 voteCount DESC 정렬됨)
-            Set<Long> top3Ids = items.stream()
-                .limit(3)
-                .map(BattleItem::getId)
-                .collect(Collectors.toSet());
+            List<ProductBattleItem> battleItems = new ArrayList<>();
 
-            // 각 아이템의 순위 매핑 (1위부터 시작)
-            AtomicInteger rankCounter = new AtomicInteger(1);
-            Map<Long, Integer> rankMap = items.stream()
-                .collect(Collectors.toMap(BattleItem::getId, bi -> rankCounter.getAndIncrement()));
+            for (int i = 0; i < items.size(); i++) {
+                BattleItem bi = items.get(i);
+                int rank = i + 1;
+                boolean isCurrentProduct = bi.getProduct().getId().equals(productId);
 
-            // TOP 3 + 현재 상품 필터링 (현재 상품이 4위 이하여도 포함)
-            List<ProductBattleItem> battleItems = items.stream()
-                .filter(item -> top3Ids.contains(item.getId())
-                    || item.getProduct().getId().equals(productId))
-                .map(bi -> ProductBattleItem.from(bi, rankMap.get(bi.getId()), productId))
-                .toList();
+                // TOP 3 아이템은 무조건 추가
+                if (rank <= 3) {
+                    battleItems.add(ProductBattleItem.from(bi, rank, isCurrentProduct));
+                }
+
+                // 현재 상품이 4위 이하면 추가 후 종료
+                if (isCurrentProduct && rank > 3) {
+                    battleItems.add(ProductBattleItem.from(bi, rank, true));
+                    break;
+                }
+            }
 
             return ProductBattle.builder()
                 .productId(productId)
@@ -383,12 +385,12 @@ public abstract class ProductResponse {
         @Schema(description = "득표율 (%)", example = "33.07")
         private Double votePercentage;
 
-        public static ProductBattleItem from(BattleItem battleItem, Integer rank, Long productId) {
+        public static ProductBattleItem from(BattleItem battleItem, Integer rank, Boolean isCurrentProduct) {
             return ProductBattleItem.builder()
                 .battleItemId(battleItem.getId())
                 .rank(rank)
                 .productName(battleItem.getProduct().getName())
-                .isCurrentProduct(battleItem.getProduct().getId().equals(productId))
+                .isCurrentProduct(isCurrentProduct)
                 .votePercentage(battleItem.getBattle().getTotalVotes() > 0
                     ? (double) battleItem.getVoteCount() / battleItem.getBattle().getTotalVotes()
                     : 0.0)
