@@ -3,6 +3,7 @@ package com.example.toycontent.app.product.controller;
 import com.example.toycontent.app.common.dto.CursorResponse;
 import com.example.toycontent.app.product.controller.dto.ProductRequest;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
+import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductBattle;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductFeed;
 import com.example.toycontent.app.product.controller.dto.ProductReviewRequest;
 import com.example.toycontent.app.product.controller.dto.ProductReviewResponse;
@@ -70,7 +71,20 @@ public class ProductController {
         @CurrentUserId(required = false) Long userId) {
 
         CursorResponse<ProductFeed> cursorResponse = productService.findProductFeeds(productId,
-            userId, cursor, size);
+            cursor, size);
+        return ResponseEntity.ok(cursorResponse);
+    }
+
+    @Operation(summary = "상품 배틀 목록 조회", description = "상품 ID로 배틀 목록을 조회합니다.")
+    @GetMapping("/{productId}/battles")
+    public ResponseEntity<CursorResponse<ProductBattle>> findProductBattles(
+        @PathVariable @Parameter(description = "상품 ID") Long productId,
+        @RequestParam(required = false) @Parameter(description = "커서 (마지막 피드 ID)") Long cursor,
+        @RequestParam(defaultValue = "20") @Parameter(description = "조회 개수") int size,
+        @CurrentUserId(required = false) Long userId) {
+
+        CursorResponse<ProductBattle> cursorResponse = productService.findProductBattles(productId,
+            cursor, size);
         return ResponseEntity.ok(cursorResponse);
     }
 
