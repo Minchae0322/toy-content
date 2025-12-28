@@ -2,14 +2,17 @@ package com.example.toycontent.app.product.controller.dto;
 
 import static com.example.toycontent.app.common.utils.TagParsingUtil.parseToList;
 
+import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.product.controller.dto.ProductReactionResponse.ProductUserReaction;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.ProductTradeSummary;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.Column;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,6 +20,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Comment;
 
 
 public abstract class ProductResponse {
@@ -211,8 +215,6 @@ public abstract class ProductResponse {
         @Schema(description = "사용자의 반응 목록", example = "false")
         private ProductReactionResponse.ProductUserReaction userReaction;
 
-        private List<ProductTradeSummary> tradeList;
-
         public static ProductDetail of(Product product, ProductUserReaction userReaction) {
 
             return ProductDetail.builder()
@@ -239,6 +241,61 @@ public abstract class ProductResponse {
                     .map(AttachmentFileResponse::of)
                     .toList())
                 .userReaction(userReaction)
+                .build();
+        }
+
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "상품 피드 응답")
+    public static class ProductFeed {
+        @Schema(description = "상품 ID", example = "1")
+        private Long productId;
+
+        @Schema(description = "피드 ID (커서로 사용)", example = "100")
+        private Long feedId;
+
+        @Schema(description = "피드 제목", example = "오늘의 추천 상품")
+        private String feedTitle;
+
+        @Schema(description = "피드 설명", example = "이 상품 정말 좋아요!")
+        private String description;
+
+        @Schema(description = "작성자 정보")
+        private ExternalUserInfo userInfo;
+
+        @Schema(description = "피드 썸네일 이미지")
+        private AttachmentFileResponse feedThumbnail;
+
+        @Schema(description = "좋아요 수", example = "42")
+        private Integer likeCount;
+
+        @Schema(description = "인기 수", example = "15")
+        private Integer hotCount;
+
+        @Schema(description = "댓글 수", example = "7")
+        private Integer commentCount;
+
+        public static ProductFeed from(Feed feed, ExternalUserInfo userInfo) {
+            return ProductFeed.builder()
+                .feedId(feed.getId())
+                .productId(feed.getProduct().getId())
+                .feedTitle(feed.getProduct().getName())
+                .description(feed.getProduct().getDescription())
+                .userInfo(userInfo)
+                .feedThumbnail(
+                    feed.getAttachmentFiles()
+                        .stream()
+                        .findFirst()
+                        .map(AttachmentFileResponse::of)
+                        .orElse(null)
+                )
+                .likeCount(feed.getLikeCount())
+                .hotCount(feed.getHotCount())
+                .commentCount(feed.getCommentCount())
                 .build();
         }
 

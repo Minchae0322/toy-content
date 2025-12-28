@@ -1,5 +1,6 @@
 package com.example.toycontent.app.feed.service;
 
+import com.example.toycontent.app.common.dto.CursorResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.FeedCursorResponse;
@@ -58,7 +59,7 @@ public class FeedService {
   /**
    * 피드 목록 조회 (커서 페이징) - 탐색/검색용
    */
-  public FeedCursorResponse getFeedsWithCursor(Search condition, Long userId) {
+  public CursorResponse<FeedResponse.ListView> getFeedsWithCursor(Search condition, Long userId) {
     Integer requestSize = condition.getSize();
     condition.setSize(requestSize + 1);
 
@@ -71,7 +72,7 @@ public class FeedService {
 
     List<FeedResponse.ListView> feedResponses = toListView(feeds, userReactionsMap);
 
-    return FeedCursorResponse.of(feedResponses, requestSize);
+    return CursorResponse.of(feedResponses, requestSize, FeedResponse.ListView::getFeedId);
   }
 
   private Map<Long, List<FeedReaction>> getUserReactionsByFeedId(List<Feed> feeds, Long userId) {

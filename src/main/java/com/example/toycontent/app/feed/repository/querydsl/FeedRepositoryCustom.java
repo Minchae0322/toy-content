@@ -18,4 +18,7 @@ public interface FeedRepositoryCustom {
   Page<HotFeedResponse> findAllByHotScore(int recentDays, Pageable pageable);
 
   List<Feed> findFollowingFeeds(Following condition, List<Long> followings);
+
+  List<Feed> findByProductIdAndIsDeletedNot(Long productId, Boolean isDeleted, Long cursor,
+      Integer size);
 }

@@ -81,7 +81,30 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
       return feeds;
     }
 
+
     fetchAssociations(feeds, condition.getReaderId());
+
+    return feeds;
+  }
+
+  @Override
+  public List<Feed> findByProductIdAndIsDeletedNot(Long productId, Boolean isDeleted, Long cursor,
+      Integer size) {
+
+    List<Feed> feeds = queryFactory
+        .selectFrom(feed)
+        .where(
+            feed.product.id.eq(productId),
+            feed.isDeleted.eq(isDeleted),
+            cursorIdLt(cursor)
+        )
+        .orderBy(feed.id.desc())
+        .limit(size)
+        .fetch();
+
+
+    List<Long> feedIds = extractFeedIds(feeds);
+    fetchPrimaryAttachments(feedIds);
 
     return feeds;
   }
@@ -90,18 +113,28 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
    * 연관 데이터 배치 조회
    */
   private void fetchAssociations(List<Feed> feeds, Long readerId) {
-    List<Long> feedIds = feeds.stream()
+    List<Long> feedIds = extractFeedIds(feeds);
+
+    fetchHashtags(feedIds);
+    fetchPrimaryAttachments(feedIds);
+    fetchUserReactions(feedIds, readerId);
+  }
+
+  private List<Long> extractFeedIds(List<Feed> feeds) {
+    return feeds.stream()
         .map(Feed::getId)
         .toList();
+  }
 
-    // 해시태그
+  private void fetchHashtags(List<Long> feedIds) {
     queryFactory
         .selectFrom(feedHashtag)
         .join(feedHashtag.hashtag, hashtag).fetchJoin()
         .where(feedHashtag.feed.id.in(feedIds))
         .fetch();
+  }
 
-    // 대표 이미지만
+  private void fetchPrimaryAttachments(List<Long> feedIds) {
     queryFactory
         .selectFrom(feedAttachmentFile)
         .where(
@@ -109,13 +142,18 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
             feedAttachmentFile.isPrimary.isTrue()
         )
         .fetch();
+  }
 
+
+
+  private void fetchUserReactions(List<Long> feedIds, Long readerId) {
     queryFactory
         .selectFrom(feedReaction)
         .where(
             feedReaction.feed.id.in(feedIds),
             feedReaction.userId.eq(readerId)
-        );
+        )
+        .fetch();
   }
 
 

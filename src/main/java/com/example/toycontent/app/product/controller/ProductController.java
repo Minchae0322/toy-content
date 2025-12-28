@@ -1,7 +1,9 @@
 package com.example.toycontent.app.product.controller;
 
+import com.example.toycontent.app.common.dto.CursorResponse;
 import com.example.toycontent.app.product.controller.dto.ProductRequest;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
+import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductFeed;
 import com.example.toycontent.app.product.controller.dto.ProductReviewRequest;
 import com.example.toycontent.app.product.controller.dto.ProductReviewResponse;
 import com.example.toycontent.app.product.controller.dto.ProductReviewResponse.ReviewCreateResponse;
@@ -57,6 +59,19 @@ public class ProductController {
         @CurrentUserId Long userId) {
         ProductResponse.ProductDetail product = productService.getProduct(id, userId);
         return ResponseEntity.ok(product);
+    }
+
+    @Operation(summary = "상품 피드 목록 조회", description = "상품 ID로 피드 목록을 조회합니다.")
+    @GetMapping("/{productId}/feeds")
+    public ResponseEntity<CursorResponse<ProductFeed>> findProductFeeds(
+        @PathVariable @Parameter(description = "상품 ID") Long productId,
+        @RequestParam(required = false) @Parameter(description = "커서 (마지막 피드 ID)") Long cursor,
+        @RequestParam(defaultValue = "20") @Parameter(description = "조회 개수") int size,
+        @CurrentUserId(required = false) Long userId) {
+
+        CursorResponse<ProductFeed> cursorResponse = productService.findProductFeeds(productId,
+            userId, cursor, size);
+        return ResponseEntity.ok(cursorResponse);
     }
 
     @GetMapping("")
