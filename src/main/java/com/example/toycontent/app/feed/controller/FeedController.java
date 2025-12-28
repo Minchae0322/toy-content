@@ -1,6 +1,7 @@
 package com.example.toycontent.app.feed.controller;
 
 import com.example.toycontent.app.common.annotation.CurrentUserId;
+import com.example.toycontent.app.common.dto.CursorResponse;
 import com.example.toycontent.app.common.enumuration.FeedReactionType;
 import com.example.toycontent.app.common.response.ApiResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse;
@@ -46,11 +47,11 @@ public class FeedController {
 
   @Operation(summary = "피드 목록 조회 (커서 페이징)", description = "인피니티 스크롤용 커서 기반 API")
   @GetMapping("/scroll")
-  public ResponseEntity<ApiResponse<FeedCursorResponse>> getFeedsWithCursor(
+  public ResponseEntity<ApiResponse<CursorResponse<ListView>>> getFeedsWithCursor(
       @ParameterObject @ModelAttribute Search condition,
       @CurrentUserId Long userId) {
 
-    FeedCursorResponse feeds = feedService.getFeedsWithCursor(condition, userId);
+    CursorResponse<ListView> feeds = feedService.getFeedsWithCursor(condition, userId);
     return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 

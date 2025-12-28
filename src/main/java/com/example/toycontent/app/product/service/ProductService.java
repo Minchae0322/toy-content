@@ -1,11 +1,18 @@
 package com.example.toycontent.app.product.service;
 
 
+import com.example.toycontent.app.common.dto.CursorResponse;
+import com.example.toycontent.app.feed.controller.dto.FeedResponse;
+import com.example.toycontent.app.feed.controller.dto.FeedResponse.ListView;
+import com.example.toycontent.app.feed.domain.Feed;
+import com.example.toycontent.app.feed.domain.FeedReaction;
+import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.product.controller.dto.ProductReactionResponse.ProductUserReaction;
 import com.example.toycontent.app.product.controller.dto.ProductRequest;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductCreate;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductDetail;
+import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductFeed;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductList;
 import com.example.toycontent.app.product.controller.dto.ProductReviewRequest;
 import com.example.toycontent.app.product.controller.dto.ProductReviewResponse.ReviewCreateResponse;
@@ -28,7 +35,10 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -49,6 +59,8 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductAttachmentFileRepository productAttachmentFileRepository;
     private final ProductReviewAttachmentFileRepository productReviewAttachmentFileRepository;
+    private final FeedRepository feedRepository;
+    private final ExternalUserInfoService externalUserInfoService;
 
     /**
      * 제품 등록
@@ -188,7 +200,7 @@ public class ProductService {
 
     @Transactional
     public ReviewCreateResponse createReview(Long productId, ProductReviewRequest.CreateReview createReviewDto, Long userId, String userName) {
-        Product product = findProductByIdOrElseThrow(productId);
+        Product product = getProductById(productId);
 
         ProductReview productReview = createReviewDto.toEntity(product, userId, userName);
         productReviewRepository.save(productReview);
@@ -202,7 +214,7 @@ public class ProductService {
     }
 
     public List<ReviewList> getReviews(Long productId, Pageable pageable) {
-        Product product = findProductByIdOrElseThrow(productId);
+        Product product = getProductById(productId);
 
         List<ProductReview> productReviews = productReviewRepository.findProductReviews(productId,
             ReviewStatus.ACTIVE,
@@ -213,7 +225,34 @@ public class ProductService {
             .toList();
     }
 
-    private Product findProductByIdOrElseThrow(Long productId) {
+    @Transactional(readOnly = true)
+    public CursorResponse<ProductFeed> findProductFeeds(Long productId, Long userId, Long cursor,
+        Integer requestSize) {
+
+        Product product = getProductById(productId);
+
+        List<Feed> productFeeds = feedRepository.findByProductIdAndIsDeletedNot(product.getId(),
+            false, cursor, requestSize + 1);
+
+        List<ProductResponse.ProductFeed> productFeedListDto = toListView(productFeeds);
+
+        return CursorResponse.of(productFeedListDto, requestSize, ProductFeed::getFeedId);
+    }
+
+    /**
+     * Feed 리스트 -> ProductFeed 변환 (공통 메서드)
+     */
+    private List<ProductResponse.ProductFeed> toListView(List<Feed> feeds) {
+        return feeds.stream()
+            .map(feed -> {
+                ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
+                return ProductResponse.ProductFeed.from(feed, userInfo);
+            })
+            .toList();
+    }
+
+
+    private Product getProductById(Long productId) {
         return productRepository.findById(productId)
             .orElseThrow(() -> new RestApiException(ProductErrorCode.PRODUCT_NOT_FOUND));
     }
