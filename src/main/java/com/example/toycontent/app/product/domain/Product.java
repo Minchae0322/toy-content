@@ -22,6 +22,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -114,6 +115,20 @@ public class Product extends BaseTimeEntity {
     @Column
     @Comment("제품 출시일 (브랜드 공식 출시일)")
     private LocalDate releaseDate;
+
+    @Column
+    @ColumnDefault("0.0")
+    @Comment("인기도 점수 (배치로 주기적 갱신)")
+    private Double popularityScore;
+
+    @Column
+    @Comment("인기도 점수 마지막 계산 시간")
+    private LocalDateTime popularityCalculatedAt;
+
+    @Column
+    @ColumnDefault("false")
+    @Comment("인기도 재계산 필요 여부")
+    private boolean popularityDirty;
 
     @JoinColumn(name = "category_id")
     @ManyToOne(fetch = FetchType.LAZY)

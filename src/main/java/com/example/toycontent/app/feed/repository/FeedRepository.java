@@ -4,6 +4,7 @@ import com.example.toycontent.app.feed.controller.dto.FeedCondition;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.repository.querydsl.FeedRepositoryCustom;
 import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -51,4 +52,6 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
    * 카테고리별 피드 조회
    */
   List<Feed> findByCategoryIdOrderByCreatedAtDesc(Long categoryId);
+
+  long countByProductIdAndCreatedAtAfter(Long productId, LocalDateTime recentPeriod);
 }

@@ -33,12 +33,3 @@ springdoc:
 jwt:
   secret: ${JWT_SECRET}
 
-scheduler:
-  hot-score:
-    enable: ${SCHEDULER_ENABLE:true}
-    time-weight-update:
-      cron: "0 0 * * * *"
-      enabled: true
-    full-recalculate:
-      cron: "0 0 3 * * *"
-      enabled: true
