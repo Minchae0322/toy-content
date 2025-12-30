@@ -41,6 +41,22 @@ file:
 jwt:
   secret: VlwEyVBsYt9V7zq57TejMnVUyzblYcfPQye08f7MGVA9XkHa
 
+scheduler:
+  product-popularity:
+    time-weight-update:
+      cron: "0 0 * * * *"
+      enabled: ${PRODUCT_POPULARITY_TIME_WEIGHT_ENABLED:true}
+    full-recalculate:
+      cron: "0 0 3 * * *"
+      enabled: ${PRODUCT_POPULARITY_FULL_RECALC_ENABLED:true}
+  hot-score:
+    time-weight-update:
+      cron: "0 0 * * * *"
+      enabled: ${HOT_SCORE_TIME_WEIGHT_ENABLED:true}
+    full-recalculate:
+      cron: "0 0 3 * * *"
+      enabled: ${HOT_SCORE_FULL_RECALC_ENABLED:true}
+
 springdoc:
   api-docs:
     enabled: true

@@ -56,14 +56,20 @@ springdoc:
     path: /swagger-ui.html
 
 scheduler:
-  hot-score:
-    enable: true
+  product-popularity:
     time-weight-update:
       cron: "0 0 * * * *"
-      enabled: true
+      enabled: ${PRODUCT_POPULARITY_TIME_WEIGHT_ENABLED:true}
     full-recalculate:
       cron: "0 0 3 * * *"
-      enabled: true
+      enabled: ${PRODUCT_POPULARITY_FULL_RECALC_ENABLED:true}
+  hot-score:
+    time-weight-update:
+      cron: "0 0 * * * *"
+      enabled: ${HOT_SCORE_TIME_WEIGHT_ENABLED:true}
+    full-recalculate:
+      cron: "0 0 3 * * *"
+      enabled: ${HOT_SCORE_FULL_RECALC_ENABLED:true}
 
 logging:
   level:

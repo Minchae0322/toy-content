@@ -3,6 +3,7 @@ package com.example.toycontent.app.battle.repository;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.repository.querydsl.BattleItemRepositoryCustom;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,4 +21,6 @@ public interface BattleItemRepository extends JpaRepository<BattleItem, Long>,
     ORDER BY bi.battle.id, bi.voteCount DESC
     """)
   List<BattleItem> findItemsByBattleIds(@Param("battleIds") List<Long> battleIds);
+
+  long countByProductIdAndCreatedAtAfter(Long productId, LocalDateTime recentPeriod);
 }
