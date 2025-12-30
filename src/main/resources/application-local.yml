@@ -52,10 +52,10 @@ scheduler:
   hot-score:
     time-weight-update:
       cron: "0 0 * * * *"
-      enabled: ${HOT_SCORE_TIME_WEIGHT_ENABLED:true}
+      enabled: ${BATTLE_HOT_SCORE_TIME_WEIGHT_ENABLED:true}
     full-recalculate:
       cron: "0 0 3 * * *"
-      enabled: ${HOT_SCORE_FULL_RECALC_ENABLED:true}
+      enabled: ${BATTLE_HOT_SCORE_FULL_RECALC_ENABLED:true}
 
 springdoc:
   api-docs:

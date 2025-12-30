@@ -47,6 +47,7 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             product.price,
             product.viewCount,
             product.likeCount,
+            product.shareCount,
             product.avgRating.as("averageRating"),
             ExpressionUtils.as(
                 JPAExpressions
@@ -126,6 +127,8 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
         case "updatedAt" -> orders.add(new OrderSpecifier<>(direction, product.updatedAt));
         case "releaseDate" -> orders.add(new OrderSpecifier<>(direction, product.releaseDate));
         case "likeCount" -> orders.add(new OrderSpecifier<>(direction, product.likeCount));
+        case "popularityScore" ->
+            orders.add(new OrderSpecifier<>(direction, product.popularityScore));
         case "viewCount" -> orders.add(new OrderSpecifier<>(direction, product.viewCount));
         default -> orders.add(new OrderSpecifier<>(Order.DESC, product.createdAt)); // 기본 정렬
       }
