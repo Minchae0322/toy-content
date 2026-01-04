@@ -150,6 +150,11 @@ public class Product extends BaseTimeEntity {
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductReview> productReviews;
 
+
+    public void updateStatus(ProductStatus newStatus) {
+        this.status = newStatus;
+    }
+
 }
 
 
