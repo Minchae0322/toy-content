@@ -104,6 +104,7 @@ public class ExternalUserInfoService {
     // 캐시 미스된 ID 추출
     List<Long> missingIds = validUserIds.stream()
         .filter(id -> !cachedUsers.containsKey(id))
+        .distinct()
         .toList();
 
     //  캐시 미스된 항목이 없으면 조기 반환
@@ -112,13 +113,7 @@ public class ExternalUserInfoService {
     }
 
     //API 배치 호출 및 결과 병합
-    Map<Long, ExternalUserInfo> fetchedUsers = serviceClient.getUserInfosOrElseCache(missingIds)
-        .stream()
-        .filter(user -> user != null && user.getUserId() != null)
-        .collect(Collectors.toMap(
-            ExternalUserInfo::getUserId,
-            user -> user
-        ));
+    Map<Long, ExternalUserInfo> fetchedUsers = serviceClient.fetchAndCacheUserInfos(missingIds);
 
     //캐시 조회 결과와 API 조회 결과 병합
     return Stream.of(cachedUsers, fetchedUsers)

@@ -113,11 +113,16 @@ public class FeedService {
    * Feed 리스트 -> ListView 변환 (공통 메서드)
    */
   private List<FeedResponse.ListView> toListView(List<Feed> feeds, Map<Long, List<FeedReaction>> userReactionsMap) {
+    List<Long> creatorIds = feeds.stream()
+        .map(Feed::getUserId)
+        .toList();
+
+    Map<Long, ExternalUserInfo> externalUserInfoMap = externalUserInfoService.getUserInfos(
+        creatorIds);
+
     return feeds.stream()
-        .map(feed -> {
-          ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
-          return FeedResponse.ListView.from(feed, userInfo, userReactionsMap.get(feed.getId()));
-        })
+        .map(feed -> FeedResponse.ListView.from(feed, externalUserInfoMap.get(feed.getUserId()),
+            userReactionsMap.get(feed.getId())))
         .toList();
   }
 

@@ -26,6 +26,8 @@ import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -95,8 +97,15 @@ public class BattleService {
   public Page<BattleResponse.BattleList> getBattles(BattleSearchCondition condition, Pageable pageable) {
     List<BattleList> battleLists = battleRepository.findBattlesWithSearchCondition(condition, pageable);
 
+    List<Long> creatorIds = battleLists.stream()
+        .map(BattleList::getCreatorId)
+        .toList();
+
+    Map<Long, ExternalUserInfo> battleCreatorsMap = externalUserInfoService.getUserInfos(
+        creatorIds);
+
     battleLists.forEach(
-        battle -> battle.setCreatorUserInfo(externalUserInfoService.getUserInfo(battle.getCreatorId())));
+        battle -> battle.setCreatorUserInfo(battleCreatorsMap.get(battle.getCreatorId())));
 
     Long totalCount = battleRepository.countBattlesWithSearchCondition(condition);
 
