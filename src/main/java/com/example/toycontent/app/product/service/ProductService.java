@@ -194,6 +194,7 @@ public class ProductService {
      * @param pageable        페이징 정보
      * @param isAdmin         관리자 여부
      */
+    @Transactional(readOnly = true)
     public Page<ProductResponse.ProductList> getAllProducts(
         ProductSearchCondition searchCondition, Pageable pageable, boolean isAdmin) {
 
@@ -207,6 +208,23 @@ public class ProductService {
         Long totalCount = productRepository.countBySearchCondition(searchCondition);
 
         // 페이징 객체 생성
+        return new PageImpl<>(productLists, pageable, totalCount);
+    }
+
+    /**
+     * 특정 사용자가 등록한 제품 목록을 페이징하여 조회합니다.
+     *
+     * @param userId    조회할 사용자 ID
+     * @param condition 검색 조건 (카테고리, 상태, 키워드 등)
+     * @param pageable  페이징 및 정렬 정보
+     * @return 사용자가 등록한 제품 목록 (페이징 처리)
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductList> getProductsByUserId(Long userId, ProductSearchCondition condition, Pageable pageable) {
+        // 조건 기반 조회
+        List<ProductList> productLists = productRepository.findByUserIdAndSearchCondition(userId, condition, pageable);
+        Long totalCount = productRepository.countByUserIdAndSearchCondition(userId, condition);
+
         return new PageImpl<>(productLists, pageable, totalCount);
     }
 
