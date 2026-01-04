@@ -253,11 +253,16 @@ public class ProductService {
      * Feed 리스트 -> ProductFeed 변환
      */
     private List<ProductResponse.ProductFeed> toListView(List<Feed> feeds) {
+        List<Long> creatorIds = feeds.stream()
+            .map(Feed::getUserId)
+            .toList();
+
+        Map<Long, ExternalUserInfo> externalUserInfoMap = externalUserInfoService.getUserInfos(
+            creatorIds);
+
         return feeds.stream()
-            .map(feed -> {
-                ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
-                return ProductResponse.ProductFeed.from(feed, userInfo);
-            })
+            .map(feed -> ProductFeed.from(feed,
+                externalUserInfoMap.get(feed.getUserId())))
             .toList();
     }
 
