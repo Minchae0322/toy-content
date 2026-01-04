@@ -312,7 +312,7 @@ public class ProductService {
     public ProductResponse.ProductUpdate updateProductStatus(Long productId, ProductStatusRequest request) {
         Product product = getProductById(productId);
 
-        product.updateStatus(request.getStatus());
+        product.updateStatus(request.getStatus(), request.getReturnReason());
 
         return ProductResponse.ProductUpdate.of(product);
     }
