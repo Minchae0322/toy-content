@@ -33,6 +33,7 @@ import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.util.StringUtils;
 
 @Getter
 @Builder
@@ -70,6 +71,10 @@ public class Product extends BaseTimeEntity {
     @Builder.Default
     @Column(name = "status")
     private ProductStatus status = ProductStatus.PENDING;
+
+    @Comment("제품 승인 거부 사유")
+    @Column(name = "reject_reason")
+    private String rejectReason;
 
     @Column(length = 1000)
     @Comment("제품 상세 설명 (맛, 특징, 용량 등)")
@@ -150,9 +155,11 @@ public class Product extends BaseTimeEntity {
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductReview> productReviews;
 
-
-    public void updateStatus(ProductStatus newStatus) {
+    public void updateStatus(ProductStatus newStatus, String rejectReason) {
         this.status = newStatus;
+        if (ProductStatus.REJECTED.equals(newStatus) && StringUtils.hasText(rejectReason)) {
+            this.rejectReason = rejectReason;
+        }
     }
 
 }

@@ -94,13 +94,17 @@ public abstract class ProductRequest {
 
     }
 
-    @Getter
+    @Data
+    @Builder
     @Schema(description = "제품 상태 변경 요청")
     public static class ProductStatusRequest {
 
         @NotNull(message = "상태는 필수입니다")
         @Schema(description = "변경할 상태", example = "ACTIVE")
         private ProductStatus status;
+
+        @Schema(description = "반려 사유")
+        private String returnReason;
     }
 
     /**
