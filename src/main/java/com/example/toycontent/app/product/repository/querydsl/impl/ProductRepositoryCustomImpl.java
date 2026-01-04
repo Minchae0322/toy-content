@@ -106,6 +106,8 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
     Optional.ofNullable(searchCondition.getCategoryId())
         .ifPresent(id -> builder.and(product.category.id.eq(id)));
 
+    Optional.ofNullable(searchCondition.getStatus())
+        .ifPresent(status -> builder.and(product.status.eq(status)));
 
     //TODO: 나머지 조건 추가
     return builder;
