@@ -79,6 +79,7 @@ public class ExternalUserInfoService {
    */
   public Map<Long, ExternalUserInfo> getUserInfos(List<Long> userIds) {
     if (CollectionUtils.isEmpty(userIds)) {
+      log.debug("[외부사용자 조회] 빈 요청 - 조회 생략");
       return Map.of();
     }
 
@@ -104,7 +105,6 @@ public class ExternalUserInfoService {
     // 캐시 미스된 ID 추출
     List<Long> missingIds = validUserIds.stream()
         .filter(id -> !cachedUsers.containsKey(id))
-        .distinct()
         .toList();
 
     //  캐시 미스된 항목이 없으면 조기 반환
