@@ -64,45 +64,26 @@ public class ProductController {
 
     @GetMapping("")
     @Operation(summary = "제품 목록 조회", description = "제품 목록을 페이징과 정렬 옵션으로 조회합니다.")
-    @Parameters({
-        @Parameter(name = "page", description = "페이지 번호 (0부터 시작)", example = "0"),
-        @Parameter(name = "size", description = "페이지 크기 (기본값: 10)", example = "10"),
-        @Parameter(name = "sort",
-            description = """
-                정렬 기준 필드와 방향을 지정합니다.
-                
-                **사용 가능한 정렬 필드:**
-                - `releaseDate` : 제품 출시일 (브랜드 공식 출시일)
-                - `createdAt` : 제품 등록 일시 (기본값)
-                - `likeCount` : 찜하기 수 (사용자가 관심상품으로 등록한 횟수)
-                - `viewCount` : 조회수
-                - `name` : 제품명
-                - 'popularityScore' : 인기도
-                - `updatedAt` : 수정 일시
-                
-                **정렬 방향:**
-                - `ASC` : 오름차순
-                - `DESC` : 내림차순 (기본값)
-                
-                **사용 예시:**
-                - `createdAt,DESC` : 등록일 내림차순 (최신순)
-                - `likeCount,DESC` : 인기순 (찜하기 많은 순)
-                - `releaseDate,ASC` : 출시일 오름차순 (오래된 순)
-                """,
-            examples = {
-                @ExampleObject(name = "최신 등록순", value = "createdAt,DESC"),
-                @ExampleObject(name = "출시일 오름차순", value = "releaseDate,ASC"),
-                @ExampleObject(name = "조회수 내림차순", value = "viewCount,DESC")
-            }
-        )
-    })
     public ResponseEntity<Page<ProductResponse.ProductList>> getAllProducts(
         @ParameterObject @Valid ProductSearchCondition condition,
+        @CurrentUserId(required = false) Long userId,
         @ParameterObject @PageableDefault(size = 10, sort = "releaseDate", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         Page<ProductResponse.ProductList> products = productService.getAllProducts(condition,
             pageable, false);
 
+        return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/my")
+    @Operation(summary = "내가 등록한 제품 목록 조회", description = "로그인한 사용자가 등록한 제품 목록을 조회합니다.")
+    public ResponseEntity<Page<ProductResponse.ProductList>> getMyProducts(
+        @CurrentUserId Long userId,
+        @ParameterObject @Valid ProductSearchCondition condition,
+        @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<ProductResponse.ProductList> products = productService.getProductsByUserId(userId,
+            condition, pageable);
         return ResponseEntity.ok(products);
     }
 
