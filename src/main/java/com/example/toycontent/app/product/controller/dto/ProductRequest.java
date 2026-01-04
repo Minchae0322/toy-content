@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 
 public abstract class ProductRequest {
 
@@ -91,6 +92,15 @@ public abstract class ProductRequest {
                 .build();
         }
 
+    }
+
+    @Getter
+    @Schema(description = "제품 상태 변경 요청")
+    public static class ProductStatusRequest {
+
+        @NotNull(message = "상태는 필수입니다")
+        @Schema(description = "변경할 상태", example = "ACTIVE")
+        private ProductStatus status;
     }
 
     /**

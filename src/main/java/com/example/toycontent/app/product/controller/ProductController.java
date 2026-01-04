@@ -133,8 +133,6 @@ public class ProductController {
     }
 
 
-
-
     @GetMapping("/admin/all")
     @CheckAdmin
     @Operation(summary = "전체 제품 목록 조회 (관리자)", description = "승인 대기중인 제품 포함 전체 목록을 조회합니다.")
@@ -146,6 +144,16 @@ public class ProductController {
         Page<ProductResponse.ProductList> products = productService.getAllProducts(condition,
             pageable, true);
         return ResponseEntity.ok(products);
+    }
+
+    @CheckAdmin
+    @Operation(summary = "제품 상태 변경 (관리자)", description = "상품의 판매 상태를 변경합니다.")
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ProductResponse.ProductUpdate> updateProductStatus(
+        @PathVariable @Parameter(description = "상품 ID") Long id,
+        @RequestBody @Valid ProductRequest.ProductStatusRequest request) {
+        ProductResponse.ProductUpdate updated = productService.updateProductStatus(id, request);
+        return ResponseEntity.ok(updated);
     }
 
     @Operation(summary = "상품 수정", description = "상품 ID에 해당하는 상품 정보를 수정합니다.")
