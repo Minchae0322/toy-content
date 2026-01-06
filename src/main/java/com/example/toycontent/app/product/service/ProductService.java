@@ -90,7 +90,7 @@ public class ProductService {
             .orElseThrow(() -> new RestApiException(CategoryErrorCode.CATEGORY_NOT_FOUND));
 
         // 신규 제품 엔티티 생성 및 저장
-        Product newProduct = productRepository.save(productDto.toEntity(category));
+        Product newProduct = productRepository.save(productDto.toEntity(category, userId));
 
         // 대표 이미지 및 상세 이미지 파일 생성
         createProductAttachmentFiles(

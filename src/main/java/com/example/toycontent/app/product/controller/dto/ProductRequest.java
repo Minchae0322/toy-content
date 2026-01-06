@@ -75,9 +75,9 @@ public abstract class ProductRequest {
         private AttachmentInfo thumbnailAttachmentInfo;
 
         @Schema(description = "첨부파일 정보 목록")
-        private List<AttachmentInfo> attachmentFileInfos = new ArrayList<>();
+        private List<AttachmentInfo> attachmentFileInfos;
 
-        public Product toEntity(Category category) {
+        public Product toEntity(Category category, Long creatorId) {
             return Product.builder()
                 .name(name)
                 .brand(brand)
@@ -89,6 +89,7 @@ public abstract class ProductRequest {
                 .tags(TagParsingUtil.listToString(tags))
                 .releaseDate(releaseDate)
                 .category(category)
+                .creatorId(creatorId)
                 .build();
         }
 
