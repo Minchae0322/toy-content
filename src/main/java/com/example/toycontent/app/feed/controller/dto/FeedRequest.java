@@ -56,10 +56,12 @@ public abstract class FeedRequest {
     private Integer price;
 
     @Schema(description = "구매처", example = "무신사", maxLength = 100)
+    @NotBlank(message = "구매처는 필수입니다")
     @Size(max = 100, message = "구매처는 최대 100자까지 입력 가능합니다")
     private String buyPlace;
 
     @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
+    @NotBlank(message = "제품 평가는 필수입니다")
     private FeedEvaluation evaluation;
 
     @NotNull(message = "대표이미지는 필수 입니다.")
