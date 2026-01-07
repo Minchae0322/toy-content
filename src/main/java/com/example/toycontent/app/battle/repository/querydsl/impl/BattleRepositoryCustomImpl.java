@@ -4,7 +4,6 @@ import static com.example.toycontent.app.battle.domain.QBattle.battle;
 import static com.example.toycontent.app.battle.domain.QBattleAttachmentFile.battleAttachmentFile;
 import static com.example.toycontent.app.battle.domain.QBattleItem.battleItem;
 import static com.example.toycontent.app.category.domain.QCategory.category;
-import static com.example.toycontent.app.product.domain.QProduct.product;
 
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
@@ -177,8 +176,8 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
         .selectFrom(battle)
         .where(
             battle.isDeleted.eq(false),
-            battle.status.eq(BattleStatus.ACTIVE),
-            battle.status.eq(BattleStatus.ACTIVE)
+            battle.status.eq(BattleStatus.NORMAL),
+            battle.status.eq(BattleStatus.NORMAL)
                 .and(battle.hotScoreUpdatedAt.lt(activeThreshold))
                 .or(battle.hotScoreUpdatedAt.isNull())
         )
@@ -191,7 +190,7 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
         .selectFrom(battle)
         .where(
             battle.isDeleted.eq(false),
-            battle.status.eq(BattleStatus.ACTIVE)
+            battle.status.eq(BattleStatus.NORMAL)
         )
         .fetch();
   }
@@ -211,10 +210,22 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
           .or(battle.category.parent.id.eq(condition.getCategory())));
     }
 
-
     // 배틀 상태 필터
     if (condition.getStatus() != null) {
       builder.and(battle.status.eq(condition.getStatus()));
+    }
+
+    // 배틀 진행 여부
+    if (condition.getIsActive() != null) {
+      LocalDateTime now = LocalDateTime.now();
+      if (condition.getIsActive()) {
+        // 진행중: 시작일 <= 현재 < 종료일
+        builder.and(battle.startDate.loe(now))
+            .and(battle.endDate.gt(now));
+      } else {
+        // 종료됨: 종료일 <= 현재
+        builder.and(battle.endDate.loe(now));
+      }
     }
 
     // 생성자 ID 필터

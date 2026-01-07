@@ -79,6 +79,7 @@ public class ExternalUserInfoService {
    */
   public Map<Long, ExternalUserInfo> getUserInfos(List<Long> userIds) {
     if (CollectionUtils.isEmpty(userIds)) {
+      log.debug("[외부사용자 조회] 빈 요청 - 조회 생략");
       return Map.of();
     }
 
@@ -112,13 +113,7 @@ public class ExternalUserInfoService {
     }
 
     //API 배치 호출 및 결과 병합
-    Map<Long, ExternalUserInfo> fetchedUsers = serviceClient.getUserInfosOrElseCache(missingIds)
-        .stream()
-        .filter(user -> user != null && user.getUserId() != null)
-        .collect(Collectors.toMap(
-            ExternalUserInfo::getUserId,
-            user -> user
-        ));
+    Map<Long, ExternalUserInfo> fetchedUsers = serviceClient.fetchAndCacheUserInfos(missingIds);
 
     //캐시 조회 결과와 API 조회 결과 병합
     return Stream.of(cachedUsers, fetchedUsers)

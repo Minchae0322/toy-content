@@ -5,11 +5,14 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.UserErrorCode;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,18 +33,33 @@ public class ExternalUserApiClient {
   private final UserCacheStore userCacheStore;
 
   /**
-   * 여러 사용자 정보 일괄 조회 (List 반환)
+   * 외부 서비스에서 여러 사용자 정보 일괄 조회 후 캐시 저장
    */
-  public List<ExternalUserInfo> getUserInfosOrElseCache(List<Long> userIds) {
-    if (ObjectUtils.isEmpty(userIds)) {
-      return List.of();
+  public Map<Long, ExternalUserInfo> fetchAndCacheUserInfos(List<Long> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+      return Collections.emptyMap();
     }
 
-    return userIds.stream()
-        .map(this::getUserInfoOrElseFetchAndCache)
-        .toList();
+    List<ExternalUserInfo> fetched = fetchUserInfosFromExternal(userIds);
+
+    Map<Long, ExternalUserInfo> result = fetched.stream()
+        .peek(userCacheStore::cacheUserInfo)
+        .collect(Collectors.toMap(
+            ExternalUserInfo::getUserId,
+            Function.identity(),
+            (existing, replacement) -> existing
+        ));
+
+    // 조회 실패한 userId는 fallback 처리
+    userIds.forEach(userId ->
+        result.computeIfAbsent(userId, this::createFallbackUserInfo));
+
+    return result;
   }
 
+  /**
+   * 단건 조회 - 기존 로직 유지
+   */
   public ExternalUserInfo getUserInfoOrElseFetchAndCache(Long userId) {
     if (userId == null || userId <= 0) {
       log.info("[외부사용자 조회] 유효하지 않은 userId: {}", userId);
@@ -49,51 +67,17 @@ public class ExternalUserApiClient {
     }
 
     return userCacheStore.getCachedUserInfos(userId)
-        .map(cachedInfo -> {
-          log.info("[외부사용자 조회] 캐시 히트 - userId: {}", userId);
-          return cachedInfo;
-        })
         .orElseGet(() -> {
-          log.info("[외부사용자 조회] 캐시 미스 - userId: {}, 외부 API 호출합니다.", userId);
+          log.info("[외부사용자 조회] 캐시 미스 - userId: {}", userId);
           try {
             return fetchAndCacheUserInfo(userId);
           } catch (Exception e) {
-            log.warn("[외부사용자 조회] 외부 API 호출 실패 - userId: {}, 대체 정보 반환", userId, e);
+            log.warn("[외부사용자 조회] 외부 API 호출 실패 - userId: {}", userId, e);
             return createFallbackUserInfo(userId);
           }
         });
   }
 
-
-
-  /**
-   * 사용자 닉네임만 조회 (간단한 버전)
-   */
-  public String getUserNickname(Long userId) {
-    ExternalUserInfo externalUserInfo = getUserInfoOrElseFetchAndCache(userId);
-    return externalUserInfo != null ? externalUserInfo.getNickname() : "사용자" + userId;
-  }
-
-  /**
-   * 캐시 무효화 (단일 사용자)
-   */
-  public void invalidateUserCache(Long userId) {
-    userCacheStore.evictUserCache(userId);
-  }
-
-  /**
-   * 캐시 무효화 (여러 사용자)
-   */
-  public void invalidateUserCacheBatch(List<Long> userIds) {
-    userCacheStore.evictUserCacheBatch(userIds);
-  }
-
-  /**
-   * 전체 사용자 캐시 무효화 (패턴 기반)
-   */
-  public void invalidateAllUserCache() {
-    userCacheStore.evictUserCacheByPattern("*");
-  }
 
   /**
    * 외부 서비스에서 사용자 정보 조회 후 캐시 저장
@@ -127,6 +111,31 @@ public class ExternalUserApiClient {
     }
   }
 
+  private List<ExternalUserInfo> fetchUserInfosFromExternal(List<Long> userIds) {
+    String joinedIds = userIds.stream()
+        .map(String::valueOf)
+        .collect(Collectors.joining(","));
+
+    try {
+      return userServiceWebClient.get()
+          .uri(uriBuilder -> uriBuilder
+              .path("/api/external/users")
+              .queryParam("userIds", joinedIds)
+              .build())
+          .retrieve()
+          .onStatus(HttpStatusCode::isError, response -> Mono.empty())
+          .bodyToFlux(ExternalUserInfo.class)
+          .timeout(TIMEOUT)
+          .collectList()
+          .doOnError(error -> log.error("사용자 목록 조회 실패: userIds={}", userIds, error))
+          .onErrorReturn(Collections.emptyList())
+          .block();
+    } catch (Exception e) {
+      log.error("외부 서비스 일괄 호출 중 예외: userIds={}", userIds, e);
+      return Collections.emptyList();
+    }
+  }
+
   /**
    * 팔로잉 목록 조회 API 호출
    */
@@ -142,56 +151,37 @@ public class ExternalUserApiClient {
         .block();
   }
 
-    /**
-     * 외부 서비스에서 사용자 정보 일괄 조회
-     */
-  private Map<Long, ExternalUserInfo> fetchUserInfosFromService(List<Long> userIds) {
-    try {
-      String userIdsParam = String.join(",",
-          userIds.stream().map(String::valueOf).toList());
-
-      List<ExternalUserInfo> fetchedUsers = userServiceWebClient.get()
-          .uri(uriBuilder -> uriBuilder
-              .path("/api/users")
-              .queryParam("ids", userIdsParam)
-              .build())
-          .retrieve()
-          .bodyToFlux(ExternalUserInfo.class)
-          .collectList()
-          .timeout(TIMEOUT)
-          .doOnError(error ->
-              log.error("❌ 사용자 정보 일괄 조회 실패: userIds={}, error={}",
-                  userIds, error.getMessage()))
-          .onErrorReturn(List.of())
-          .block();
-
-      if (fetchedUsers == null) {
-        fetchedUsers = List.of();
-      }
-
-      // List를 Map으로 변환
-      Map<Long, ExternalUserInfo> result = fetchedUsers.stream()
-          .filter(user -> user != null && user.getUserId() != null)
-          .collect(Collectors.toMap(ExternalUserInfo::getUserId, user -> user));
-
-      // 조회되지 않은 사용자들에 대해 폴백 데이터 생성
-      userIds.forEach(userId -> {
-        if (!result.containsKey(userId)) {
-          result.put(userId, createFallbackUserInfo(userId));
-        }
-      });
-
-      log.debug("👥 외부 서비스 일괄 조회 완료: 요청={}, 성공={}",
-          userIds.size(), fetchedUsers.size());
-
-      return result;
-
-    } catch (Exception e) {
-      log.error("❌ 외부 서비스 일괄 조회 중 예외 발생: userIds={}", userIds, e);
-      return userIds.stream()
-          .collect(Collectors.toMap(id -> id, this::createFallbackUserInfo));
-    }
+  /**
+   * 사용자 닉네임만 조회 (간단한 버전)
+   */
+  public String getUserNickname(Long userId) {
+    ExternalUserInfo externalUserInfo = getUserInfoOrElseFetchAndCache(userId);
+    return externalUserInfo != null ? externalUserInfo.getNickname() : "사용자" + userId;
   }
+
+  /**
+   * 캐시 무효화 (단일 사용자)
+   */
+  public void invalidateUserCache(Long userId) {
+    userCacheStore.evictUserCache(userId);
+  }
+
+  /**
+   * 캐시 무효화 (여러 사용자)
+   */
+  public void invalidateUserCacheBatch(List<Long> userIds) {
+    userCacheStore.evictUserCacheBatch(userIds);
+  }
+
+  /**
+   * 전체 사용자 캐시 무효화 (패턴 기반)
+   */
+  public void invalidateAllUserCache() {
+    userCacheStore.evictUserCacheByPattern("*");
+  }
+
+
+
 
   /**
    * 폴백 사용자 정보 생성

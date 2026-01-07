@@ -6,11 +6,9 @@ import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHot
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleItemInfo;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
-import com.example.toycontent.app.battle.controller.dto.BattleVoteResponse.UserBattleVote;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleAttachmentFile;
 import com.example.toycontent.app.battle.domain.BattleItem;
-import com.example.toycontent.app.battle.domain.BattleVote;
 import com.example.toycontent.app.battle.repository.BattleAttachmentFileRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.battle.repository.BattleRepository;
@@ -27,9 +25,9 @@ import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -58,7 +56,7 @@ public class BattleService {
 
   public void validateCreation(Long userId) {
     // 동시 진행 배틀 수 체크
-    long activeCount = battleRepository.countByCreatorIdAndStatus(userId, BattleStatus.ACTIVE);
+    long activeCount = battleRepository.countByCreatorIdAndStatus(userId, BattleStatus.NORMAL);
     if (activeCount >= MAX_ACTIVE_BATTLES) {
       throw new RestApiException(BattleErrorCode.MAX_ACTIVE_BATTLES);
     }
@@ -99,8 +97,15 @@ public class BattleService {
   public Page<BattleResponse.BattleList> getBattles(BattleSearchCondition condition, Pageable pageable) {
     List<BattleList> battleLists = battleRepository.findBattlesWithSearchCondition(condition, pageable);
 
+    List<Long> creatorIds = battleLists.stream()
+        .map(BattleList::getCreatorId)
+        .toList();
+
+    Map<Long, ExternalUserInfo> battleCreatorsMap = externalUserInfoService.getUserInfos(
+        creatorIds);
+
     battleLists.forEach(
-        battle -> battle.setCreatorUserInfo(externalUserInfoService.getUserInfo(battle.getCreatorId())));
+        battle -> battle.setCreatorUserInfo(battleCreatorsMap.get(battle.getCreatorId())));
 
     Long totalCount = battleRepository.countBattlesWithSearchCondition(condition);
 
@@ -171,7 +176,7 @@ public class BattleService {
         .endDate(request.getEndDate())
         .participationStartDate(request.getParticipationStartDate())
         .voteType(request.getVoteType())
-        .status(BattleStatus.ACTIVE)
+        .status(BattleStatus.NORMAL)
         .build();
   }
 

@@ -66,6 +66,9 @@ public abstract class ProductResponse {
         @Schema(description = "리뷰 수", example = "12")
         private Integer reviewCount;
 
+        @Schema(description = "공유 수", example = "12")
+        private Integer shareCount;
+
         @Schema(description = "카테고리명", example = "피규어")
         private String categoryName;
 
@@ -450,5 +453,14 @@ public abstract class ProductResponse {
 
         @Schema(description = "수정 성공 메시지", example = "상품 정보가 성공적으로 수정되었습니다.")
         private String message;
+
+        public static ProductUpdate of(Product product) {
+            return ProductUpdate.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .updatedAt(product.getUpdatedAt())
+                .message("상품 정보가 성공적으로 수정되었습니다.")
+                .build();
+        }
     }
 }

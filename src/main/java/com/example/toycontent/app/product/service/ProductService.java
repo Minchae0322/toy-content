@@ -13,6 +13,7 @@ import com.example.toycontent.app.feed.domain.FeedReaction;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.product.controller.dto.ProductReactionResponse.ProductUserReaction;
 import com.example.toycontent.app.product.controller.dto.ProductRequest;
+import com.example.toycontent.app.product.controller.dto.ProductRequest.ProductStatusRequest;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductBattle;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductBattleItem;
@@ -43,6 +44,7 @@ import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
+import jakarta.validation.Valid;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -88,7 +90,7 @@ public class ProductService {
             .orElseThrow(() -> new RestApiException(CategoryErrorCode.CATEGORY_NOT_FOUND));
 
         // 신규 제품 엔티티 생성 및 저장
-        Product newProduct = productRepository.save(productDto.toEntity(category));
+        Product newProduct = productRepository.save(productDto.toEntity(category, userId));
 
         // 대표 이미지 및 상세 이미지 파일 생성
         createProductAttachmentFiles(
@@ -192,6 +194,7 @@ public class ProductService {
      * @param pageable        페이징 정보
      * @param isAdmin         관리자 여부
      */
+    @Transactional(readOnly = true)
     public Page<ProductResponse.ProductList> getAllProducts(
         ProductSearchCondition searchCondition, Pageable pageable, boolean isAdmin) {
 
@@ -205,6 +208,23 @@ public class ProductService {
         Long totalCount = productRepository.countBySearchCondition(searchCondition);
 
         // 페이징 객체 생성
+        return new PageImpl<>(productLists, pageable, totalCount);
+    }
+
+    /**
+     * 특정 사용자가 등록한 제품 목록을 페이징하여 조회합니다.
+     *
+     * @param userId    조회할 사용자 ID
+     * @param condition 검색 조건 (카테고리, 상태, 키워드 등)
+     * @param pageable  페이징 및 정렬 정보
+     * @return 사용자가 등록한 제품 목록 (페이징 처리)
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductList> getProductsByUserId(Long userId, ProductSearchCondition condition, Pageable pageable) {
+        // 조건 기반 조회
+        List<ProductList> productLists = productRepository.findByUserIdAndSearchCondition(userId, condition, pageable);
+        Long totalCount = productRepository.countByUserIdAndSearchCondition(userId, condition);
+
         return new PageImpl<>(productLists, pageable, totalCount);
     }
 
@@ -253,11 +273,16 @@ public class ProductService {
      * Feed 리스트 -> ProductFeed 변환
      */
     private List<ProductResponse.ProductFeed> toListView(List<Feed> feeds) {
+        List<Long> creatorIds = feeds.stream()
+            .map(Feed::getUserId)
+            .toList();
+
+        Map<Long, ExternalUserInfo> externalUserInfoMap = externalUserInfoService.getUserInfos(
+            creatorIds);
+
         return feeds.stream()
-            .map(feed -> {
-                ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
-                return ProductResponse.ProductFeed.from(feed, userInfo);
-            })
+            .map(feed -> ProductFeed.from(feed,
+                externalUserInfoMap.get(feed.getUserId())))
             .toList();
     }
 
@@ -281,6 +306,15 @@ public class ProductService {
             .toList();
 
         return CursorResponse.of(content, size, ProductBattle::getBattleId);
+    }
+
+    @Transactional
+    public ProductResponse.ProductUpdate updateProductStatus(Long productId, ProductStatusRequest request) {
+        Product product = getProductById(productId);
+
+        product.updateStatus(request.getStatus(), request.getReturnReason());
+
+        return ProductResponse.ProductUpdate.of(product);
     }
 
 
