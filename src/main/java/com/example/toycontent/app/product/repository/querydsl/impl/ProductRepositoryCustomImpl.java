@@ -16,6 +16,7 @@ import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,13 +32,49 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
 
   private final JPAQueryFactory queryFactory;
 
-
   @Override
   public List<ProductList> findBySearchCondition(ProductSearchCondition searchCondition,
       Pageable pageable) {
 
     BooleanBuilder whereClause = getWhereClauseWithSearchCondition(searchCondition);
 
+    return selectProductList()
+        .where(whereClause)
+        .orderBy(getOrderSpecifier(pageable.getSort()))
+        .offset(pageable.getOffset())
+        .limit(pageable.getPageSize())
+        .fetch();
+  }
+
+  @Override
+  public Long countBySearchCondition(ProductSearchCondition searchCondition) {
+    BooleanBuilder whereClause = getWhereClauseWithSearchCondition(searchCondition);
+    return countProducts(whereClause);
+  }
+
+  @Override
+  public List<ProductList> findByUserIdAndSearchCondition(Long userId,
+      ProductSearchCondition condition, Pageable pageable) {
+
+    BooleanBuilder whereClause = getWhereClauseWithSearchCondition(condition);
+    whereClause.and(product.creatorId.eq(userId));
+
+    return selectProductList()
+        .where(whereClause)
+        .orderBy(getOrderSpecifier(pageable.getSort()))
+        .offset(pageable.getOffset())
+        .limit(pageable.getPageSize())
+        .fetch();
+  }
+
+  @Override
+  public Long countByUserIdAndSearchCondition(Long userId, ProductSearchCondition condition) {
+    BooleanBuilder whereClause = getWhereClauseWithSearchCondition(condition);
+    whereClause.and(product.creatorId.eq(userId));
+    return countProducts(whereClause);
+  }
+
+  private JPAQuery<ProductList> selectProductList() {
     return queryFactory
         .select(Projections.fields(ProductList.class,
             product.id,
@@ -47,10 +84,11 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             product.price,
             product.viewCount,
             product.likeCount,
+            product.shareCount,
             product.avgRating.as("averageRating"),
             ExpressionUtils.as(
                 JPAExpressions
-                    .select(productReview.count().intValue())  // 여기서 변환
+                    .select(productReview.count().intValue())
                     .from(productReview)
                     .where(productReview.product.id.eq(product.id)
                         .and(productReview.status.eq(ReviewStatus.ACTIVE))),
@@ -59,7 +97,6 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             product.category.name.as("categoryName"),
             product.releaseDate,
             product.createdAt,
-            // 썸네일 DTO 매핑
             Projections.fields(AttachmentFileResponse.class,
                 productAttachmentFile.id,
                 productAttachmentFile.orgFileNm,
@@ -74,17 +111,11 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
         .leftJoin(product.productReviews, productReview)
         .leftJoin(product.productAttachmentFiles, productAttachmentFile)
         .on(productAttachmentFile.product.id.eq(product.id)
-            .and(productAttachmentFile.isPrimary.isTrue()))
-        .where(whereClause)
-        .orderBy(getOrderSpecifier(pageable.getSort()))
-        .offset(pageable.getOffset())
-        .limit(pageable.getPageSize())
-        .fetch();
+            .and(productAttachmentFile.isPrimary.isTrue()));
   }
 
-  public Long countBySearchCondition(ProductSearchCondition searchCondition) {
-    BooleanBuilder whereClause = getWhereClauseWithSearchCondition(searchCondition);
-
+  // 공통 count 쿼리
+  private Long countProducts(BooleanBuilder whereClause) {
     Long count = queryFactory
         .select(product.countDistinct())
         .from(product)
@@ -105,6 +136,8 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
     Optional.ofNullable(searchCondition.getCategoryId())
         .ifPresent(id -> builder.and(product.category.id.eq(id)));
 
+    Optional.ofNullable(searchCondition.getStatus())
+        .ifPresent(status -> builder.and(product.status.eq(status)));
 
     //TODO: 나머지 조건 추가
     return builder;
@@ -126,6 +159,8 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
         case "updatedAt" -> orders.add(new OrderSpecifier<>(direction, product.updatedAt));
         case "releaseDate" -> orders.add(new OrderSpecifier<>(direction, product.releaseDate));
         case "likeCount" -> orders.add(new OrderSpecifier<>(direction, product.likeCount));
+        case "popularityScore" ->
+            orders.add(new OrderSpecifier<>(direction, product.popularityScore));
         case "viewCount" -> orders.add(new OrderSpecifier<>(direction, product.viewCount));
         default -> orders.add(new OrderSpecifier<>(Order.DESC, product.createdAt)); // 기본 정렬
       }

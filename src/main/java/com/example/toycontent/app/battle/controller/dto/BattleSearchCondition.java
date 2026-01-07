@@ -18,7 +18,7 @@ public class BattleSearchCondition {
   @Parameter(description = "카테고리")
   private Long category;
 
-  @Parameter(description = "배틀 상태 (SCHEDULED, ACTIVE, ENDED, CLOSED)")
+  @Parameter(description = "배틀 상태 (NORMAL, SUSPENDED, EARLY_CLOSED)")
   private BattleStatus status;
 
   @Parameter(description = "검색어 (제목)")
@@ -26,5 +26,8 @@ public class BattleSearchCondition {
 
   @Parameter(description = "생성자 ID")
   private Long creatorId;
+
+  @Parameter(description = "진행 여부")
+  private Boolean isActive;
 
 }

@@ -11,10 +11,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum BattleStatus {
-  DRAFT("DRAFT", "임시저장"),
-  ACTIVE("ACTIVE", "진행중"),
-  CLOSED("CLOSED", "정상 종료"),
-  EARLY_CLOSED("EARLY_CLOSED", "조기 종료");
+  NORMAL("NORMAL", "정상"),
+  SUSPENDED("SUSPENDED", "정지됨"),
+  EARLY_CLOSED("EARLY_CLOSED", "조기 종료"),
+  ;
 
   private String title;
   private String description;

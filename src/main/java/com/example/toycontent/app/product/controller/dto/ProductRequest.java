@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 
 public abstract class ProductRequest {
 
@@ -74,9 +75,9 @@ public abstract class ProductRequest {
         private AttachmentInfo thumbnailAttachmentInfo;
 
         @Schema(description = "첨부파일 정보 목록")
-        private List<AttachmentInfo> attachmentFileInfos = new ArrayList<>();
+        private List<AttachmentInfo> attachmentFileInfos;
 
-        public Product toEntity(Category category) {
+        public Product toEntity(Category category, Long creatorId) {
             return Product.builder()
                 .name(name)
                 .brand(brand)
@@ -88,9 +89,23 @@ public abstract class ProductRequest {
                 .tags(TagParsingUtil.listToString(tags))
                 .releaseDate(releaseDate)
                 .category(category)
+                .creatorId(creatorId)
                 .build();
         }
 
+    }
+
+    @Data
+    @Builder
+    @Schema(description = "제품 상태 변경 요청")
+    public static class ProductStatusRequest {
+
+        @NotNull(message = "상태는 필수입니다")
+        @Schema(description = "변경할 상태", example = "ACTIVE")
+        private ProductStatus status;
+
+        @Schema(description = "반려 사유")
+        private String returnReason;
     }
 
     /**
