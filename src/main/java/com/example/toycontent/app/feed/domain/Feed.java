@@ -145,19 +145,23 @@ public class Feed extends BaseTimeEntity {
   private LocalDateTime deletedAt;
 
   // ===== 연관 관계 =====
-  @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   @Builder.Default
   @Comment("첨부 이미지 목록 (최대 5장)")
   private List<FeedAttachmentFile> attachmentFiles = new ArrayList<>();
 
-  @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
   @Builder.Default
   @Comment("해시태그 목록 (최대 5개)")
   private List<FeedHashtag> hashtags = new ArrayList<>();
 
-  @OneToMany(mappedBy = "feed")
+  @OneToMany(mappedBy = "feed", fetch = FetchType.LAZY)
   @Comment("리액션 목록")
-  private List<FeedReaction> reactions;
+  private List<FeedReaction> reactions = new ArrayList<>();
+
+  @OneToMany(mappedBy = "feed", fetch = FetchType.LAZY)
+  @Comment("피드 스레드")
+  private List<FeedThread> threads = new ArrayList<>();
 
   /**
    * 피드 정보 업데이트 (첨부파일 제외)
