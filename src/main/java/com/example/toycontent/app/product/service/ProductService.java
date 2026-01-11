@@ -6,17 +6,13 @@ import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.battle.repository.BattleRepository;
 import com.example.toycontent.app.common.dto.CursorResponse;
-import com.example.toycontent.app.feed.controller.dto.FeedResponse;
-import com.example.toycontent.app.feed.controller.dto.FeedResponse.ListView;
 import com.example.toycontent.app.feed.domain.Feed;
-import com.example.toycontent.app.feed.domain.FeedReaction;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.product.controller.dto.ProductReactionResponse.ProductUserReaction;
 import com.example.toycontent.app.product.controller.dto.ProductRequest;
 import com.example.toycontent.app.product.controller.dto.ProductRequest.ProductStatusRequest;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductBattle;
-import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductBattleItem;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductCreate;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductDetail;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductFeed;
@@ -44,7 +40,6 @@ import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
-import jakarta.validation.Valid;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -312,7 +307,7 @@ public class ProductService {
     public ProductResponse.ProductUpdate updateProductStatus(Long productId, ProductStatusRequest request) {
         Product product = getProductById(productId);
 
-        product.updateStatus(request.getStatus(), request.getReturnReason());
+        product.updateStatus(request.getStatus(), request.getRejectReason());
 
         return ProductResponse.ProductUpdate.of(product);
     }
