@@ -55,6 +55,7 @@ public class FeedComment extends BaseTimeEntity {
   @Comment("삭제 여부")
   private Boolean deleted = false;
 
+  @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
 
   public void updateContent(String content) {
