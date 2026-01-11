@@ -72,7 +72,7 @@ public class FeedThread extends BaseTimeEntity {
   @Comment("삭제 일시")
   private LocalDateTime deletedAt;
 
-  @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy = "feedThread", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   @Comment("첨부 이미지 목록 (최대 5장)")
   private List<FeedThreadAttachmentFile> attachmentFiles = new ArrayList<>();
