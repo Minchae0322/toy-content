@@ -85,6 +85,7 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             product.viewCount,
             product.likeCount,
             product.shareCount,
+            product.rejectReason,
             product.avgRating.as("averageRating"),
             ExpressionUtils.as(
                 JPAExpressions

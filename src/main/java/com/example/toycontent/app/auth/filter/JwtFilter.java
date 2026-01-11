@@ -27,21 +27,20 @@ public class JwtFilter extends OncePerRequestFilter {
     private final JwtParser tokenProvider;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+        FilterChain filterChain) throws ServletException, IOException {
 
         String token = tokenProvider.resolveAccessToken(request);
 
+        // 토큰이 있으면 인증 처리
         if (StringUtils.hasText(token) && tokenProvider.validateToken(token)) {
-            Long userId = tokenProvider.getUserId(token); // JWT에서 userId 추출
+            Long userId = tokenProvider.getUserId(token);
             String userName = tokenProvider.getUsername(token);
-            List<String> roles = tokenProvider.getRoles(token); // JWT에서 roles 추출
+            List<String> roles = tokenProvider.getRoles(token);
 
-            // 권한 목록 생성
             List<SimpleGrantedAuthority> authorities = roles.stream()
-                    .map(SimpleGrantedAuthority::new)
-                    .collect(Collectors.toList());
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
 
             CustomUserDetails userDetails = new CustomUserDetails(
                 userId,
@@ -50,29 +49,40 @@ public class JwtFilter extends OncePerRequestFilter {
             );
 
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+                new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+
+        // Optional 인증 경로는 토큰 없어도 통과
+        if (isOptionalAuthPath(request)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // 필수 인증 경로는 인증 정보 필요
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
             filterChain.doFilter(request, response);
             return;
         }
 
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
-        return;
+    }
+
+    private boolean isOptionalAuthPath(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+
+        // GET /api/products, GET /api/products/{id} → 비로그인도 허용, 로그인 시 추가 정보 제공
+        if ("GET".equals(method)) {
+            return path.equals("/api/products") || path.matches("/api/products/\\d+");
+        }
+        return false;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        String method = request.getMethod();
-
-        if (path.equals("/api/products") && "GET".equals(method)) {
-            return true;
-        }
-
-        if (path.matches("/api/products/\\d+") && "GET".equals(method)) {
-            return true;
-        }
 
         return path.startsWith("/api/login")
             || path.startsWith("/api/oauth2")

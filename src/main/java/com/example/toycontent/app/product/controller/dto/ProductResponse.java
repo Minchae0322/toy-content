@@ -75,6 +75,9 @@ public abstract class ProductResponse {
         @Schema(description = "상품 유형", example = "SALE")
         private String productType;
 
+        @Schema(description = "반려 사유", example = "안돼요")
+        private String rejectReason;
+
         @Schema(description = "대표 이미지")
         private AttachmentFileResponse thumbnailDto;
 

@@ -14,11 +14,9 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
 
 public abstract class ProductRequest {
 
@@ -105,7 +103,7 @@ public abstract class ProductRequest {
         private ProductStatus status;
 
         @Schema(description = "반려 사유")
-        private String returnReason;
+        private String rejectReason;
     }
 
     /**
