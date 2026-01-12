@@ -135,7 +135,7 @@ public class Feed extends BaseTimeEntity {
   private Integer reportCount = 0;
 
   // ===== 삭제 처리 =====
-  @Column(nullable = false, name = "del_yn")
+  @Column(name = "deleted", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
   @Builder.Default
   @Comment("삭제 여부")
   private Boolean isDeleted = false;

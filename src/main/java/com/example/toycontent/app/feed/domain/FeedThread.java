@@ -37,7 +37,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Entity
-@Table(name = "tb_feed_comment")
+@Table(name = "tb_feed_thread")
 public class FeedThread extends BaseTimeEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -63,7 +63,7 @@ public class FeedThread extends BaseTimeEntity {
   @Comment("제품 평가 (BEST/GOOD/OKAY/BAD)")
   private FeedEvaluation evaluation;
 
-  @Column(nullable = false, name = "del_yn")
+  @Column(name = "deleted", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
   @Builder.Default
   @Comment("삭제 여부")
   private Boolean isDeleted = false;
