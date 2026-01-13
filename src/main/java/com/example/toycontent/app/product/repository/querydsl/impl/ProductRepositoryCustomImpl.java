@@ -100,6 +100,7 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             product.createdAt,
             Projections.fields(AttachmentFileResponse.class,
                 productAttachmentFile.id,
+                productAttachmentFile.attachFileId,
                 productAttachmentFile.orgFileNm,
                 productAttachmentFile.fileUrl,
                 productAttachmentFile.fileSize,
