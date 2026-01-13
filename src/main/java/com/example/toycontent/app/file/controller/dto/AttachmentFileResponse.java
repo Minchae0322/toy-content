@@ -19,7 +19,7 @@ public class AttachmentFileResponse {
     private Long id;
 
     @Schema(description = "첨부 파일 ID", example = "1")
-    private Long attachmentFileId;
+    private Long attachFileId;
 
     @Schema(description = "원본 파일 이름", example = "example.jpg")
     private String orgFileNm;
@@ -41,7 +41,7 @@ public class AttachmentFileResponse {
     public static AttachmentFileResponse of(ProductAttachmentFile attachmentFile) {
         return AttachmentFileResponse.builder()
             .id(attachmentFile.getId())
-            .attachmentFileId(attachmentFile.getAttachFileId())
+            .attachFileId(attachmentFile.getAttachFileId())
             .orgFileNm(attachmentFile.getOrgFileNm())
             .fileUrl(attachmentFile.getFileUrl())
             .fileSize(attachmentFile.getFileSize())
