@@ -344,18 +344,20 @@ public abstract class ProductResponse {
             List<ProductBattleItem> battleItems = new ArrayList<>();
 
             for (int i = 0; i < items.size(); i++) {
-                BattleItem bi = items.get(i);
+                BattleItem battleItem = items.get(i);
                 int rank = i + 1;
-                boolean isCurrentProduct = bi.getProduct().getId().equals(productId);
+
+                boolean isCurrentProduct = battleItem.getProduct() != null
+                    && battleItem.getProduct().getId().equals(productId);
 
                 // TOP 3 아이템은 무조건 추가
                 if (rank <= 3) {
-                    battleItems.add(ProductBattleItem.from(bi, rank, isCurrentProduct));
+                    battleItems.add(ProductBattleItem.from(battleItem, rank, isCurrentProduct));
                 }
 
                 // 현재 상품이 4위 이하면 추가 후 종료
                 if (isCurrentProduct && rank > 3) {
-                    battleItems.add(ProductBattleItem.from(bi, rank, true));
+                    battleItems.add(ProductBattleItem.from(battleItem, rank, true));
                     break;
                 }
             }
@@ -395,7 +397,8 @@ public abstract class ProductResponse {
             return ProductBattleItem.builder()
                 .battleItemId(battleItem.getId())
                 .rank(rank)
-                .productName(battleItem.getProduct().getName())
+                .productName(battleItem.getProduct() != null ? battleItem.getProduct().getName()
+                    : battleItem.getCustomName())
                 .isCurrentProduct(isCurrentProduct)
                 .votePercentage(battleItem.getBattle().getTotalVotes() > 0
                     ? (double) battleItem.getVoteCount() / battleItem.getBattle().getTotalVotes()
