@@ -50,13 +50,13 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     @Index(name = "idx_product_id", columnList = "product_id"),
 
     // 커서 페이징용 복합 인덱스 (핵심)
-    @Index(name = "idx_feed_cursor", columnList = "del_yn, id DESC"),
+    @Index(name = "idx_feed_cursor", columnList = "deleted, id DESC"),
 
     // 카테고리별 조회용
-    @Index(name = "idx_feed_category_cursor", columnList = "del_yn, category_id, id DESC"),
+    @Index(name = "idx_feed_category_cursor", columnList = "deleted, category_id, id DESC"),
 
     // 사용자별 피드 조회용
-    @Index(name = "idx_feed_user_cursor", columnList = "del_yn, user_id, id DESC")
+    @Index(name = "idx_feed_user_cursor", columnList = "deleted, user_id, id DESC")
 })
 public class Feed extends BaseTimeEntity {
   @Id

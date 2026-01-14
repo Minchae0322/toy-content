@@ -61,7 +61,7 @@ public abstract class FeedRequest {
     private String buyPlace;
 
     @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
-    @NotBlank(message = "제품 평가는 필수입니다")
+    @NotNull(message = "제품 평가는 필수입니다")
     private FeedEvaluation evaluation;
 
     @NotNull(message = "대표이미지는 필수 입니다.")
