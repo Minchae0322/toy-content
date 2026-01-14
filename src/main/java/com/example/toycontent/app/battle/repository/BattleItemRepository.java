@@ -16,9 +16,9 @@ public interface BattleItemRepository extends JpaRepository<BattleItem, Long>,
 
   @Query("""
     SELECT bi FROM BattleItem bi
-    JOIN FETCH bi.product p
+    LEFT JOIN FETCH bi.product p
     WHERE bi.battle.id IN :battleIds
-    ORDER BY bi.battle.id, bi.voteCount DESC
+    ORDER BY bi.battle.id, bi.totalScore DESC
     """)
   List<BattleItem> findItemsByBattleIds(@Param("battleIds") List<Long> battleIds);
 
