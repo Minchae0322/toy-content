@@ -393,6 +393,9 @@ public abstract class ProductResponse {
         @Schema(description = "득표율 (%)", example = "33.07")
         private Double votePercentage;
 
+        @Schema(description = "점수", example = "33")
+        private Integer totalScore;
+
         public static ProductBattleItem from(BattleItem battleItem, Integer rank, Boolean isCurrentProduct) {
             return ProductBattleItem.builder()
                 .battleItemId(battleItem.getId())
@@ -403,6 +406,7 @@ public abstract class ProductResponse {
                 .votePercentage(battleItem.getBattle().getTotalVotes() > 0
                     ? (double) battleItem.getVoteCount() / battleItem.getBattle().getTotalVotes()
                     : 0.0)
+                .totalScore(battleItem.getTotalScore())
                 .build();
         }
 
