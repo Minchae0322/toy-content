@@ -1,7 +1,9 @@
 package com.example.toycontent.app.product.controller.dto;
 
+import static com.example.toycontent.app.common.utils.BattleItemRankingCalculator.setRanking;
 import static com.example.toycontent.app.common.utils.TagParsingUtil.parseToList;
 
+import com.example.toycontent.app.battle.controller.dto.Rankable;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
@@ -341,26 +343,22 @@ public abstract class ProductResponse {
         private List<ProductBattleItem> battleItems;
 
         public static ProductBattle from(Battle battle, List<BattleItem> items, Long productId) {
-            List<ProductBattleItem> battleItems = new ArrayList<>();
+            List<ProductBattleItem> rankedItems = setRanking(
+                items.stream()
+                    .map(item -> ProductBattleItem.from(item, isCurrentProduct(item, productId)))
+                    .collect(Collectors.toList())
+            );
 
-            for (int i = 0; i < items.size(); i++) {
-                BattleItem battleItem = items.get(i);
-                int rank = i + 1;
+            // TOP 3 까지
+            List<ProductBattleItem> battleItems = rankedItems.stream()
+                .filter(item -> item.getRank() <= 3)
+                .collect(Collectors.toList());
 
-                boolean isCurrentProduct = battleItem.getProduct() != null
-                    && battleItem.getProduct().getId().equals(productId);
-
-                // TOP 3 아이템은 무조건 추가
-                if (rank <= 3) {
-                    battleItems.add(ProductBattleItem.from(battleItem, rank, isCurrentProduct));
-                }
-
-                // 현재 상품이 4위 이하면 추가 후 종료
-                if (isCurrentProduct && rank > 3) {
-                    battleItems.add(ProductBattleItem.from(battleItem, rank, true));
-                    break;
-                }
-            }
+            // 현재 상품이 TOP 3에 없으면 추가
+            rankedItems.stream()
+                .filter(item -> item.getIsCurrentProduct() && item.getRank() > 3)
+                .findFirst()
+                .ifPresent(battleItems::add);
 
             return ProductBattle.builder()
                 .productId(productId)
@@ -371,6 +369,10 @@ public abstract class ProductResponse {
                 .battleItems(battleItems)
                 .build();
         }
+
+        private static boolean isCurrentProduct(BattleItem item, Long productId) {
+            return item.getProduct() != null && item.getProduct().getId().equals(productId);
+        }
     }
 
     @Data
@@ -378,7 +380,7 @@ public abstract class ProductResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     @Schema(description = "배틀 참여 상품 정보")
-    public static class ProductBattleItem {
+    public static class ProductBattleItem implements Rankable {
         @Schema(description = "배틀 아이템 ID", example = "1")
         private Long battleItemId;
 
@@ -396,10 +398,10 @@ public abstract class ProductResponse {
         @Schema(description = "점수", example = "33")
         private Integer totalScore;
 
-        public static ProductBattleItem from(BattleItem battleItem, Integer rank, Boolean isCurrentProduct) {
+
+        public static ProductBattleItem from(BattleItem battleItem, Boolean isCurrentProduct) {
             return ProductBattleItem.builder()
                 .battleItemId(battleItem.getId())
-                .rank(rank)
                 .productName(battleItem.getProduct() != null ? battleItem.getProduct().getName()
                     : battleItem.getCustomName())
                 .isCurrentProduct(isCurrentProduct)
@@ -410,6 +412,10 @@ public abstract class ProductResponse {
                 .build();
         }
 
+        @Override
+        public Long getId() {
+            return this.battleItemId;
+        }
     }
 
     @Data

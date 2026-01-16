@@ -1,5 +1,7 @@
 package com.example.toycontent.app.battle.service;
 
+import static com.example.toycontent.app.common.utils.BattleItemRankingCalculator.setRanking;
+
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
@@ -139,9 +141,11 @@ public class BattleService {
         battleId, currentUserId, status);
 
     // DTO 변환
-    List<BattleItemInfo> items = battleItems.stream()
-        .map(BattleItemInfo::from)
-        .toList();
+    List<BattleItemInfo> items = setRanking(
+        battleItems.stream()
+            .map(BattleItemInfo::from)
+            .collect(Collectors.toList())
+    );
 
     return BattleResponse.BattleDetail.from(battle, userInfo, items);
   }
