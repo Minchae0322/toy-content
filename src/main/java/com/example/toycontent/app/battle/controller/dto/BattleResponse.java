@@ -211,11 +211,11 @@ public abstract class BattleResponse {
   }
 
   @Schema(description = "배틀 아이템 정보")
-  @Getter
+  @Data
   @Builder
   @NoArgsConstructor
   @AllArgsConstructor
-  public static class BattleItemInfo {
+  public static class BattleItemInfo implements Rankable {
 
     @Schema(description = "아이템 ID", example = "1")
     private Long id;
@@ -240,6 +240,9 @@ public abstract class BattleResponse {
 
     @Schema(description = "득표 스코어", example = "22")
     private Integer totalScore;
+
+    @Schema(description = "랭킹", example = "1")
+    private Integer rank;
 
     @Schema(description = "아이템 상태", example = "ACTIVE")
     private BattleItemStatus status;
