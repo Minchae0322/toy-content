@@ -145,7 +145,7 @@ public class Battle extends BaseTimeEntity {
 
 
   public void addTotalScore(Integer score) {
-    this.totalScore += totalScore;
+    this.totalScore += score;
   }
   public void subtractTotalScore(Integer score) {
     this.totalScore = Math.max(0, this.totalScore - score);
