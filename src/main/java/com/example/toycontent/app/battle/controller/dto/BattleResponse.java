@@ -235,7 +235,7 @@ public abstract class BattleResponse {
     @Schema(description = "투표 수", example = "42")
     private Integer voteCount;
 
-    @Schema(description = "득표율", example = "33.07")
+    @Schema(description = "투표 점유율", example = "33.07")
     private Double votePercentage;
 
     @Schema(description = "득표 스코어", example = "22")
@@ -274,8 +274,8 @@ public abstract class BattleResponse {
               .map(UserBattleVote::from)
               .orElse(null))
           .votePercentage(
-              item.getBattle().getTotalVotes() > 0
-                  ? (double) item.getVoteCount() / item.getBattle().getTotalVotes()
+              item.getBattle().getTotalScore() > 0
+                  ? (double) item.getVoteCount() / item.getBattle().getTotalScore()
                   : 0.0)
           .build();
     }
