@@ -275,7 +275,7 @@ public abstract class BattleResponse {
               .orElse(null))
           .votePercentage(
               item.getBattle().getTotalScore() > 0
-                  ? (double) item.getVoteCount() / item.getBattle().getTotalScore()
+                  ? (double) item.getTotalScore() / item.getBattle().getTotalScore()
                   : 0.0)
           .build();
     }

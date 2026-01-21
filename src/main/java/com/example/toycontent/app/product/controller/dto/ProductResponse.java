@@ -406,7 +406,7 @@ public abstract class ProductResponse {
                     : battleItem.getCustomName())
                 .isCurrentProduct(isCurrentProduct)
                 .votePercentage(battleItem.getBattle().getTotalScore() > 0
-                    ? (double) battleItem.getVoteCount() / battleItem.getBattle().getTotalScore()
+                    ? (double) battleItem.getTotalScore() / battleItem.getBattle().getTotalScore()
                     : 0.0)
                 .totalScore(battleItem.getTotalScore())
                 .build();
