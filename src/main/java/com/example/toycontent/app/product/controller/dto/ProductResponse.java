@@ -405,8 +405,8 @@ public abstract class ProductResponse {
                 .productName(battleItem.getProduct() != null ? battleItem.getProduct().getName()
                     : battleItem.getCustomName())
                 .isCurrentProduct(isCurrentProduct)
-                .votePercentage(battleItem.getBattle().getTotalVotes() > 0
-                    ? (double) battleItem.getVoteCount() / battleItem.getBattle().getTotalVotes()
+                .votePercentage(battleItem.getBattle().getTotalScore() > 0
+                    ? (double) battleItem.getVoteCount() / battleItem.getBattle().getTotalScore()
                     : 0.0)
                 .totalScore(battleItem.getTotalScore())
                 .build();
