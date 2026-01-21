@@ -263,8 +263,10 @@ public class BattleItemService {
       int score = calculateScore(battle.getVoteType(), vote.getVoteRank());
       if (isAdd) {
         item.addScore(score);
+        battle.addTotalScore(score);
       } else {
         item.subtractScore(score);
+        battle.subtractTotalScore(score);
       }
     });
   }

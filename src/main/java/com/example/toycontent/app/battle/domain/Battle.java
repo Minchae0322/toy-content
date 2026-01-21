@@ -107,6 +107,11 @@ public class Battle extends BaseTimeEntity {
 
   @Builder.Default
   @Column(nullable = false)
+  @Comment("총 점수")
+  private Integer totalScore = 0;
+
+  @Builder.Default
+  @Column(nullable = false)
   @Comment("총 조회 수")
   @NotAudited
   private Integer totalViews = 0;
@@ -138,6 +143,14 @@ public class Battle extends BaseTimeEntity {
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<BattleAttachmentFile> battleAttachmentFiles = new ArrayList<>();
 
+
+  public void addTotalScore(Integer score) {
+    this.totalScore += totalScore;
+  }
+  public void subtractTotalScore(Integer score) {
+    this.totalScore = Math.max(0, this.totalScore - score);
+
+  }
 
   public void incrementTotalVotes(int delta) {
     this.totalVotes += delta;
