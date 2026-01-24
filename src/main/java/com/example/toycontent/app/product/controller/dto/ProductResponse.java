@@ -6,31 +6,25 @@ import static com.example.toycontent.app.common.utils.TagParsingUtil.parseToList
 import com.example.toycontent.app.battle.controller.dto.Rankable;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.category.contoller.dto.CategoryResponse;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
+import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.feed.domain.Feed;
+import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.app.product.controller.dto.ProductReactionResponse.ProductUserReaction;
 import com.example.toycontent.app.product.domain.Product;
-import com.example.toycontent.app.category.contoller.dto.CategoryResponse;
-import com.example.toycontent.app.common.enumuration.ProductStatus;
-import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
-import com.example.toycontent.app.oneMouth.controller.dto.OneMouthResponse.ProductTradeSummary;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.Column;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Comment;
+import org.springframework.util.StringUtils;
 
 
 public abstract class ProductResponse {
@@ -299,8 +293,10 @@ public abstract class ProductResponse {
             return ProductFeed.builder()
                 .feedId(feed.getId())
                 .productId(feed.getProduct().getId())
-                .feedTitle(feed.getProduct().getName())
-                .description(feed.getProduct().getDescription())
+                .feedTitle(
+                    StringUtils.hasText(feed.getProduct().getName()) ? feed.getProduct().getName()
+                        : feed.getProductNameCustom())
+                .description(feed.getReview())
                 .userInfo(userInfo)
                 .feedThumbnail(
                     feed.getAttachmentFiles()
