@@ -49,7 +49,7 @@ public class FeedController {
   @GetMapping("/scroll")
   public ResponseEntity<ApiResponse<CursorResponse<ListView>>> getFeedsWithCursor(
       @ParameterObject @ModelAttribute Search condition,
-      @CurrentUserId Long userId) {
+      @CurrentUserId(required = false) Long userId) {
 
     CursorResponse<ListView> feeds = feedService.getFeedsWithCursor(condition, userId);
     return ResponseEntity.ok(ApiResponse.success(feeds));
