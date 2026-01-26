@@ -54,6 +54,9 @@ public abstract class FeedResponse {
     @Schema(description = "정가")
     private Integer price;
 
+    @Schema(description = "트렌딩 여부")
+    private Boolean isTrending;
+
     @Schema(description = "조회수")
     private Integer viewCount;
 
@@ -84,10 +87,13 @@ public abstract class FeedResponse {
     @Schema(description = "수정일시")
     private LocalDateTime updatedAt;
 
+
+
     public static ListView from(Feed feed, ExternalUserInfo userInfo, List<FeedReaction> userReactions) {
       return ListView.builder()
           .feedId(feed.getId())
           .userInfo(userInfo)
+          .isTrending(feed.getIsTrending())
           .productId(feed.getProduct() != null ? feed.getProduct().getId() : null)
           .productName(
               feed.getProduct() != null ? feed.getProduct().getName() : feed.getProductNameCustom())
@@ -175,6 +181,9 @@ public abstract class FeedResponse {
     @Schema(description = "핫해요 수")
     private Integer hotCount;
 
+    @Schema(description = "트렌딩 여부")
+    private Boolean isTrending;
+
     @Schema(description = "댓글 수")
     private Integer commentCount;
 
@@ -210,6 +219,7 @@ public abstract class FeedResponse {
           .viewCount(feed.getViewCount())
           .likeCount(feed.getLikeCount())
           .hotCount(feed.getHotCount())
+          .isTrending(feed.getIsTrending())
           .commentCount(feed.getCommentCount())
           .attachmentFiles(
               feed.getAttachmentFiles()
@@ -235,6 +245,9 @@ public abstract class FeedResponse {
 
     @Schema(description = "피드 ID")
     private Long feedId;
+
+    @Schema(description = "트렌딩 여부")
+    private Boolean isTrending;
 
     @Schema(description = "상품명")
     private String productName;

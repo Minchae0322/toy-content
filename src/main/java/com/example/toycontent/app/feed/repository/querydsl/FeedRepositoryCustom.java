@@ -7,6 +7,9 @@ import com.example.toycontent.app.feed.domain.Feed;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jdbc.repository.query.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface FeedRepositoryCustom {
 
@@ -21,4 +24,6 @@ public interface FeedRepositoryCustom {
 
   List<Feed> findByProductIdAndIsDeletedNot(Long productId, Boolean isDeleted, Long cursor,
       Integer size);
+
+
 }
