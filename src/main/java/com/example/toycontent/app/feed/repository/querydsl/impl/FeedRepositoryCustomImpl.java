@@ -117,7 +117,10 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
 
     fetchHashtags(feedIds);
     fetchPrimaryAttachments(feedIds);
-    fetchUserReactions(feedIds, readerId);
+
+    if(readerId != null) {
+      fetchUserReactions(feedIds, readerId);
+    }
   }
 
   private List<Long> extractFeedIds(List<Feed> feeds) {

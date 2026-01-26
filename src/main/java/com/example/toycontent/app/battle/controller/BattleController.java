@@ -36,7 +36,8 @@ public class BattleController {
 
   @Operation(summary = "배틀 생성 권한 체크")
   @GetMapping("/creation/validation")
-  public ResponseEntity<ApiResponse<Void>> validateCreation(@CurrentUserId Long userId) {
+  public ResponseEntity<ApiResponse<Void>> validateCreation(
+      @CurrentUserId Long userId) {
     battleService.validateCreation(userId);
     return ResponseEntity.ok(ApiResponse.success(null, "생성 가능합니다."));
   }

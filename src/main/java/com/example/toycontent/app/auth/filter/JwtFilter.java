@@ -73,9 +73,23 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        // GET /api/products, GET /api/products/{id} → 비로그인도 허용, 로그인 시 추가 정보 제공
         if ("GET".equals(method)) {
-            return path.equals("/api/products") || path.matches("/api/products/\\d+");
+            return // 상품 관련
+                path.equals("/products")
+                    || path.matches("/products/\\d+")
+                    || path.matches("/products/\\d+/feeds")
+                    || path.matches("/products/\\d+/battles")
+                    || path.matches("/products/\\d+/reviews")
+                    // 피드 관련
+                    || path.equals("/feeds/scroll")
+                    || path.equals("/feeds/list")
+                    || path.matches("/feeds/\\d+")
+                    // 피드 댓글
+                    || path.matches("/feeds/\\d+/comments")
+                    // 배틀 관련
+                    || path.equals("/battles")
+                    || path.equals("/battles/hot")
+                    || path.matches("/battles/\\d+");
         }
         return false;
     }
