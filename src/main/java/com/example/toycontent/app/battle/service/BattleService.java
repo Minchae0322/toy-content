@@ -85,7 +85,9 @@ public class BattleService {
     Battle battle = createBattleEntity(userId, request, category);
     battleRepository.save(battle);
 
-    createBattleAttachmentFiles(request.getThumbnailAttachmentInfo(), battle);
+    if(request.getThumbnailAttachmentInfo() != null) {
+      createBattleAttachmentFiles(request.getThumbnailAttachmentInfo(), battle);
+    }
 
     battleItemService.createBattleItems(userId, battle, request.getItems());
 
