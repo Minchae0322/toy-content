@@ -13,7 +13,7 @@ import org.springframework.util.StopWatch;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "scheduler.product-popularity", name = "enable", havingValue = "true")
+@ConditionalOnProperty(prefix = "scheduler.product-popularity", name = "enabled", havingValue = "true")
 public class ProductPopularityScheduler {
   private final ProductPopularityService popularityService;
 

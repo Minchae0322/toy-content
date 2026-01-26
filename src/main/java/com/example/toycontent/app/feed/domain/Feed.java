@@ -134,6 +134,16 @@ public class Feed extends BaseTimeEntity {
   @Comment("신고 누적 수")
   private Integer reportCount = 0;
 
+  // ===== 트렌딩 =====
+  @Column(name = "view_count_24h_ago")
+  @Comment("24시간 전 조회수")
+  private Integer viewCount24hAgo;
+
+  @Column(name = "is_trending", nullable = false)
+  @Builder.Default
+  @Comment("트렌딩 여부")
+  private Boolean isTrending = false;
+
   // ===== 삭제 처리 =====
   @Column(name = "deleted", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
   @Builder.Default
@@ -270,5 +280,27 @@ public class Feed extends BaseTimeEntity {
     } else if (reaction.getReactionType() == FeedReactionType.HOT) {
       decrementHotCount();
     }
+  }
+
+  /**
+   * 트렌딩 여부 계산
+   */
+  public boolean checkTrending(int threshold) {
+    if (viewCount24hAgo == null) return false;
+    return (viewCount - viewCount24hAgo) >= threshold;
+  }
+
+  /**
+   * 트렌딩 상태 갱신
+   */
+  public void updateTrendingStatus(int threshold) {
+    this.isTrending = checkTrending(threshold);
+  }
+
+  /**
+   * 24시간 전 조회수 스냅샷
+   */
+  public void snapshotViewCount() {
+    this.viewCount24hAgo = this.viewCount;
   }
 }

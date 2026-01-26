@@ -70,6 +70,10 @@ scheduler:
     full-recalculate:
       cron: "0 0 3 * * *"
       enabled: ${BATTLE_HOT_SCORE_FULL_RECALC_ENABLED:true}
+  feed-trending:
+    enabled: ${FEED_TRENDING_ENABLE:true}
+    threshold: ${FEED_TRENDING_THRESHOLD:50}
+    cron: "0 0 0 * * *"
 
 logging:
   level:

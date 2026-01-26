@@ -169,6 +169,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .select(Projections.fields(
             HotFeedResponse.class,
             feed.id.as("feedId"),
+            feed.isTrending,
             feed.productNameCustom.as("productName"),
             Expressions.stringTemplate(
                 "CASE WHEN LENGTH({0}) > 50 THEN CONCAT(SUBSTRING({0}, 1, 20), '...') ELSE {0} END",
