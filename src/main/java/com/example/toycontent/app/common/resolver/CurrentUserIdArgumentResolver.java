@@ -2,6 +2,8 @@ package com.example.toycontent.app.common.resolver;
 
 import com.example.toycontent.app.auth.CustomUserDetails;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
+import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.common.exception.impl.UserErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
@@ -34,19 +36,20 @@ public class CurrentUserIdArgumentResolver implements HandlerMethodArgumentResol
         CurrentUserId annotation = parameter.getParameterAnnotation(CurrentUserId.class);
         boolean required = annotation != null && annotation.required();
 
+
         // 인증되지 않은 경우
         if (authentication == null || !authentication.isAuthenticated()
             || "anonymousUser".equals(authentication.getPrincipal())) {
             if (required) {
-                throw new IllegalStateException("인증되지 않은 사용자입니다.");
+                throw new RestApiException(UserErrorCode.UNAUTHORIZED);
             }
-            return null;  // required=false면 null 반환
+            return null;
         }
 
         // Principal 타입 체크
         if (!(authentication.getPrincipal() instanceof CustomUserDetails)) {
             if (required) {
-                throw new IllegalStateException("올바른 인증 정보가 아닙니다.");
+                throw new RestApiException(UserErrorCode.INVALID_AUTHENTICATION);
             }
             return null;
         }
@@ -59,9 +62,8 @@ public class CurrentUserIdArgumentResolver implements HandlerMethodArgumentResol
 
         // userId가 null인 경우
         if (required) {
-            throw new IllegalStateException("인증 정보에서 사용자를 찾을 수 없습니다.");
+            throw new RestApiException(UserErrorCode.USER_ID_NOT_FOUND);
         }
-
         return null;
     }
 }
