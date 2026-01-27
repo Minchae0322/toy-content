@@ -89,11 +89,19 @@
       <appender-ref ref="FEED_FILE"/>
     </logger>
 
+    <logger name="com.example.toycontent.app.scheduler" level="INFO" additivity="false">
+      <appender-ref ref="CONSOLE"/>
+      <appender-ref ref="SCHEDULER_FILE"/>
+      <appender-ref ref="ERROR_FILE"/>
+    </logger>
+
     <root level="INFO">
       <appender-ref ref="CONSOLE"/>
       <appender-ref ref="ASYNC_FILE"/>
       <appender-ref ref="ERROR_FILE"/>
     </root>
+
+
   </springProfile>
 
   <!-- prod 프로파일 -->
@@ -110,11 +118,19 @@
       <appender-ref ref="ERROR_FILE"/>
     </logger>
 
+    <logger name="com.example.toycontent.app.scheduler" level="INFO" additivity="false">
+      <appender-ref ref="CONSOLE"/>
+      <appender-ref ref="SCHEDULER_FILE"/>
+      <appender-ref ref="ERROR_FILE"/>
+    </logger>
+
     <root level="WARN">
       <appender-ref ref="CONSOLE"/>
       <appender-ref ref="ASYNC_FILE"/>
       <appender-ref ref="ERROR_FILE"/>
     </root>
+
+
   </springProfile>
 
 </configuration>
