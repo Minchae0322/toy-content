@@ -175,6 +175,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
                 "CASE WHEN LENGTH({0}) > 50 THEN CONCAT(SUBSTRING({0}, 1, 20), '...') ELSE {0} END",
                 feed.review
             ).as("reviewSummary"),
+            feed.evaluation.as("feedEvaluation"),
             Projections.fields(AttachmentFileResponse.class,
                 feedAttachmentFile.id,
                 feedAttachmentFile.orgFileNm,

@@ -87,8 +87,6 @@ public abstract class FeedResponse {
     @Schema(description = "수정일시")
     private LocalDateTime updatedAt;
 
-
-
     public static ListView from(Feed feed, ExternalUserInfo userInfo, List<FeedReaction> userReactions) {
       return ListView.builder()
           .feedId(feed.getId())
@@ -257,6 +255,9 @@ public abstract class FeedResponse {
 
     @Schema(description = "대표 이미지 URL")
     private AttachmentFileResponse hotFeedThumbnailDto;
+
+    @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
+    private FeedEvaluation feedEvaluation;
   }
 
   @Getter
