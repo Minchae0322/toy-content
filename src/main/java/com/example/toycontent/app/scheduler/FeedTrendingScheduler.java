@@ -40,9 +40,10 @@ public class FeedTrendingScheduler {
     stopWatch.start();
 
     try {
+      int snapshot = feedRepository.snapshotViewCount();
       int marked = feedRepository.markTrending(trendingThreshold);
       int unmarked = feedRepository.unmarkTrending(trendingThreshold);
-      int snapshot = feedRepository.snapshotViewCount();
+
 
       stopWatch.stop();
       log.info("[피드 트렌딩] 완료 - marked: {}, unmarked: {}, snapshot: {}, {}ms",
