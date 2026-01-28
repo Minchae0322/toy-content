@@ -43,7 +43,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Entity
-@Table(name = "TB_FEED", indexes = {
+@Table(name = "tb_feed", indexes = {
     // 기존 인덱스
     @Index(name = "idx_feed_category", columnList = "category_id"),
     @Index(name = "idx_user_id", columnList = "user_id"),
