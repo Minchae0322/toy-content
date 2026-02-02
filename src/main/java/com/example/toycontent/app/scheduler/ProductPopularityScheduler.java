@@ -4,6 +4,7 @@ package com.example.toycontent.app.scheduler;
 import com.example.toycontent.app.product.service.ProductPopularityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,6 +30,11 @@ public class ProductPopularityScheduler {
    * - 최근 활동이 있거나 dirty 마킹된 상품만 처리
    */
   @Scheduled(cron = "${scheduler.product-popularity.time-weight-update.cron}")
+  @SchedulerLock(
+      name = "productPopularity",
+      lockAtLeastFor = "30m",
+      lockAtMostFor = "50m"
+  )
   public void timeWeightUpdate() {
     if (!timeWeightEnabled) {
       log.debug("[제품 인기도] 시간 가중치 업데이트 스케줄러 OFF");
@@ -53,6 +59,11 @@ public class ProductPopularityScheduler {
    * 전체 재계산 (새벽 3시)
    * - 시간 감쇠 반영을 위해 전체 상품 재계산
    */
+  @SchedulerLock(
+      name = "productPopularity",
+      lockAtLeastFor = "1h",
+      lockAtMostFor = "6h"
+  )
   @Scheduled(cron = "${scheduler.product-popularity.full-recalculate.cron}")
   public void fullRecalculate() {
     if (!fullRecalculateEnabled) {
