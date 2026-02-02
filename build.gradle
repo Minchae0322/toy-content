@@ -41,6 +41,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
+    // Actuator (Health Check)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
@@ -48,7 +51,9 @@ dependencies {
     //webClient
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
-
+// ShedLock
+    implementation 'net.javacrumbs.shedlock:shedlock-spring:5.10.0'
+    implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:5.10.0'
 
     //validation
     implementation("org.springframework.boot:spring-boot-starter-validation")

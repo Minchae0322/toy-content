@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -32,6 +33,11 @@ public class BattleHotScoreScheduler {
    * - 최근 30분 내 활동이 있는 배틀만 처리
    */
   @Scheduled(cron = "${scheduler.hot-score.time-weight-update.cron}")
+  @SchedulerLock(
+      name = "productPopularity",
+      lockAtLeastFor = "15m",
+      lockAtMostFor = "25m"
+  )
   @Transactional
   public void timeWeightUpdate() {
     if (!timeWeightEnabled) {
@@ -67,6 +73,11 @@ public class BattleHotScoreScheduler {
    * - 시간 감쇠 반영을 위해 전체 배틀 재계산
    */
   @Scheduled(cron = "${scheduler.hot-score.full-recalculate.cron}")
+  @SchedulerLock(
+      name = "productPopularity",
+      lockAtLeastFor = "1h",
+      lockAtMostFor = "6h"
+  )
   @Transactional
   public void fullRecalculate() {
     if (!fullRecalculateEnabled) {

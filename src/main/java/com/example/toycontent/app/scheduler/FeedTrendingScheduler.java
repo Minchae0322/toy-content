@@ -3,6 +3,7 @@ package com.example.toycontent.app.scheduler;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,6 +29,11 @@ public class FeedTrendingScheduler {
    * 매일 자정: 트렌딩 상태 갱신 + 조회수 스냅샷
    */
   @Scheduled(cron = "${scheduler.feed-trending.cron}")
+  @SchedulerLock(
+      name = "productPopularity",
+      lockAtLeastFor = "1h",
+      lockAtMostFor = "6h"
+  )
   @Transactional
   public void updateTrendingAndSnapshot() {
     if (!enabled) {

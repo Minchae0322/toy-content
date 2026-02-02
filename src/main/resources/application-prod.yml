@@ -35,6 +35,24 @@ spring:
     hibernate:
       ddl-auto: none  # 운영에서는 반드시 none
 
+# Actuator 설정
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: never  # 상세정보 숨김 (보안)
+      probes:
+        enabled: true      # liveness, readiness probe 활성화
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
 external:
   user-service:
     protocol: https
