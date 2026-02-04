@@ -226,10 +226,10 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .add(feed.viewCount.multiply(0.1))
         .doubleValue();
 
-    // 시간 감쇠 계수: POWER(hoursSinceCreation + 2, 1.5)
+    // 시간 감쇠 계수: POWER(GREATEST(hoursSinceCreation + 2, 1), 1.5)
     NumberExpression<Double> decayFactor = Expressions.numberTemplate(
         Double.class,
-        "POWER({0} + 2, 1.5)",
+        "POWER(GREATEST({0} + 2, 1), 1.5)",
         hoursSinceCreation
     );
 
