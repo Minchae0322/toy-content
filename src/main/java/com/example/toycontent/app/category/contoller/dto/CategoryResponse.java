@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 
 public class CategoryResponse {
 
-    @Getter
+    @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
@@ -39,6 +39,9 @@ public class CategoryResponse {
 
         @Schema(title = "키워드")
         private String keywords;
+
+        @Schema(title = "해당 카테고리로 작성된 글 개수")
+        private Long contentCount;
 
         @Schema(title = "생성일시")
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

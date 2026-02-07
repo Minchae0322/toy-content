@@ -28,13 +28,23 @@ public class CategoryController {
     private final CategoryService categoryService;
 
 
-    @Operation(summary = "카테고리 목록 조회 (페이징)", description = "카테고리 목록을 페이징 처리하여 조회합니다.", hidden = true)
+    @Operation(summary = "카테고리 목록 조회 (페이징)", hidden = true)
     @GetMapping
     public ApiResponse<Page<ListView>> getCategoriesPages(
-            @PageableDefault(size = 20) Pageable pageable,
-            @ParameterObject CategorySearchCondition condition) {
+        @PageableDefault(size = 20) Pageable pageable,
+        @ParameterObject CategorySearchCondition.PageSearch condition) {
 
         Page<ListView> categories = categoryService.getCategoriesPages(pageable, condition);
+        return ApiResponse.success(categories);
+    }
+
+    @Operation(summary = "인기 카테고리 목록 조회", description = "콘텐츠 등록 수 기준으로 많이 사용된 카테고리를 조회합니다.")
+    @GetMapping("/popular")
+    public ApiResponse<Page<ListView>> getPopularCategories(
+        @PageableDefault(size = 20) Pageable pageable,
+        @ParameterObject CategorySearchCondition.PopularSearch condition) {
+
+        Page<ListView> categories = categoryService.getPopularCategories(pageable, condition);
         return ApiResponse.success(categories);
     }
 
