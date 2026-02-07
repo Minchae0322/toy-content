@@ -51,7 +51,7 @@ public class CategoryController {
     @Operation(summary = "카테고리 전체 목록 조회", description = "카테고리 전체 목록을 조회합니다.")
     @GetMapping("list")
     public ApiResponse<List<ListView>> getCategories(
-            @ParameterObject CategorySearchCondition condition) {
+            @ParameterObject CategorySearchCondition.PageSearch condition) {
 
         List<ListView> categories = categoryService.getCategories(condition);
         return ApiResponse.success(categories);
