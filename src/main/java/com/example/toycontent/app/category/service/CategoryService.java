@@ -6,10 +6,15 @@ import com.example.toycontent.app.category.contoller.dto.CategoryResponse.ListVi
 import com.example.toycontent.app.category.contoller.dto.CategorySearchCondition;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
+import com.example.toycontent.app.category.repository.dto.CategoryCountDto;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
-import jakarta.transaction.Transactional;
+
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -17,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +40,41 @@ public class CategoryService {
                         .map(ListView::from)
                         .toList(),
                 pageable, totalCount);
+    }
+
+
+
+    @Transactional(readOnly = true)
+    public Page<ListView> getPopularCategories(Pageable pageable,
+        CategorySearchCondition.PopularSearch condition) {
+
+        Page<CategoryCountDto> countPage = switch (condition.getType()) {
+            case BATTLE  -> categoryRepository.findPopularByBattle(pageable, condition);
+            case FEED    -> categoryRepository.findPopularByFeed(pageable, condition);
+            case PRODUCT -> categoryRepository.findPopularByProduct(pageable, condition);
+        };
+
+        if (countPage.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+
+        List<CategoryCountDto> counts = countPage.getContent();
+
+        Map<Long, Category> categoryMap = categoryRepository
+            .findAllById(counts.stream().map(CategoryCountDto::getCategoryId).toList())
+            .stream()
+            .collect(Collectors.toMap(Category::getId, Function.identity()));
+
+        List<ListView> result = counts.stream()
+            .filter(dto -> categoryMap.containsKey(dto.getCategoryId()))
+            .map(dto -> {
+                ListView view = ListView.from(categoryMap.get(dto.getCategoryId()));
+                view.setContentCount(dto.getContentCount());
+                return view;
+            })
+            .toList();
+
+        return new PageImpl<>(result, pageable, countPage.getTotalElements());
     }
 
 
