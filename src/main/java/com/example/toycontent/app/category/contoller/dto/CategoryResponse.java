@@ -4,6 +4,7 @@ import com.example.toycontent.app.category.domain.Category;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -146,12 +147,17 @@ public class CategoryResponse {
 
         public static SubCategoryDetail from(Category category) {
             return SubCategoryDetail.builder()
-                .categoryId(category.getParent().getId())
-                .categoryName(category.getParent().getName())
+                .categoryId(Optional.ofNullable(category.getParent())
+                    .map(Category::getId)
+                    .orElse(null))
+                .categoryName(Optional.ofNullable(category.getParent())
+                    .map(Category::getName)
+                    .orElse(null))
                 .subCategoryId(category.getId())
                 .subCategoryName(category.getName())
                 .build();
         }
+
     }
 
 
