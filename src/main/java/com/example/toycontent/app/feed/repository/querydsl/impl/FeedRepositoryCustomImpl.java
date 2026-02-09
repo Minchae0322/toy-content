@@ -5,15 +5,12 @@ import static com.example.toycontent.app.feed.domain.QFeedAttachmentFile.feedAtt
 import static com.example.toycontent.app.feed.domain.QFeedHashtag.feedHashtag;
 import static com.example.toycontent.app.feed.domain.QFeedReaction.feedReaction;
 import static com.example.toycontent.app.hashtag.domain.QHashtag.hashtag;
-import static com.example.toycontent.app.product.domain.QProductAttachmentFile.productAttachmentFile;
 
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.HotFeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.QFeed;
-import com.example.toycontent.app.feed.domain.QFeedAttachmentFile;
-import com.example.toycontent.app.feed.domain.QFeedReaction;
 import com.example.toycontent.app.feed.repository.querydsl.FeedRepositoryCustom;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.querydsl.core.types.Projections;
@@ -45,7 +42,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .distinct()
         .where(
             cursorIdLt(condition.getCursor()),
-            categoryEq(condition.getCategoryId()),
+            categoryEq(condition.getCategoryId(), condition.getCategoryDepth()),
             creatorIdEq(condition.getCreatorId()),
             feed.isDeleted.isFalse()
         )
@@ -247,10 +244,17 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .orElse(null);
   }
 
-  private BooleanExpression categoryEq(Long categoryId) {
-    return categoryId != null ? feed.category.id.eq(categoryId) : null;
-  }
+  private BooleanExpression categoryEq(Long categoryId, Integer depth) {
+    if (categoryId == null) return null;
 
+    if (depth != null && depth <= 1) {
+      // 상위 카테고리 선택 시 자신 + 하위 카테고리 포함
+      return feed.category.id.eq(categoryId)
+          .or(feed.category.parent.id.eq(categoryId));
+    }
+
+    return feed.category.id.eq(categoryId);
+  }
 
   private BooleanExpression creatorIdEq(Long creatorId) {
     return creatorId != null ? feed.userId.eq(creatorId) : null;

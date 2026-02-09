@@ -17,6 +17,9 @@ public class ProductSearchCondition {
   @Schema(description = "카테고리 ID", example = "1")
   private Long categoryId;
 
+  @Schema(description = "카테고리 뎁스", example = "1")
+  private Integer categoryDepth;
+
   @Schema(description = "브랜드명", example = "스타벅스")
   private String brand;
 
