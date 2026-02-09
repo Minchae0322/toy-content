@@ -58,9 +58,9 @@ public abstract class BattleRequest {
     private VoteType voteType;
 
 
-    @Schema(description = "배틀 아이템 목록 (2~20개)")
+    @Schema(description = "배틀 아이템 목록 (1~20개)")
     @Valid
-    @Size(min = 2, max = 20, message = "아이템은 2~20개 사이여야 합니다")
+    @Size(min = 1, max = 20, message = "아이템은 1~20개 사이여야 합니다")
     private List<ItemRequest> items;
 
     @Schema(description = "대표이미지")

@@ -113,35 +113,39 @@ public class BattleItem extends BaseTimeEntity {
   @OneToMany(fetch = FetchType.LAZY, mappedBy = "battleItem")
   private List<BattleVote> battleVotes = new ArrayList<>();
 
-  /**
-   * 투표 수 증가
-   */
-  public void incrementVote() {
+  // ========== 투표 수 ==========
+
+  /** 투표 반영 시 득표 수 증가 */
+  public void incrementVoteCount() {
     this.voteCount++;
   }
 
+  /** 복수 투표 재투표 시, 기존 득표를 되돌릴 때 감소 */
+  public void decrementVoteCount() {
+    this.voteCount = Math.max(0, this.voteCount - 1);
+  }
+
+  // ========== 점수 ==========
 
   /**
-   * 점수 추가
-   * - SINGLE 투표: 1점
-   * - MULTIPLE 투표: 1위=3점, 2위=2점, 3위=1점
-   * @param score 추가할 점수
+   * 투표 반영 시 점수 증가
+   * - SINGLE 투표: 한 표당 고정 점수
+   * - MULTIPLE 투표: 순위에 따라 차등 점수
    */
   public void addScore(int score) {
     this.totalScore += score;
   }
 
-  /**
-   * 점수 차감 (투표 취소 시)
-   * @param score 차감할 점수
-   */
+  /** 복수 투표 재투표 시, 기존 점수를 되돌릴 때 감소 */
   public void subtractScore(int score) {
     this.totalScore = Math.max(0, this.totalScore - score);
   }
 
+  // ========== 상태 변경 ==========
+
   /**
-   * 신고 수 증가
-   * 3회 이상 신고 시 자동으로 검토중 상태로 변경
+   * 신고 접수 시 신고 수 증가
+   * 누적 신고가 기준치 이상이면 자동으로 검토 대기 상태로 전환
    */
   public void incrementReport() {
     this.reportCount++;
@@ -150,71 +154,46 @@ public class BattleItem extends BaseTimeEntity {
     }
   }
 
-  /**
-   * 아이템 제외 처리
-   * 배틀에서 제외되며 투표 불가
-   */
+  /** 관리자 검토 후 아이템 제외 처리 (투표 불가) */
   public void exclude() {
     this.status = BattleItemStatus.EXCLUDED;
   }
 
-  /**
-   * 아이템 승인 처리
-   * 검토 완료 후 다시 활성화
-   */
+  /** 관리자 검토 완료 후 다시 활성화 */
   public void approve() {
     this.status = BattleItemStatus.ACTIVE;
   }
 
-  /**
-   * Soft Delete
-   */
+  /** 논리 삭제 */
   public void softDelete() {
     this.isDeleted = true;
   }
 
-  // ========== Helper 메서드 ==========
+  // ========== 조회 헬퍼 ==========
 
-  /**
-   * 제품명 조회
-   * Product가 있으면 Product 정보, 없으면 커스텀 정보 반환
-   */
+  /** Product가 있으면 Product 정보, 없으면 커스텀 정보 반환 */
   public String getName() {
     return product != null ? product.getName() : customName;
   }
 
-  /**
-   * 브랜드명 조회
-   * Product가 있으면 Product 정보, 없으면 커스텀 정보 반환
-   */
+  /** Product가 있으면 Product 정보, 없으면 커스텀 정보 반환 */
   public String getBrand() {
     return product != null ? product.getBrand() : customBrand;
   }
 
-  /**
-   * 커스텀 아이템 여부 확인
-   */
+  /** 커스텀 아이템 여부 (Product 없이 직접 등록된 아이템) */
   public boolean isCustomItem() {
     return product == null;
   }
 
-
-  /**
-   * 활성 상태 여부 확인
-   */
+  /** 활성 상태이며 삭제되지 않은 아이템인지 확인 */
   public boolean isActive() {
     return status == BattleItemStatus.ACTIVE && !isDeleted;
   }
 
-  /**
-   * 투표 가능 여부 확인
-   */
+  /** 투표 가능 여부 (활성 상태일 때만 투표 가능) */
   public boolean canVote() {
-    return isActive() && status == BattleItemStatus.ACTIVE;
-  }
-
-  // BattleItem.java
-  public void incrementVoteCount(int delta) {
-    this.voteCount += delta;
+    return isActive();
   }
 }
+

@@ -43,7 +43,7 @@ public class BattleItemService {
    */
   @Transactional
   public void addBattleItems(Long battleId, Long userId, BattleRequest.AddBattleItems request) {
-    Battle battle = getBattleByIdOrElseThrow(battleId);
+    Battle battle = getBattleById(battleId);
     List<ItemRequest> items = request.getItems();
 
     validateItemAddition(battle, userId, items);
@@ -130,7 +130,7 @@ public class BattleItemService {
    */
   @Transactional
   public void approveBattleItem(Long battleId, Long itemId, Long userId) {
-    Battle battle = getBattleByIdOrElseThrow(battleId);
+    Battle battle = getBattleById(battleId);
     validateBattleCreator(battle, userId);
 
     BattleItem item = battleItemRepository.findById(itemId)
@@ -153,7 +153,7 @@ public class BattleItemService {
    */
   @Transactional
   public void excludeBattleItem(Long battleId, Long itemId, Long userId) {
-    Battle battle = getBattleByIdOrElseThrow(battleId);
+    Battle battle = getBattleById(battleId);
     validateBattleCreator(battle, userId);
 
     BattleItem item = battleItemRepository.findById(itemId)
@@ -167,37 +167,85 @@ public class BattleItemService {
   }
 
   /**
-   * 배틀 아이템 투표
+   * 배틀 아이템에 투표한다.
+   * - 단일 투표(SINGLE): 하나의 아이템에만 투표 가능, 재투표 불가
+   * - 복수 투표(MULTIPLE): 여러 아이템에 투표 가능, 재투표 시 기존 투표를 삭제하고 새로 반영
    */
   @Transactional
   public void vote(Long battleId, Long currentUserId, BattleVoteRequest.Vote request) {
-    Battle battle = getBattleByIdOrElseThrow(battleId);
+    Battle battle = getBattleById(battleId);
+    List<BattleVoteRequest.VoteItem> voteItems = request.getVotes();
+    List<BattleVote> existingVotes = battleVoteRepository.findByBattle_IdAndUserId(battleId, currentUserId);
 
-    validateAndHandleExistingVotes(battle, currentUserId, request);
+    if (battle.isSingleVote()) {
+      validateSingleVote(voteItems, existingVotes.size());
+    } else {
+      validateMultipleVote(voteItems);
+      removeExistingVotesIfPresent(battle, existingVotes);
+    }
 
-    List<BattleVote> votes = createVotes(battle, currentUserId, request.getVotes());
-    battleVoteRepository.saveAll(votes);
-
-    updateVoteStatistics(battle, votes, true);
+    List<BattleVote> newVotes = createVotes(battle, currentUserId, voteItems);
+    battleVoteRepository.saveAll(newVotes);
+    applyVoteStatistics(battle, newVotes);
   }
 
   /**
-   * 투표 검증 및 기존 투표 처리
+   * 복수 투표 시, 기존 투표가 있으면 통계를 되돌리고 삭제한다.
+   * 단일 투표는 재투표 자체가 불가능하므로 이 메서드를 호출하지 않는다.
    */
-  private void validateAndHandleExistingVotes(Battle battle, Long userId, BattleVoteRequest.Vote request) {
-    List<BattleVoteRequest.VoteItem> voteItems = request.getVotes();
-    List<BattleVote> existingVotes = battleVoteRepository.findByBattle_IdAndUserId(battle.getId(),
-        userId);
-
-    if (VoteType.SINGLE.equals(battle.getVoteType())) {
-      validateSingleVote(voteItems, existingVotes.size());
+  private void removeExistingVotesIfPresent(Battle battle, List<BattleVote> existingVotes) {
+    if (existingVotes.isEmpty()) {
       return;
     }
 
-    // MULTIPLE 타입
-    validateMultipleVote(voteItems);
-    handleExistingVotesIfPresent(battle, existingVotes);
+    rollbackVoteStatistics(battle, existingVotes);
+    battle.getVotes().removeAll(existingVotes);
+    battleVoteRepository.deleteAll(existingVotes);
   }
+
+  /**
+   * 새로운 투표를 통계에 반영한다.
+   * - 참여자 수 증가
+   * - 총 투표 수 증가 (단일: 한 표, 복수: 투표한 아이템 수만큼)
+   * - 각 아이템의 득표 수와 점수 증가
+   */
+  private void applyVoteStatistics(Battle battle, List<BattleVote> votes) {
+    battle.incrementTotalParticipants();
+
+    int voteCount = battle.isSingleVote() ? 1 : votes.size();
+    battle.addTotalVotes(voteCount);
+
+    votes.forEach(vote -> {
+      BattleItem item = vote.getBattleItem();
+      int score = calculateScore(battle.getVoteType(), vote.getVoteRank());
+
+      item.incrementVoteCount();
+      item.addScore(score);
+      battle.addTotalScore(score);
+    });
+  }
+
+  /**
+   * 기존 투표를 통계에서 되돌린다.
+   * applyVoteStatistics의 역연산으로, 복수 투표 재투표 시 사용된다.
+   */
+  private void rollbackVoteStatistics(Battle battle, List<BattleVote> votes) {
+    battle.decrementTotalParticipants();
+
+    int voteCount = battle.isSingleVote() ? 1 : votes.size();
+    battle.subtractTotalVotes(voteCount);
+
+    votes.forEach(vote -> {
+      BattleItem item = vote.getBattleItem();
+      int score = calculateScore(battle.getVoteType(), vote.getVoteRank());
+
+      item.decrementVoteCount();
+      item.subtractScore(score);
+      battle.subtractTotalScore(score);
+    });
+  }
+
+
 
   /**
    * 1인 1표 검증
@@ -228,48 +276,6 @@ public class BattleItemService {
     }
   }
 
-  /**
-   * 기존 투표 처리 (수정 로직)
-   */
-  private void handleExistingVotesIfPresent(Battle battle,  List<BattleVote> existingVotes) {
-    if (existingVotes.isEmpty()) {
-      return;
-    }
-
-    updateVoteStatistics(battle, existingVotes, false);
-
-    battle.getVotes().removeAll(existingVotes);
-    battleVoteRepository.deleteAll(existingVotes);
-  }
-
-  /**
-   * 투표 통계 업데이트
-   */
-  private void updateVoteStatistics(Battle battle, List<BattleVote> votes, boolean isAdd) {
-    int delta = isAdd ? 1 : -1;
-
-    battle.incrementTotalParticipants(delta);
-
-    int voteCountDelta = (battle.getVoteType() == VoteType.SINGLE)
-        ? delta
-        : votes.size() * delta;
-    battle.incrementTotalVotes(voteCountDelta);
-
-    // voteCount 및 totalScore 업데이트
-    votes.forEach(vote -> {
-      BattleItem item = vote.getBattleItem();
-      item.incrementVoteCount(delta);
-
-      int score = calculateScore(battle.getVoteType(), vote.getVoteRank());
-      if (isAdd) {
-        item.addScore(score);
-        battle.addTotalScore(score);
-      } else {
-        item.subtractScore(score);
-        battle.subtractTotalScore(score);
-      }
-    });
-  }
 
   /**
    * 투표 타입과 순위에 따른 점수 계산
@@ -295,21 +301,18 @@ public class BattleItemService {
    */
   @Transactional
   public void cancelVote(Long battleId, Long userId) {
-    Battle battle = getBattleByIdOrElseThrow(battleId);
+    Battle battle = getBattleById(battleId);
 
-    List<BattleVote> votes = battleVoteRepository.findByBattleAndUserId(
-        battle, userId);
+    List<BattleVote> votes = battleVoteRepository.findByBattleAndUserId(battle, userId);
 
     if (votes.isEmpty()) {
       throw new RestApiException(BattleErrorCode.VOTE_NOT_FOUND);
     }
 
-    // 비정규화 컬럼 업데이트 (취소 전에 먼저)
-    updateVoteStatistics(battle, votes, false);
+    rollbackVoteStatistics(battle, votes);
 
     battle.getVotes().removeAll(votes);
     battleVoteRepository.deleteAll(votes);
-
   }
 
 
@@ -350,7 +353,7 @@ public class BattleItemService {
    */
   @Transactional
   public void reportBattleItem(Long battleId, Long itemId, Long userId, BattleRequest.Report request) {
-    Battle battle = getBattleByIdOrElseThrow(battleId);
+    Battle battle = getBattleById(battleId);
 
     BattleItem item = battleItemRepository.findById(itemId)
         .orElseThrow(() -> new RestApiException(BattleErrorCode.BATTLE_ITEM_NOT_FOUND));
@@ -381,7 +384,7 @@ public class BattleItemService {
   }
 
 
-  private Battle getBattleByIdOrElseThrow(Long battleId) {
+  private Battle getBattleById(Long battleId) {
     return battleRepository.findById(battleId)
         .orElseThrow(() -> new RestApiException(BattleErrorCode.BATTLE_NOT_FOUND));
   }
