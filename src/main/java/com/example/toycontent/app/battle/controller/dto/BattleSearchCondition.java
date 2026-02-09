@@ -18,6 +18,9 @@ public class BattleSearchCondition {
   @Parameter(description = "카테고리")
   private Long category;
 
+  @Parameter(description = "카테고리 뎁스")
+  private Integer categoryDepth;
+
   @Parameter(description = "배틀 상태 (NORMAL, SUSPENDED, EARLY_CLOSED)")
   private BattleStatus status;
 

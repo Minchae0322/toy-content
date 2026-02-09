@@ -30,6 +30,9 @@ public abstract class FeedCondition {
     @Parameter(description = "카테고리 ID")
     private Long categoryId;
 
+    @Parameter(description = "카테고리 depth")
+    private Integer categoryDepth;
+
     @Parameter(description = "해시태그 목록")
     private List<String> hashtags;
 

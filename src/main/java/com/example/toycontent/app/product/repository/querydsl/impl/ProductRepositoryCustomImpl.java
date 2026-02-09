@@ -15,6 +15,7 @@ import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -136,7 +137,13 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             .or(product.brand.contains(keyword)));
 
     Optional.ofNullable(searchCondition.getCategoryId())
-        .ifPresent(id -> builder.and(product.category.id.eq(id)));
+        .ifPresent(id -> {
+          BooleanExpression categoryCondition = searchCondition.getCategoryDepth() != null && searchCondition.getCategoryDepth() <= 1
+              ? product.category.id.eq(id)
+              .or(product.category.parent.id.eq(id))
+              : product.category.id.eq(id);
+          builder.and(categoryCondition);
+        });
 
     Optional.ofNullable(searchCondition.getStatus())
         .ifPresent(status -> builder.and(product.status.eq(status)));
