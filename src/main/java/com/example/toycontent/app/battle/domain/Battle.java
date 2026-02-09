@@ -143,26 +143,12 @@ public class Battle extends BaseTimeEntity {
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<BattleAttachmentFile> battleAttachmentFiles = new ArrayList<>();
 
-
-  public void addTotalScore(Integer score) {
-    this.totalScore += score;
-  }
-  public void subtractTotalScore(Integer score) {
-    this.totalScore = Math.max(0, this.totalScore - score);
-
-  }
-
   public void incrementTotalVotes(int delta) {
     this.totalVotes += delta;
   }
 
   public void incrementTotalParticipants(int delta) {
     this.totalParticipants += delta;
-  }
-
-  public void incrementTotalViews() {
-    this.totalViews++;
-
   }
 
   /**
@@ -185,6 +171,56 @@ public class Battle extends BaseTimeEntity {
     double timeDecay = Math.pow(hoursSinceStart + 2, 1.5); // +2는 0으로 나누기 방지
 
     return baseScore / timeDecay;
+  }
+
+  // ========== 투표 타입 판별 ==========
+
+  /** 단일 투표 타입인지 확인 */
+  public boolean isSingleVote() {
+    return VoteType.SINGLE.equals(this.voteType);
+  }
+
+  // ========== 참여자 수 ==========
+
+  /** 새로운 참여자가 투표했을 때 참여자 수 증가 */
+  public void incrementTotalParticipants() {
+    this.totalParticipants++;
+  }
+
+  /** 복수 투표 재투표 시, 기존 참여 기록을 되돌릴 때 참여자 수 감소 */
+  public void decrementTotalParticipants() {
+    this.totalParticipants = Math.max(0, this.totalParticipants - 1);
+  }
+
+  // ========== 투표 수 ==========
+
+  /** 투표 반영 시 투표 수 증가 (단일: 한 표, 복수: 투표한 아이템 수만큼) */
+  public void addTotalVotes(int count) {
+    this.totalVotes += count;
+  }
+
+  /** 복수 투표 재투표 시, 기존 투표 수를 되돌릴 때 감소 */
+  public void subtractTotalVotes(int count) {
+    this.totalVotes = Math.max(0, this.totalVotes - count);
+  }
+
+  // ========== 점수 ==========
+
+  /** 투표 반영 시 총 점수 증가 */
+  public void addTotalScore(int score) {
+    this.totalScore += score;
+  }
+
+  /** 복수 투표 재투표 시, 기존 점수를 되돌릴 때 감소 */
+  public void subtractTotalScore(int score) {
+    this.totalScore = Math.max(0, this.totalScore - score);
+  }
+
+  // ========== 조회 수 ==========
+
+  /** 배틀 상세 조회 시 조회 수 증가 */
+  public void incrementTotalViews() {
+    this.totalViews++;
   }
 
 
