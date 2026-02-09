@@ -55,6 +55,9 @@ public abstract class BattleResponse {
     @Schema(description = "총 조회 수", example = "523")
     private Integer totalViews;
 
+    @Schema(description = "배틀 상태", example = "ACTIVE")
+    private BattleStatus status;
+
   }
 
   @Schema(description = "배틀 목록 조회 응답")

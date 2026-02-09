@@ -117,6 +117,7 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
             battle.totalParticipants,
             battle.totalVotes,
             battle.totalViews,
+            battle.status,
             // 썸네일 DTO 매핑
             Projections.fields(AttachmentFileResponse.class,
                 battleAttachmentFile.id,
@@ -206,8 +207,12 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
 
     // 카테고리 필터
     if (condition.getCategory() != null) {
-      builder.and(battle.category.id.eq(condition.getCategory())
-          .or(battle.category.parent.id.eq(condition.getCategory())));
+      if (condition.getCategoryDepth() != null && condition.getCategoryDepth() <= 1) {
+        builder.and(battle.category.id.eq(condition.getCategory())
+            .or(battle.category.parent.id.eq(condition.getCategory())));
+      } else {
+        builder.and(battle.category.id.eq(condition.getCategory()));
+      }
     }
 
     // 배틀 상태 필터
