@@ -131,6 +131,7 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
         .from(battle)
         .leftJoin(battle.battleAttachmentFiles, battleAttachmentFile)
         .on(battleAttachmentFile.isPrimary.isTrue())
+        .where(battle.isDeleted.isFalse())
         .orderBy(battle.hotScore.desc())
         .offset(0)
         .limit(10)
