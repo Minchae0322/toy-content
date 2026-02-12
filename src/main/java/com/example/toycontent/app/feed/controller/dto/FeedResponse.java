@@ -263,6 +263,9 @@ public abstract class FeedResponse {
     @Schema(description = "생성일시", example = "2025-02-12 14:30:00")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+
+    @Schema(description = "구매처")
+    private String buyPlace;
   }
 
   @Getter
