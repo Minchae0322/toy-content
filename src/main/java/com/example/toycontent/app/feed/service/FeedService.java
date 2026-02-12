@@ -54,7 +54,7 @@ public class FeedService {
   private final ExternalUserFollowingService externalUserFollowingService;
   private final FeedReactionRepository feedReactionRepository;
 
-  private static final int HOT_FEED_RECENT_DAYS = 7;
+  private static final int HOT_FEED_RECENT_DAYS = 30;
   
   /**
    * 피드 목록 조회 (커서 페이징) - 탐색/검색용
@@ -136,16 +136,6 @@ public class FeedService {
     return feedRepository.findAllByHotScore(HOT_FEED_RECENT_DAYS, pageable);
   }
 
-
-  /**
-   * 피드 전체 목록 조회
-   */
-  public List<FeedResponse.ListView> getFeedList(FeedCondition condition, Long userId) {
-    List<Feed> feeds = feedRepository.findFeedsWithSearchCondition(condition);
-    Map<Long, List<FeedReaction>> userReactionsMap = getUserReactionsByFeedId(feeds, userId);
-
-    return toListView(feeds, userReactionsMap);
-  }
 
   /**
    * 피드 단건 조회
