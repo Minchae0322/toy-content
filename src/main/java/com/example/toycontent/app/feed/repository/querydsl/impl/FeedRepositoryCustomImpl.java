@@ -5,6 +5,7 @@ import static com.example.toycontent.app.feed.domain.QFeedAttachmentFile.feedAtt
 import static com.example.toycontent.app.feed.domain.QFeedHashtag.feedHashtag;
 import static com.example.toycontent.app.feed.domain.QFeedReaction.feedReaction;
 import static com.example.toycontent.app.hashtag.domain.QHashtag.hashtag;
+import static com.example.toycontent.app.product.domain.QProduct.product;
 
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.HotFeedResponse;
@@ -13,6 +14,8 @@ import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.QFeed;
 import com.example.toycontent.app.feed.repository.querydsl.FeedRepositoryCustom;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
@@ -22,9 +25,12 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Repository;
 
@@ -187,7 +193,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .on(feedAttachmentFile.feed.id.eq(feed.id)
             .and(feedAttachmentFile.isPrimary.eq(true)))
         .where(feed.createdAt.goe(thresholdDate))
-        .orderBy(hotScore.desc(), feed.createdAt.desc())
+        .orderBy(getOrderSpecifier(pageable.getSort(), hotScore))
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize())
         .fetch();
@@ -200,7 +206,36 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
     return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
   }
 
+  /**
+   * 정렬 조건 변환
+   * - 미지정: hotScore DESC → createdAt DESC
+   * - hotScore 지정: hotScore → createdAt DESC (tiebreaker)
+   * - 그 외: 해당 필드 단독 정렬
+   */
+  private OrderSpecifier<?>[] getOrderSpecifier(Sort sort, NumberExpression<Double> hotScore) {
+    OrderSpecifier<?> hotScoreDesc = new OrderSpecifier<>(Order.DESC, hotScore);
+    OrderSpecifier<?> createdAtDesc = new OrderSpecifier<>(Order.DESC, feed.createdAt);
 
+    if (sort.isUnsorted()) {
+      return new OrderSpecifier<?>[]{ hotScoreDesc, createdAtDesc };
+    }
+
+    return sort.stream()
+        .flatMap(order -> {
+          Order direction = order.isAscending() ? Order.ASC : Order.DESC;
+          return switch (order.getProperty()) {
+            case "hotScore" -> Stream.of(
+                new OrderSpecifier<>(direction, hotScore), createdAtDesc);
+            case "createdAt"    -> Stream.of(new OrderSpecifier<>(direction, feed.createdAt));
+            case "viewCount"    -> Stream.of(new OrderSpecifier<>(direction, feed.viewCount));
+            case "likeCount"    -> Stream.of(new OrderSpecifier<>(direction, feed.likeCount));
+            case "hotCount"     -> Stream.of(new OrderSpecifier<>(direction, feed.hotCount));
+            case "commentCount" -> Stream.of(new OrderSpecifier<>(direction, feed.commentCount));
+            default -> Stream.of(hotScoreDesc, createdAtDesc);
+          };
+        })
+        .toArray(OrderSpecifier<?>[]::new);
+  }
 
 
   /**

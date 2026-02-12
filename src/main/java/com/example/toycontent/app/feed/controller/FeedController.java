@@ -24,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -68,36 +70,26 @@ public class FeedController {
   @Operation(
       summary = "핫 피드 목록 조회",
       description = """
-          인기도 점수가 높은 피드를 조회합니다.
+                    인기도 점수가 높은 피드를 조회합니다.
           
-          **핫 스코어 계산 공식:**
-```
-          hotScore = (좋아요 * 2 + 핫 * 3 + 조회수 * 0.1) / 시간 감쇠 계수
-          시간 감쇠 계수 = (경과 시간(시) + 2)^1.5
-```
+                    **핫 스코어 계산 공식:**
+          ```
+                    hotScore = (좋아요 * 2 + 핫 * 3 + 조회수 * 0.1) / 시간 감쇠 계수
+                    시간 감쇠 계수 = (경과 시간(시) + 2)^1.5
+          ```
           
-          **특징:**
-          - 최근 게시물일수록 높은 점수
-          - 좋아요보다 핫 리액션에 더 높은 가중치
-          - 시간이 지날수록 점수 자동 하락
-          - Reddit/Hacker News 알고리즘 적용
+                    **특징:**
+                    - 최근 게시물일수록 높은 점수
+                    - 좋아요보다 핫 리액션에 더 높은 가중치
+                    - 시간이 지날수록 점수 자동 하락
+                    - Reddit/Hacker News 알고리즘 적용
           """
   )
   @GetMapping("/hot")
   public ResponseEntity<ApiResponse<Page<HotFeedResponse>>> getHotFeeds(
-      @ParameterObject Pageable pageable) {
+      @ParameterObject @PageableDefault(sort = "hotScore", direction = Sort.Direction.DESC) Pageable pageable) {
 
     Page<FeedResponse.HotFeedResponse> feeds = feedService.getHotFeeds(pageable);
-    return ResponseEntity.ok(ApiResponse.success(feeds));
-  }
-
-  @Operation(summary = "피드 전체 목록 조회", description = "피드 전체 목록을 조회합니다.")
-  @GetMapping("/list")
-  public ResponseEntity<ApiResponse<List<ListView>>> getFeedList(
-      @ParameterObject @ModelAttribute FeedCondition condition,
-      @CurrentUserId(required = false) Long userId) {
-
-    List<FeedResponse.ListView> feeds = feedService.getFeedList(condition, userId);
     return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 
