@@ -260,8 +260,7 @@ public abstract class FeedResponse {
     @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
     private FeedEvaluation feedEvaluation;
 
-    @Schema(description = "생성일시", example = "2025-02-12 14:30:00")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @Schema(description = "생성일시")
     private LocalDateTime createdAt;
 
     @Schema(description = "구매처")
