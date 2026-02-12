@@ -10,6 +10,7 @@ import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedHashtag;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -258,6 +259,10 @@ public abstract class FeedResponse {
 
     @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
     private FeedEvaluation feedEvaluation;
+
+    @Schema(description = "생성일시", example = "2025-02-12 14:30:00")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt;
   }
 
   @Getter
