@@ -179,6 +179,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
                 feed.review
             ).as("reviewSummary"),
             feed.evaluation.as("feedEvaluation"),
+            feed.createdAt.as("createdAt"),
             Projections.fields(AttachmentFileResponse.class,
                 feedAttachmentFile.id,
                 feedAttachmentFile.orgFileNm,
