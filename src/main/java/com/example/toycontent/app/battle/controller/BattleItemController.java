@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.*;
 public class BattleItemController {
 
   private final BattleItemService battleItemService;
-  private final BattleItemCommentService battleItemCommentService;
 
   @Operation(summary = "배틀 아이템 추가")
   @PostMapping
@@ -92,13 +91,5 @@ public class BattleItemController {
     return ResponseEntity.ok(ApiResponse.success(null, "신고가 접수되었습니다."));
   }
 
-  @Operation(summary = "배틀 전체 코멘트 조회", description = "정렬: ?sort=likeCount,desc (공감순) / ?sort=createdAt,desc (최신순)")
-  @GetMapping("/{battleId}/comments")
-  public ResponseEntity<ApiResponse<Slice<Detail>>> getBattleComments(
-      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
-      @CurrentUserId(required = false) Long userId,
-      @PageableDefault(size = 10, sort = "likeCount", direction = Sort.Direction.DESC) Pageable pageable) {
-    return ResponseEntity.ok(ApiResponse.success(
-        battleItemCommentService.getBattleComments(battleId, userId, pageable)));
-  }
+
 }
