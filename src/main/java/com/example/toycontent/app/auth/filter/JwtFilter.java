@@ -89,7 +89,10 @@ public class JwtFilter extends OncePerRequestFilter {
                     // 배틀 관련
                     || path.equals("/battles")
                     || path.equals("/battles/hot")
-                    || path.matches("/battles/\\d+");
+                    || path.matches("/battles/\\d+")
+                    // 배틀 코멘트
+                    || path.matches("/battles/\\d+/comments")
+                    || path.matches("/battles/\\d+/items/\\d+/comments");
         }
         return false;
     }

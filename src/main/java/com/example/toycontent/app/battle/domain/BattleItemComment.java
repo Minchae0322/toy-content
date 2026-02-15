@@ -51,6 +51,10 @@ public class BattleItemComment extends BaseTimeEntity {
   @Comment("작성자")
   private Long creatorId;
 
+  @Column(name = "creator_nickname", nullable = false, length = 30)
+  @Comment("작성자 닉네임 (작성 시점 스냅샷)")
+  private String creatorNickname;
+
   @Column(nullable = false, length = 100)
   @Comment("변론 내용 (최대 40자, 여유분 포함)")
   private String content;

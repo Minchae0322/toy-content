@@ -2,6 +2,7 @@ package com.example.toycontent.app.battle.service;
 
 import static com.example.toycontent.app.common.utils.BattleItemRankingCalculator.setRanking;
 
+import com.example.toycontent.app.battle.controller.dto.BattleItemCommentResponse.BattleItemCommentSummary;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
@@ -12,6 +13,7 @@ import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleAttachmentFile;
 import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.repository.BattleAttachmentFileRepository;
+import com.example.toycontent.app.battle.repository.BattleItemCommentRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.battle.repository.BattleRepository;
 import com.example.toycontent.app.battle.repository.BattleVoteRepository;
@@ -27,6 +29,7 @@ import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -51,6 +54,7 @@ public class BattleService {
   private final ExternalUserInfoService externalUserInfoService;
   private final BattleAttachmentFileRepository battleAttachmentFileRepository;
   private final BattleVoteRepository battleVoteRepository;
+  private final BattleItemCommentRepository battleItemCommentRepository;
 
 
   private static final int MAX_ACTIVE_BATTLES = 10;
@@ -121,9 +125,6 @@ public class BattleService {
     return battleRepository.findHotBattlesWithSearchCondition();
   }
 
-  /**
-   * 배틀 상세 조회
-   */
   @Transactional
   public BattleResponse.BattleDetail getBattleDetail(Long battleId, Long currentUserId) {
     // 배틀 조회 및 생성자 정보 가져오기
@@ -142,10 +143,25 @@ public class BattleService {
     List<BattleItem> battleItems = battleItemRepository.findByBattleIdWithBattleVote(
         battleId, currentUserId, status);
 
-    // DTO 변환
+    // 아이템별 BEST 코멘트 + 코멘트 수 일괄 조회 (아이템 없으면 빈 맵)
+    List<Long> itemIds = battleItems.stream()
+        .map(BattleItem::getId)
+        .toList();
+
+    Map<Long, BattleItemCommentSummary> commentSummaryMap = itemIds.isEmpty()
+        ? Collections.emptyMap()
+        : battleItemCommentRepository.findBestCommentsAndCountByItemIds(itemIds)
+            .stream()
+            .map(BattleItemCommentSummary::from)
+            .collect(Collectors.toMap(
+                BattleItemCommentSummary::getBattleItemId,
+                summary -> summary
+            ));
+
+    // DTO 변환 (아이템 정보 + 코멘트 요약 조합 후 랭킹 부여)
     List<BattleItemInfo> items = setRanking(
         battleItems.stream()
-            .map(BattleItemInfo::from)
+            .map(item -> BattleItemInfo.from(item, commentSummaryMap.get(item.getId())))
             .collect(Collectors.toList())
     );
 

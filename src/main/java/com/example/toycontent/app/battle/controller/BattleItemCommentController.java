@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -40,21 +41,23 @@ public class BattleItemCommentController {
       @Parameter(description = "배틀 아이템 ID") @PathVariable Long itemId,
       @CurrentUserId Long userId,
       @Valid @RequestBody BattleItemCommentRequest.Create request) {
+
     commentService.createComment(battleId, itemId, userId, request);
+
     return ResponseEntity.ok(ApiResponse.success(null, "코멘트가 등록되었습니다."));
   }
 
-  @Operation(summary = "코멘트 목록 조회")
+  @Operation(summary = "코멘트 목록 조회", description = "정렬: ?sort=likeCount,desc (공감순) / ?sort=createdAt,desc (최신순)")
   @GetMapping
   public ResponseEntity<ApiResponse<Slice<BattleItemCommentResponse.Detail>>> getComments(
       @Parameter(description = "배틀 ID") @PathVariable Long battleId,
       @Parameter(description = "배틀 아이템 ID") @PathVariable Long itemId,
-      @Parameter(description = "정렬 기준 (likes: 공감순, latest: 최신순)") @RequestParam(defaultValue = "likes") String sort,
-      @CurrentUserId Long userId,
-      @PageableDefault(size = 10) Pageable pageable) {
+      @CurrentUserId(required = false) Long userId,
+      @PageableDefault(size = 10, sort = "likeCount", direction = Sort.Direction.DESC) Pageable pageable) {
     return ResponseEntity.ok(ApiResponse.success(
-        commentService.getComments(battleId, itemId, userId, sort, pageable)));
+        commentService.getComments(battleId, itemId, userId, pageable)));
   }
+
 
   @Operation(summary = "코멘트 수정")
   @PutMapping("/{commentId}")

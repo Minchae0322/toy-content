@@ -20,10 +20,10 @@ public abstract class BattleItemCommentResponse {
     private Long battleItemId;
 
     @Schema(description = "작성자 ID")
-    private Long memberId;
+    private Long creatorId;
 
-    @Schema(description = "작성자 닉네임")
-    private String nickname;
+    @Schema(description = "작성자 닉네임 (작성 시점)")
+    private String creatorNickname;
 
     @Schema(description = "코멘트 내용")
     private String content;
@@ -51,5 +51,50 @@ public abstract class BattleItemCommentResponse {
 
     @Schema(description = "현재 공감 수")
     private Integer likeCount;
+
+    public static LikeResult of(boolean isLiked, int likeCount) {
+      return LikeResult.builder()
+          .isLiked(isLiked)
+          .likeCount(likeCount)
+          .build();
+    }
   }
+
+  @Getter
+  @Builder
+  @Schema(description = "아이템별 BEST 코멘트 + 코멘트 수")
+  public static class BattleItemCommentSummary {
+
+    @Schema(description = "배틀 아이템 ID")
+    private Long battleItemId;
+
+    @Schema(description = "BEST 코멘트 ID")
+    private Long commentId;
+
+    @Schema(description = "작성자 닉네임")
+    private String creatorNickname;
+
+    @Schema(description = "코멘트 내용")
+    private String content;
+
+    @Schema(description = "공감 수")
+    private Integer likeCount;
+
+    @Schema(description = "전체 코멘트 수")
+    private Long commentCount;
+
+    public static BattleItemCommentSummary from(Object[] row) {
+      return BattleItemCommentSummary.builder()
+          .battleItemId(((Number) row[0]).longValue())
+          .commentId(((Number) row[1]).longValue())
+          .creatorNickname((String) row[2])
+          .content((String) row[3])
+          .likeCount(((Number) row[4]).intValue())
+          .commentCount(((Number) row[5]).longValue())
+          .build();
+    }
+  }
+
+
+
 }
