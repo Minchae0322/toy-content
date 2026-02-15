@@ -22,7 +22,7 @@ public interface BattleItemCommentRepository extends JpaRepository<BattleItemCom
             bic.like_count,
             COUNT(*) OVER(PARTITION BY bic.battle_item_id) AS comment_count,
             ROW_NUMBER() OVER(PARTITION BY bic.battle_item_id ORDER BY bic.like_count DESC, bic.created_at ASC) AS rn
-        FROM TB_BATTLE_ITEM_COMMENT bic
+        FROM tb_battle_item_comment bic
         WHERE bic.battle_item_id IN :itemIds AND bic.is_deleted = false
     ) t WHERE t.rn = 1
     """, nativeQuery = true)
