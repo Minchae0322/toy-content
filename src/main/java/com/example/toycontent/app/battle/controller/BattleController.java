@@ -1,10 +1,12 @@
 package com.example.toycontent.app.battle.controller;
 
 
+import com.example.toycontent.app.battle.controller.dto.BattleItemCommentResponse.Detail;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
+import com.example.toycontent.app.battle.service.BattleItemCommentService;
 import com.example.toycontent.app.battle.service.BattleService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.response.ApiResponse;
@@ -17,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class BattleController {
 
   private final BattleService battleService;
+  private final BattleItemCommentService battleItemCommentService;
 
   @Operation(summary = "배틀 생성 권한 체크")
   @GetMapping("/creation/validation")
@@ -76,5 +81,13 @@ public class BattleController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-
+  @Operation(summary = "배틀 전체 코멘트 조회", description = "정렬: ?sort=likeCount,desc (공감순) / ?sort=createdAt,desc (최신순)")
+  @GetMapping("/{battleId}/comments")
+  public ResponseEntity<ApiResponse<Slice<Detail>>> getBattleComments(
+      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
+      @CurrentUserId(required = false) Long userId,
+      @PageableDefault(size = 10, sort = "likeCount", direction = Sort.Direction.DESC) Pageable pageable) {
+    return ResponseEntity.ok(ApiResponse.success(
+        battleItemCommentService.getBattleComments(battleId, userId, pageable)));
+  }
 }
