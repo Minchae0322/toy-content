@@ -11,6 +11,8 @@ import com.example.toycontent.app.battle.repository.BattleItemCommentRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -25,15 +27,20 @@ public class BattleItemCommentService {
   private final BattleItemRepository battleItemRepository;
   private final BattleItemCommentRepository commentRepository;
   private final BattleItemCommentLikeRepository likeRepository;
+  private final ExternalUserInfoService externalUserInfoService;
 
   @Transactional
   public void createComment(Long battleId, Long itemId, Long userId, BattleItemCommentRequest.Create request) {
     BattleItem battleItem = battleItemRepository.findById(itemId)
         .orElseThrow(() -> new RestApiException(BattleErrorCode.BATTLE_ITEM_NOT_FOUND));
 
+    ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(userId);
+
     BattleItemComment comment = BattleItemComment.builder()
         .battleItem(battleItem)
         .creatorId(userId)
+        .creatorNickname(userInfo.getNickname())
+        .creatorProfileImageUrl(userInfo.getProfileImageFile().getFileUrl())
         .content(request.getContent())
         .build();
 

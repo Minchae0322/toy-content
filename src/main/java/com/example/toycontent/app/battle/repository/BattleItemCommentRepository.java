@@ -14,10 +14,11 @@ public interface BattleItemCommentRepository extends JpaRepository<BattleItemCom
     BattleItemCommentRepositoryCustom {
 
   @Query(value = """
-    SELECT * FROM (
+      SELECT * FROM (
         SELECT bic.battle_item_id,
             bic.battle_item_comment_id,
             bic.creator_nickname,
+            bic.creator_profile_image_url,
             bic.content,
             bic.like_count,
             COUNT(*) OVER(PARTITION BY bic.battle_item_id) AS comment_count,

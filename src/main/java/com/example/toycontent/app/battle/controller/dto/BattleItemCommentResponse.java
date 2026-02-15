@@ -25,6 +25,9 @@ public abstract class BattleItemCommentResponse {
     @Schema(description = "작성자 닉네임 (작성 시점)")
     private String creatorNickname;
 
+    @Schema(description = "작성자 프로필 이미지 URL")
+    private String creatorProfileImageUrl;
+
     @Schema(description = "코멘트 내용")
     private String content;
 
@@ -74,6 +77,9 @@ public abstract class BattleItemCommentResponse {
     @Schema(description = "작성자 닉네임")
     private String creatorNickname;
 
+    @Schema(description = "작성자 프로필 이미지 URL")
+    private String creatorProfileImageUrl;
+
     @Schema(description = "코멘트 내용")
     private String content;
 
@@ -88,9 +94,10 @@ public abstract class BattleItemCommentResponse {
           .battleItemId(((Number) row[0]).longValue())
           .commentId(((Number) row[1]).longValue())
           .creatorNickname((String) row[2])
-          .content((String) row[3])
-          .likeCount(((Number) row[4]).intValue())
-          .commentCount(((Number) row[5]).longValue())
+          .creatorProfileImageUrl((String) row[3])
+          .content((String) row[4])
+          .likeCount(((Number) row[5]).intValue())
+          .commentCount(((Number) row[6]).longValue())
           .build();
     }
   }
