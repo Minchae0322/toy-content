@@ -67,7 +67,15 @@ public enum BattleErrorCode implements ErrorCode {
   PARTICIPATION_NOT_ALLOWED(HttpStatus.FORBIDDEN, "참여할 수 없습니다."),
   PARTICIPATION_PERIOD_NOT_STARTED(HttpStatus.BAD_REQUEST, "아직 참여 기간이 아닙니다."),
   MAX_PARTICIPANTS_EXCEEDED(HttpStatus.BAD_REQUEST, "최대 참여자 수를 초과했습니다."),
-  ALREADY_PARTICIPATED(HttpStatus.BAD_REQUEST, "이미 참여한 배틀입니다.");
+  ALREADY_PARTICIPATED(HttpStatus.BAD_REQUEST, "이미 참여한 배틀입니다."),
+
+  // 배틀 코멘트
+  COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "코멘트를 찾을 수 없습니다."),
+  COMMENT_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "이미 삭제된 코멘트입니다."),
+  NOT_COMMENT_WRITER(HttpStatus.FORBIDDEN, "본인이 작성한 코멘트만 수정/삭제할 수 있습니다."),
+  COMMENT_CONTENT_EMPTY(HttpStatus.BAD_REQUEST, "코멘트 내용을 입력해주세요."),
+  ALREADY_LIKED_COMMENT(HttpStatus.BAD_REQUEST, "이미 공감한 코멘트입니다."),
+  ;
 
   private final HttpStatus httpStatus;
   private final String message;
