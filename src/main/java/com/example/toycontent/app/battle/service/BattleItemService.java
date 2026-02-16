@@ -14,6 +14,8 @@ import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
+import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
+import com.example.toycontent.app.common.utils.YoutubeUtils;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
 import java.util.List;
@@ -79,50 +81,68 @@ public class BattleItemService {
   }
 
   /**
-   * 배틀 아이템 생성 및 저장
+   * 배틀 아이템 생성 (즉시 활성 상태로 등록)
+   * - CREATOR_ONLY, PUBLIC 권한의 배틀에서 사용
    */
   @Transactional
   public void createBattleItems(Long userId, Battle battle, List<ItemRequest> request) {
-    List<BattleItem> battleItems = request.stream()
-        .map(itemRequest -> {
-          Product product = Optional.ofNullable(itemRequest.getProductId())
-              .flatMap(productRepository::findById)
-              .orElse(null);
+    saveBattleItems(userId, battle, request, BattleItemStatus.ACTIVE);
+  }
 
-          return BattleItem.builder()
-              .battle(battle)
-              .product(product)
-              .registerId(userId)
-              .status(BattleItemStatus.ACTIVE)
-              .customName(itemRequest.getCustomName())
-              .customBrand(itemRequest.getCustomBrand())
-              .customImageUrl(itemRequest.getCustomImageUrl())
-              .build();
-        })
+  /**
+   * 배틀 아이템 승인 요청 (검토 대기 상태로 등록)
+   * - PUBLIC_APPROVAL 권한의 배틀에서 사용
+   * - 배틀 생성자가 승인해야 활성화됨
+   */
+  @Transactional
+  public void requestAddBattleItems(Long userId, Battle battle, List<ItemRequest> request) {
+    saveBattleItems(userId, battle, request, BattleItemStatus.UNDER_REVIEW);
+  }
+
+  private void saveBattleItems(Long userId, Battle battle, List<ItemRequest> request,
+      BattleItemStatus status) {
+    List<BattleItem> battleItems = request.stream()
+        .map(itemRequest -> createBattleItem(userId, battle, itemRequest, status))
         .toList();
 
     battleItemRepository.saveAll(battleItems);
   }
 
-  public void requestAddBattleItems(Long userId, Battle battle, List<ItemRequest> request) {
-    List<BattleItem> battleItems = request.stream()
-        .map(itemRequest -> {
-          Product product = productRepository.findById(itemRequest.getProductId())
-              .orElse(null);
+  /**
+   * 타입별로 필요한 필드만 세팅하여 BattleItem을 생성한다.
+   * - PRODUCT: 제품 조회 후 연결 (존재하지 않으면 예외)
+   * - CUSTOM: 사용자가 직접 입력한 제품 정보 세팅
+   * - YOUTUBE: URL에서 videoId를 추출하여 저장 (유효하지 않은 URL이면 예외)
+   */
+  private BattleItem createBattleItem(Long userId, Battle battle, ItemRequest request,
+      BattleItemStatus status) {
+    BattleItem.BattleItemBuilder builder = BattleItem.builder()
+        .battle(battle)
+        .registerId(userId)
+        .itemType(request.getItemType())
+        .status(status);
 
-          return BattleItem.builder()
-              .battle(battle)
-              .product(product)
-              .registerId(userId)
-              .status(BattleItemStatus.UNDER_REVIEW)
-              .customName(itemRequest.getCustomName())
-              .customBrand(itemRequest.getCustomBrand())
-              .customImageUrl(itemRequest.getCustomImageUrl())
-              .build();
-        })
-        .toList();
+    switch (request.getItemType()) {
+      case PRODUCT -> {
+        Product product = productRepository.findById(request.getProductId())
+            .orElseThrow(() -> new RestApiException(ProductErrorCode.PRODUCT_NOT_FOUND));
+        builder.product(product);
+      }
+      case CUSTOM -> builder
+          .customName(request.getCustomName())
+          .customBrand(request.getCustomBrand())
+          .customImageUrl(request.getCustomImageUrl());
+      case YOUTUBE -> {
+        String videoId = YoutubeUtils.extractVideoId(request.getContentUrl());
+        builder
+            .customName(request.getCustomName())
+            .customBrand(request.getCustomBrand())
+            .contentUrl(request.getContentUrl())
+            .contentId(videoId);
+      }
+    }
 
-    battleItemRepository.saveAll(battleItems);
+    return builder.build();
   }
 
   /**
