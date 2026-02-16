@@ -26,7 +26,7 @@ public class BattleItemCommentRepositoryImpl implements BattleItemCommentReposit
   private final JPAQueryFactory queryFactory;
 
   @Override
-  public Slice<Detail> findComments(Long itemId, Long userId, Pageable pageable) {
+  public Slice<Detail> findBattleItemComments(Long itemId, Long userId, Pageable pageable) {
 
     List<Detail> content = queryFactory
         .select(Projections.fields(BattleItemCommentResponse.Detail.class,

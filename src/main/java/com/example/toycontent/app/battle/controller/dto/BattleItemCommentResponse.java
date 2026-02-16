@@ -3,14 +3,18 @@ package com.example.toycontent.app.battle.controller.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 public abstract class BattleItemCommentResponse {
 
   @Getter
   @Builder
   @Schema(description = "코멘트 상세")
+  @NoArgsConstructor
+  @AllArgsConstructor
   public static class Detail {
 
     @Schema(description = "코멘트 ID")

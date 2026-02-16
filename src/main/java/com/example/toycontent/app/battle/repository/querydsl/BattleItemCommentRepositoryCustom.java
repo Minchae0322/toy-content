@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 
 public interface BattleItemCommentRepositoryCustom {
-  Slice<Detail> findComments(Long itemId, Long userId, Pageable pageable);
+  Slice<Detail> findBattleItemComments(Long itemId, Long userId, Pageable pageable);
 
   Slice<BattleItemCommentResponse.Detail> findBattleComments(Long battleId, Long userId, Pageable pageable);
 }
