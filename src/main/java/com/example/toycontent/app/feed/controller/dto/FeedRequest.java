@@ -83,10 +83,6 @@ public abstract class FeedRequest {
   @Schema(description = "피드 수정 요청")
   public static class UpdateFeed {
 
-    @Schema(description = "피드 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull(message = "피드 ID는 필수입니다")
-    private Long feedId;
-
     @Schema(description = "사용자 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "사용자 ID는 필수입니다")
     private Long userId;
@@ -94,7 +90,7 @@ public abstract class FeedRequest {
     @Schema(description = "상품 ID (기존 상품 선택 시)", example = "100")
     private Long productId;
 
-    @Schema(description = "커스텀 상품명", example = "스타벅스 아메리카노", maxLength = 200)
+    @Schema(description = "커스텀 상품명 (상품 ID가 없을 경우)", example = "스타벅스 아메리카노", maxLength = 200)
     @Size(max = 200, message = "상품명은 최대 200자까지 입력 가능합니다")
     private String productNameCustom;
 
@@ -107,15 +103,19 @@ public abstract class FeedRequest {
     @Size(max = 1000, message = "리뷰 내용은 최대 1000자까지 입력 가능합니다")
     private String review;
 
+    @Schema(description = "구매처", example = "무신사", maxLength = 100)
+    @NotBlank(message = "구매처는 필수입니다")
+    @Size(max = 100, message = "구매처는 최대 100자까지 입력 가능합니다")
+    private String buyPlace;
+
     @Schema(description = "구매 가격 (원)", example = "4500", minimum = "0", maximum = "999999999")
     @Min(value = 0, message = "구매 가격은 0원 이상이어야 합니다")
     @Max(value = 999999999, message = "구매 가격은 999,999,999원 이하여야 합니다")
     private Integer buyPrice;
 
-    @Schema(description = "정가 (원)", example = "5000", minimum = "0", maximum = "999999999")
-    @Min(value = 0, message = "정가는 0원 이상이어야 합니다")
-    @Max(value = 999999999, message = "정가는 999,999,999원 이하여야 합니다")
-    private Integer price;
+    @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
+    @NotNull(message = "제품 평가는 필수입니다")
+    private FeedEvaluation evaluation;
 
     @Schema(description = "해시태그 목록 (# 제외, 최대 20개)", example = "[\"커피\", \"맛집\"]", maxLength = 20)
     @Size(max = 20, message = "해시태그는 최대 20개까지 등록 가능합니다")
