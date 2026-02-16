@@ -126,9 +126,10 @@ public class FeedController {
   @Operation(summary = "피드 삭제", description = "피드를 삭제합니다.")
   @DeleteMapping("/{feedId}")
   public ResponseEntity<ApiResponse<Void>> deleteFeed(
-      @Parameter(description = "피드 ID") @PathVariable Long feedId) {
+      @Parameter(description = "피드 ID") @PathVariable Long feedId,
+      @CurrentUserId Long userId) {
 
-    feedService.deleteFeed(feedId);
+    feedService.deleteFeed(feedId, userId);
     return ResponseEntity.ok(ApiResponse.success(null, "피드가 삭제되었습니다."));
   }
 

@@ -277,8 +277,13 @@ public class FeedService {
    * 피드 삭제
    */
   @Transactional
-  public void deleteFeed(Long feedId) {
+  public void deleteFeed(Long feedId, Long userId) {
     Feed feed = findFeedById(feedId);
+
+    if(!feed.getUserId().equals(userId)) {
+      throw new RestApiException(FeedErrorCode.CREATOR_NOT_MATCH);
+    }
+
     feed.delete();
 
     //해시 태그 사용횟수 감소

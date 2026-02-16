@@ -177,12 +177,13 @@ public class Feed extends BaseTimeEntity {
    * 피드 정보 업데이트 (첨부파일 제외)
    */
   public void update(FeedRequest.UpdateFeed request, Category category, Product product) {
-    this.productNameCustom = request.getProductNameCustom();
-    this.review = request.getReview();
-    this.buyPrice = request.getBuyPrice();
-    this.price = request.getPrice();
-    this.category = category;
     this.product = product;
+    this.productNameCustom = request.getProductNameCustom();
+    this.category = category;
+    this.review = request.getReview();
+    this.evaluation = request.getEvaluation();
+    this.buyPlace = request.getBuyPlace();
+    this.buyPrice = request.getBuyPrice();
   }
 
   public void delete() {
