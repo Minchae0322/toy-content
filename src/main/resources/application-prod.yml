@@ -68,8 +68,8 @@ management:
 
 external:
   user-service:
-    protocol: https
-    host: ${USER_SERVICE_HOST}
+    protocol: http
+    host: ${USER_SERVICE_HOST:auth-service}
     port: ${USER_SERVICE_PORT:443}
     api-key: ${USER_SERVICE_API_KEY}
 
