@@ -1,7 +1,12 @@
 package com.example.toycontent.app.battle.domain;
 
+import static com.example.toycontent.app.common.enumuration.BattleItemType.CUSTOM;
+import static com.example.toycontent.app.common.enumuration.BattleItemType.PRODUCT;
+import static com.example.toycontent.app.common.enumuration.BattleItemType.YOUTUBE;
+
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
+import com.example.toycontent.app.common.enumuration.BattleItemType;
 import com.example.toycontent.app.product.domain.Product;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -49,6 +54,13 @@ public class BattleItem extends BaseTimeEntity {
   @Comment("배틀")
   private Battle battle;
 
+  // ========== 타입 구분 ==========
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 20)
+  @Comment("아이템 타입 (PRODUCT: 제품, CUSTOM: 사용자 직접입력, YOUTUBE: 유튜브)")
+  private BattleItemType itemType;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "product_id")
   @Comment("제품 (null이면 커스텀 아이템)")
@@ -67,6 +79,16 @@ public class BattleItem extends BaseTimeEntity {
   @Column(length = 500)
   @Comment("커스텀 이미지 URL")
   private String customImageUrl;
+
+  // ========== 외부 콘텐츠 공통 (YOUTUBE, 향후 TIKTOK 등) ==========
+
+  @Column(length = 500)
+  @Comment("외부 콘텐츠 원본 URL")
+  private String contentUrl;
+
+  @Column(length = 50)
+  @Comment("외부 콘텐츠 고유 ID (YouTube videoId 등)")
+  private String contentId;
 
   // ========== 등록 정보 ==========
 
@@ -171,20 +193,45 @@ public class BattleItem extends BaseTimeEntity {
 
   // ========== 조회 헬퍼 ==========
 
-  /** Product가 있으면 Product 정보, 없으면 커스텀 정보 반환 */
-  public String getName() {
-    return product != null ? product.getName() : customName;
+  // ========== 조회 헬퍼 ==========
+
+
+  /**
+   * 타입에 관계없이 표시할 이름을 반환한다.
+   * - PRODUCT: 연결된 제품의 이름
+   * - CUSTOM: 사용자가 직접 입력한 커스텀 제품명
+   * - YOUTUBE: 외부 콘텐츠 원본 URL
+   */
+  public String getDisplayName() {
+    return switch (itemType) {
+      case PRODUCT -> product != null ? product.getName() : "알 수 없는 제품";
+      case CUSTOM, YOUTUBE -> customName;
+    };
   }
 
-  /** Product가 있으면 Product 정보, 없으면 커스텀 정보 반환 */
-  public String getBrand() {
-    return product != null ? product.getBrand() : customBrand;
+  /**
+   * 타입에 관계없이 표시할 이미지 URL을 반환한다.
+   * - PRODUCT: null (AttachmentFile 기반이므로 DTO 변환 시 별도 처리)
+   * - CUSTOM: 사용자가 등록한 이미지 URL
+   * - YOUTUBE: videoId 기반 YouTube 썸네일 URL (480x360)
+   */
+  public String getDisplayImageUrl() {
+    return switch (itemType) {
+      case PRODUCT -> null;
+      case CUSTOM -> customImageUrl;
+      case YOUTUBE -> contentId != null
+          ? "https://img.youtube.com/vi/" + contentId + "/hqdefault.jpg"
+          : null;
+    };
   }
 
-  /** 커스텀 아이템 여부 (Product 없이 직접 등록된 아이템) */
-  public boolean isCustomItem() {
-    return product == null;
+  public String getEmbedUrl() {
+    if (itemType == BattleItemType.YOUTUBE && contentId != null) {
+      return "https://www.youtube.com/embed/" + contentId;
+    }
+    return null;
   }
+
 
   /** 활성 상태이며 삭제되지 않은 아이템인지 확인 */
   public boolean isActive() {

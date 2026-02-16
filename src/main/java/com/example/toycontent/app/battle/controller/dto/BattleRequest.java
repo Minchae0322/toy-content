@@ -1,5 +1,6 @@
 package com.example.toycontent.app.battle.controller.dto;
 
+import com.example.toycontent.app.common.enumuration.BattleItemType;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest;
@@ -58,9 +59,9 @@ public abstract class BattleRequest {
     private VoteType voteType;
 
 
-    @Schema(description = "배틀 아이템 목록 (1~20개)")
+    @Schema(description = "배틀 아이템 목록 (1~30개)")
     @Valid
-    @Size(min = 1, max = 20, message = "아이템은 1~20개 사이여야 합니다")
+    @Size(min = 1, max = 30, message = "아이템은 1~30개 사이여야 합니다")
     private List<ItemRequest> items;
 
     @Schema(description = "대표이미지")
@@ -75,20 +76,31 @@ public abstract class BattleRequest {
   @AllArgsConstructor
   public static class ItemRequest {
 
-    @Schema(description = "제품 ID (기존 제품 선택 시)", example = "123")
+    @Schema(description = "아이템 타입 (PRODUCT: DB 등록 제품, CUSTOM: 사용자 직접입력, YOUTUBE: 유튜브 콘텐츠)",
+        example = "PRODUCT", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "아이템 타입은 필수입니다")
+    private BattleItemType itemType;
+
+    @Schema(description = "제품 ID (itemType=PRODUCT일 때 필수, 그 외 무시됨)", example = "123")
     private Long productId;
 
-    @Schema(description = "커스텀 제품명", example = "나이키 덩크 로우 판다")
+    @Schema(description = "아이템명 (itemType=CUSTOM, YOUTUBE일 때 필수)", example = "나이키 덩크 로우 판다")
     @Size(max = 30, message = "제품명은 30자 이내여야 합니다")
     private String customName;
 
-    @Schema(description = "커스텀 브랜드", example = "Nike")
+    @Schema(description = "브랜드명 (itemType=CUSTOM, YOUTUBE일 때 선택)", example = "Nike")
     @Size(max = 20, message = "브랜드명은 20자 이내여야 합니다")
     private String customBrand;
 
-    @Schema(description = "커스텀 이미지 URL")
+    @Schema(description = "이미지 URL (itemType=CUSTOM일 때 선택, 그 외 무시됨)")
     @Size(max = 500, message = "이미지 URL은 500자 이내여야 합니다")
     private String customImageUrl;
+
+    @Schema(description = "유튜브 URL (itemType=YOUTUBE일 때 필수, 그 외 무시됨). "
+        + "지원 형식: youtube.com/watch, youtu.be, youtube.com/shorts",
+        example = "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    @Size(max = 500, message = "콘텐츠 URL은 500자 이내여야 합니다")
+    private String contentUrl;
   }
 
   @Schema(description = "배틀 아이템 추가 요청")

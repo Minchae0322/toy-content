@@ -4,9 +4,9 @@ import com.example.toycontent.app.battle.controller.dto.BattleItemCommentRespons
 import com.example.toycontent.app.battle.controller.dto.BattleVoteResponse.UserBattleVote;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
-import com.example.toycontent.app.battle.domain.BattleVote;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse.SubCategoryDetail;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
+import com.example.toycontent.app.common.enumuration.BattleItemType;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.VoteType;
@@ -17,10 +17,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -224,17 +221,29 @@ public abstract class BattleResponse {
     @Schema(description = "아이템 ID", example = "1")
     private Long id;
 
-    @Schema(description = "제품 ID (커스텀 아이템인 경우 null)", example = "123")
+    @Schema(description = "아이템 타입 (PRODUCT: DB 등록 제품, CUSTOM: 사용자 직접입력, YOUTUBE: 유튜브 콘텐츠)",
+        example = "PRODUCT")
+    private BattleItemType battleItemType;
+
+    @Schema(description = "제품 상세 정보 (itemType=PRODUCT일 때만 존재, 그 외 null)")
     private BattleItemProduct battleItemProduct;
 
-    @Schema(description = "제품명", example = "나이키 덩크 로우 판다")
+    @Schema(description = "아이템명 - PRODUCT인 경우 null이므로 battleItemProduct.name 사용 필요. "
+        + "CUSTOM, YOUTUBE는 이 필드로 노출",
+        example = "나이키 덩크 로우 판다")
     private String customName;
 
-    @Schema(description = "브랜드", example = "Nike")
-    private String customBrand;
-
-    @Schema(description = "이미지 URL")
+    @Schema(description = "아이템 이미지 URL - PRODUCT인 경우 null이므로 battleItemProduct.thumbnailDto 사용 필요. "
+        + "CUSTOM은 사용자가 등록한 이미지, YOUTUBE는 영상 썸네일")
     private String customImageUrl;
+
+    @Schema(description = "외부 콘텐츠 원본 URL (itemType=YOUTUBE일 때만 존재, 그 외 null). 원본 링크 이동 및 임베드용",
+        example = "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    private String contentUrl;
+
+    @Schema(description = "외부 콘텐츠 임베드 URL (itemType=YOUTUBE일 때만 존재, 그 외 null). iframe src에 바로 사용",
+        example = "https://www.youtube.com/embed/dQw4w9WgXcQ")
+    private String embedUrl;
 
     @Schema(description = "투표 수", example = "42")
     private Integer voteCount;
@@ -266,11 +275,14 @@ public abstract class BattleResponse {
     public static BattleItemInfo from(BattleItem item, BattleItemCommentSummary battleItemCommentSummary) {
       return BattleItemInfo.builder()
           .id(item.getId())
+          .battleItemType(item.getItemType())
           .battleItemProduct(
               item.getProduct() != null ? BattleItemProduct.of(item.getProduct()) : null)
-          .customName(item.getCustomName())
-          .customBrand(item.getCustomBrand())
-          .customImageUrl(item.getCustomImageUrl())
+          .contentUrl(item.getContentUrl())
+          .customName(item.getDisplayName())
+          .customImageUrl(item.getDisplayImageUrl())
+          .contentUrl(item.getContentUrl())
+          .embedUrl(item.getEmbedUrl())
           .voteCount(item.getVoteCount())
           .totalScore(item.getTotalScore())
           .status(item.getStatus())
