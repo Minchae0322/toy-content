@@ -194,7 +194,8 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .leftJoin(feedAttachmentFile)
         .on(feedAttachmentFile.feed.id.eq(feed.id)
             .and(feedAttachmentFile.isPrimary.eq(true)))
-        .where(feed.createdAt.goe(thresholdDate))
+        .where(feed.createdAt.goe(thresholdDate),
+            feed.isDeleted.eq(false))
         .orderBy(getOrderSpecifier(pageable.getSort(), hotScore))
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize())
