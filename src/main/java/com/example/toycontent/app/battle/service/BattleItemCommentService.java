@@ -50,7 +50,7 @@ public class BattleItemCommentService {
   @Transactional(readOnly = true)
   public Slice<BattleItemCommentResponse.Detail> getComments(
       Long battleId, Long itemId, Long userId, Pageable pageable) {
-    return commentRepository.findComments(itemId, userId, pageable);
+    return commentRepository.findBattleItemComments(itemId, userId, pageable);
   }
 
   @Transactional(readOnly = true)
