@@ -4,6 +4,7 @@ import com.example.toycontent.app.battle.controller.dto.BattleItemCommentRespons
 import com.example.toycontent.app.battle.controller.dto.BattleVoteResponse.UserBattleVote;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.battle.domain.BattleVote;
 import com.example.toycontent.app.category.contoller.dto.CategoryResponse.SubCategoryDetail;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.enumuration.BattleItemType;
@@ -272,7 +273,9 @@ public abstract class BattleResponse {
     @Schema(description = "BEST 코멘트 및 코멘트 수")
     private BattleItemCommentSummary commentSummary;
 
-    public static BattleItemInfo from(BattleItem item, BattleItemCommentSummary battleItemCommentSummary) {
+    public static BattleItemInfo from(BattleItem item,
+        BattleItemCommentSummary battleItemCommentSummary, BattleVote userVote) {
+
       return BattleItemInfo.builder()
           .id(item.getId())
           .battleItemType(item.getItemType())
@@ -288,10 +291,7 @@ public abstract class BattleResponse {
           .status(item.getStatus())
           .reportCount(item.getReportCount())
           .registerId(item.getRegisterId())
-          .userBattleVote(item.getBattleVotes().stream()
-              .findFirst()
-              .map(UserBattleVote::from)
-              .orElse(null))
+          .userBattleVote(userVote != null ? UserBattleVote.from(userVote) : null)
           .votePercentage(
               item.getBattle().getTotalScore() > 0
                   ? (double) item.getTotalScore() / item.getBattle().getTotalScore()
