@@ -38,7 +38,7 @@ public class FeedCommentService {
     Feed feed = feedRepository.findById(feedId)
         .orElseThrow(() -> new RestApiException(FeedErrorCode.FEED_NOT_FOUND));
 
-    ExternalUserInfo externalUserInfo = externalUserInfoService.getUserInfo(feed.getUserId());
+    ExternalUserInfo externalUserInfo = externalUserInfoService.getUserInfo(creatorId);
 
     FeedComment comment = toFeedComment(feed, request, creatorId, externalUserInfo);
 
