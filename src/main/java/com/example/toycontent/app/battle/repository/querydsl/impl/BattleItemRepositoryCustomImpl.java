@@ -5,6 +5,7 @@ import static com.example.toycontent.app.battle.domain.QBattleVote.battleVote;
 import static com.example.toycontent.app.product.domain.QProduct.product;
 
 import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.battle.domain.BattleVote;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.battle.repository.querydsl.BattleItemRepositoryCustom;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
@@ -13,8 +14,12 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -25,7 +30,7 @@ public class BattleItemRepositoryCustomImpl implements BattleItemRepositoryCusto
   private final JPAQueryFactory queryFactory;
 
   @Override
-  public List<BattleItem> findByBattleIdWithBattleVote(Long battleId, Long currentUserId, BattleItemStatus status) {
+  public List<BattleItem> findByBattleId(Long battleId, Long currentUserId, BattleItemStatus status) {
     BooleanBuilder whereCondition = whereClause(status);
 
     JPAQuery<BattleItem> query = queryFactory
@@ -47,13 +52,10 @@ public class BattleItemRepositoryCustomImpl implements BattleItemRepositoryCusto
             battleItem.id.asc()  // 같은 상태 내에서는 ID 순
         );
 
-    Optional.ofNullable(currentUserId).ifPresent(userId ->
-        query.leftJoin(battleItem.battleVotes, battleVote)
-            .on(battleVote.userId.eq(userId))
-    );
-
     return query.fetch();
   }
+
+
 
   private BooleanBuilder whereClause(BattleItemStatus status) {
     BooleanBuilder builder = new BooleanBuilder();

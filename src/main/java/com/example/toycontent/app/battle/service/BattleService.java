@@ -12,6 +12,7 @@ import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleAttachmentFile;
 import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.battle.domain.BattleVote;
 import com.example.toycontent.app.battle.repository.BattleAttachmentFileRepository;
 import com.example.toycontent.app.battle.repository.BattleItemCommentRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
@@ -140,7 +141,7 @@ public class BattleService {
         : BattleItemStatus.ACTIVE;
 
     // 배틀 아이템 목록 조회 (조회 사용자 투표 정보 포함)
-    List<BattleItem> battleItems = battleItemRepository.findByBattleIdWithBattleVote(
+    List<BattleItem> battleItems = battleItemRepository.findByBattleId(
         battleId, currentUserId, status);
 
     // 아이템별 BEST 코멘트 + 코멘트 수 일괄 조회 (아이템 없으면 빈 맵)
@@ -148,6 +149,11 @@ public class BattleService {
         .map(BattleItem::getId)
         .toList();
 
+    // 현재 사용자의 투표 정보만 별도 조회
+    Map<Long, BattleVote> userVoteMap = battleVoteRepository
+        .findUserVotesByBattleItemIds(itemIds, currentUserId);
+
+    // 아이템별 BEST 코멘트 + 코멘트 수 일괄 조회
     Map<Long, BattleItemCommentSummary> commentSummaryMap = itemIds.isEmpty()
         ? Collections.emptyMap()
         : battleItemCommentRepository.findBestCommentsAndCountByItemIds(itemIds)
@@ -158,10 +164,11 @@ public class BattleService {
                 summary -> summary
             ));
 
-    // DTO 변환 (아이템 정보 + 코멘트 요약 조합 후 랭킹 부여)
+    // DTO 변환: 아이템 정보 + 사용자 투표 + 코멘트 요약 조합 후 랭킹 부여
     List<BattleItemInfo> items = setRanking(
         battleItems.stream()
-            .map(item -> BattleItemInfo.from(item, commentSummaryMap.get(item.getId())))
+            .map(item -> BattleItemInfo.from(item, commentSummaryMap.get(item.getId()),
+                userVoteMap.get(item.getId())))
             .collect(Collectors.toList())
     );
 
