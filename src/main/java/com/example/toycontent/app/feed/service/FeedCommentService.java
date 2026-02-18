@@ -11,6 +11,8 @@ import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedComment;
 import com.example.toycontent.app.feed.repository.FeedCommentRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
+import com.example.toycontent.app.kafka.KafkaNotificationProducer;
+import com.example.toycontent.app.notification.NotificationService;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import com.example.toycontent.external.user.service.UserCacheStore;
@@ -28,6 +30,8 @@ public class FeedCommentService {
   private final FeedCommentRepository feedCommentRepository;
   private final ExternalUserInfoService externalUserInfoService;
 
+  private final NotificationService notificationService;
+
   @Transactional
   public Page<CommentItem> getComments(Long feedId, Pageable pageable) {
     return feedCommentRepository.findByFeedIdAndDeletedFalse(feedId, pageable);
@@ -44,6 +48,15 @@ public class FeedCommentService {
 
     feedCommentRepository.save(comment);
     feed.incrementCommentCount();
+
+    notificationService.notifyFeedComment(
+        feed.getUserId(),
+        creatorId,
+        externalUserInfo.getNickname(),
+        externalUserInfo.getProfileImageFile().getFileUrl(),
+        feedId,
+        feed.getProductNameCustom()
+    );
 
     return FeedCommentResponse.Created.of(comment);
   }
