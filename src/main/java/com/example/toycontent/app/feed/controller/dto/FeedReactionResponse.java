@@ -37,27 +37,22 @@ public class FeedReactionResponse {
     @Schema(description = "좋아요 수", example = "42")
     private Integer likeCount;
 
-    @Schema(description = "핫해요 수", example = "15")
-    private Integer hotCount;
 
-
-    public static ReactionResult added(FeedReactionType reactionType, int likeCount, int hotCount) {
+    public static ReactionResult added(FeedReactionType reactionType, int likeCount) {
       return ReactionResult.builder()
           .reactionType(reactionType)
           .action("added")
           .message("리액션이 추가되었습니다.")
           .likeCount(likeCount)
-          .hotCount(hotCount)
           .build();
     }
 
-    public static ReactionResult removed(FeedReactionType reactionType, int likeCount, int hotCount) {
+    public static ReactionResult removed(FeedReactionType reactionType, int likeCount) {
       return ReactionResult.builder()
           .reactionType(reactionType)
           .action("removed")
           .message("리액션이 취소되었습니다.")
           .likeCount(likeCount)
-          .hotCount(hotCount)
           .build();
     }
 
@@ -80,8 +75,6 @@ public class FeedReactionResponse {
     @Schema(description = "좋아요 수", example = "42")
     private Long likeCount;
 
-    @Schema(description = "핫해요 수", example = "15")
-    private Long hotCount;
 
 
     public static ReactionStats from(List<FeedReaction> reactions) {
@@ -90,7 +83,7 @@ public class FeedReactionResponse {
             .totalCount(0L)
             .countByType(Map.of())
             .likeCount(0L)
-            .hotCount(0L)
+
             .build();
       }
 
@@ -103,7 +96,6 @@ public class FeedReactionResponse {
       return ReactionStats.builder()
           .totalCount((long) reactions.size())
           .likeCount(countByType.getOrDefault(FeedReactionType.LIKE, 0L))
-          .hotCount(countByType.getOrDefault(FeedReactionType.HOT, 0L))
           .build();
     }
   }

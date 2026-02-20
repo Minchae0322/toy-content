@@ -68,7 +68,7 @@ public class FeedReactionService {
         feed.getProductNameCustom()
     );
 
-    return FeedReactionResponse.ReactionResult.added(type, feed.getLikeCount(), feed.getHotCount());
+    return FeedReactionResponse.ReactionResult.added(type, feed.getLikeCount());
   }
 
   /**
@@ -81,7 +81,7 @@ public class FeedReactionService {
     feedReactionRepository.delete(reaction);
     feedRepository.save(feed);
 
-    return FeedReactionResponse.ReactionResult.removed(type, feed.getLikeCount(), feed.getHotCount());
+    return FeedReactionResponse.ReactionResult.removed(type, feed.getLikeCount());
   }
 
   /**

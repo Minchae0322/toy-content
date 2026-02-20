@@ -166,7 +166,6 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
   @Override
   public Page<HotFeedResponse> findAllByHotScore(int recentDays, Pageable pageable) {
     LocalDateTime thresholdDate = LocalDateTime.now().minusDays(recentDays);
-    NumberExpression<Double> hotScore = calculateHotScore(feed);
 
     List<HotFeedResponse> content = queryFactory
         .select(Projections.fields(
@@ -196,7 +195,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
             .and(feedAttachmentFile.isPrimary.eq(true)))
         .where(feed.createdAt.goe(thresholdDate),
             feed.isDeleted.eq(false))
-        .orderBy(getOrderSpecifier(pageable.getSort(), hotScore))
+        .orderBy(getOrderSpecifier(pageable.getSort()))
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize())
         .fetch();
@@ -212,11 +211,10 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
   /**
    * 정렬 조건 변환
    * - 미지정: hotScore DESC → createdAt DESC
-   * - hotScore 지정: hotScore → createdAt DESC (tiebreaker)
    * - 그 외: 해당 필드 단독 정렬
    */
-  private OrderSpecifier<?>[] getOrderSpecifier(Sort sort, NumberExpression<Double> hotScore) {
-    OrderSpecifier<?> hotScoreDesc = new OrderSpecifier<>(Order.DESC, hotScore);
+  private OrderSpecifier<?>[] getOrderSpecifier(Sort sort) {
+    OrderSpecifier<?> hotScoreDesc = new OrderSpecifier<>(Order.DESC, feed.hotScore);
     OrderSpecifier<?> createdAtDesc = new OrderSpecifier<>(Order.DESC, feed.createdAt);
 
     if (sort.isUnsorted()) {
@@ -227,12 +225,10 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .flatMap(order -> {
           Order direction = order.isAscending() ? Order.ASC : Order.DESC;
           return switch (order.getProperty()) {
-            case "hotScore" -> Stream.of(
-                new OrderSpecifier<>(direction, hotScore), createdAtDesc);
             case "createdAt"    -> Stream.of(new OrderSpecifier<>(direction, feed.createdAt));
-            case "viewCount"    -> Stream.of(new OrderSpecifier<>(direction, feed.viewCount));
+            case "viewCount"    -> Stream.of(
+                new OrderSpecifier<>(direction, feed.viewCount.subtract(feed.viewCount24hAgo)));
             case "likeCount"    -> Stream.of(new OrderSpecifier<>(direction, feed.likeCount));
-            case "hotCount"     -> Stream.of(new OrderSpecifier<>(direction, feed.hotCount));
             case "commentCount" -> Stream.of(new OrderSpecifier<>(direction, feed.commentCount));
             default -> Stream.of(hotScoreDesc, createdAtDesc);
           };
@@ -240,37 +236,6 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .toArray(OrderSpecifier<?>[]::new);
   }
 
-
-  /**
-   * 핫 스코어 계산식
-   *
-   * hotScore = (likeCount * 2 + hotCount * 3 + viewCount * 0.1) / decayFactor
-   * decayFactor = POWER(hoursSinceCreation + 2, 1.5)
-   */
-  private NumberExpression<Double> calculateHotScore(QFeed feed) {
-    // 경과 시간(시간 단위) 계산
-    NumberExpression<Long> hoursSinceCreation = Expressions.numberTemplate(
-        Long.class,
-        "TIMESTAMPDIFF(HOUR, {0}, NOW())",
-        feed.createdAt
-    );
-
-    // 참여도 점수: (좋아요 * 2 + 핫 * 3 + 조회수 * 0.1)
-    NumberExpression<Double> engagementScore = feed.likeCount.multiply(2)
-        .add(feed.hotCount.multiply(3))
-        .add(feed.viewCount.multiply(0.1))
-        .doubleValue();
-
-    // 시간 감쇠 계수: POWER(GREATEST(hoursSinceCreation + 2, 1), 1.5)
-    NumberExpression<Double> decayFactor = Expressions.numberTemplate(
-        Double.class,
-        "POWER(GREATEST({0} + 2, 1), 1.5)",
-        hoursSinceCreation
-    );
-
-    // 최종 핫 스코어: engagementScore / decayFactor
-    return engagementScore.divide(decayFactor);
-  }
 
   /**
    * 커서 조건 - ID가 cursor보다 작은 것
