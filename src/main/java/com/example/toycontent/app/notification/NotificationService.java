@@ -76,7 +76,7 @@ public class NotificationService {
         .content(NotificationType.BATTLE_ITEM_COMMENT.formatContent(actorNickname, battleTitle, itemTitle))
         .referenceId(String.valueOf(itemId))
         .referenceType(NotificationReferenceType.BATTLE_ITEM)
-        .actionUrl("/battle/" + battleId)
+        .actionUrl("/battles/" + battleId)
         .actorId(actorId)
         .actorNickname(actorNickname)
         .actorProfileImageUrl(actorProfileImageUrl)
