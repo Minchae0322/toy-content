@@ -11,6 +11,7 @@ import com.example.toycontent.app.battle.repository.BattleItemCommentRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
+import com.example.toycontent.app.notification.NotificationService;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import lombok.RequiredArgsConstructor;
@@ -28,21 +29,33 @@ public class BattleItemCommentService {
   private final BattleItemCommentRepository commentRepository;
   private final BattleItemCommentLikeRepository likeRepository;
   private final ExternalUserInfoService externalUserInfoService;
+  private final NotificationService notificationService;
 
   @Transactional
-  public void createComment(Long battleId, Long itemId, Long userId, BattleItemCommentRequest.Create request) {
+  public void createComment(Long battleId, Long itemId, Long actionUserId, BattleItemCommentRequest.Create request) {
     BattleItem battleItem = battleItemRepository.findById(itemId)
         .orElseThrow(() -> new RestApiException(BattleErrorCode.BATTLE_ITEM_NOT_FOUND));
 
-    ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(userId);
+    ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(actionUserId);
 
     BattleItemComment comment = BattleItemComment.builder()
         .battleItem(battleItem)
-        .creatorId(userId)
+        .creatorId(actionUserId)
         .creatorNickname(userInfo.getNickname())
         .creatorProfileImageUrl(userInfo.getProfileImageFile().getFileUrl())
         .content(request.getContent())
         .build();
+
+    notificationService.notifyBattleItemComment(
+        battleItem.getRegisterId(),
+        actionUserId,
+        userInfo.getNickname(),
+        userInfo.getProfileImageFile().getFileUrl(),
+        battleItem.getBattle().getId(),
+        battleItem.getBattle().getTitle(),
+        battleItem.getId(),
+        battleItem.getDisplayName()
+    );
 
     commentRepository.save(comment);
   }
@@ -91,6 +104,7 @@ public class BattleItemCommentService {
           comment.incrementLikeCount();
           return true;
         });
+
 
     return BattleItemCommentResponse.LikeResult.of(isLiked, comment.getLikeCount());
   }

@@ -42,10 +42,10 @@ public class NotificationService {
   }
 
   @Async("notificationExecutor")
-  public void notifyFeedLike(Long feedOwnerId, Long actorId, String actorNickname,
+  public void notifyFeedLike(Long feedCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl, Long feedId, String feedTitle) {
     sendSafely(NotificationType.FEED_LIKE, KafkaNotificationDto.builder()
-        .userId(feedOwnerId)
+        .userId(feedCreatorId)
         .type(NotificationType.FEED_LIKE)
         .title(NotificationType.FEED_LIKE.getTitle())
         .content(NotificationType.FEED_LIKE.formatContent(actorNickname, feedTitle))
@@ -65,18 +65,18 @@ public class NotificationService {
   // ============================
 
   @Async("notificationExecutor")
-  public void notifyItemComment(Long itemOwnerId, Long actorId, String actorNickname,
+  public void notifyBattleItemComment(Long battleItemCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl,
       Long battleId, String battleTitle,
       Long itemId, String itemTitle) {
     sendSafely(NotificationType.BATTLE_ITEM_COMMENT, KafkaNotificationDto.builder()
-        .userId(itemOwnerId)
+        .userId(battleItemCreatorId)
         .type(NotificationType.BATTLE_ITEM_COMMENT)
         .title(NotificationType.BATTLE_ITEM_COMMENT.getTitle())
         .content(NotificationType.BATTLE_ITEM_COMMENT.formatContent(actorNickname, battleTitle, itemTitle))
         .referenceId(String.valueOf(itemId))
         .referenceType(NotificationReferenceType.BATTLE_ITEM)
-        .actionUrl("/battle/" + battleId + "/item/" + itemId)
+        .actionUrl("/battle/" + battleId)
         .actorId(actorId)
         .actorNickname(actorNickname)
         .actorProfileImageUrl(actorProfileImageUrl)
@@ -85,13 +85,14 @@ public class NotificationService {
     );
   }
 
+  @Deprecated
   @Async("notificationExecutor")
-  public void notifyItemLike(Long itemOwnerId, Long actorId, String actorNickname,
+  public void notifyBattleItemLike(Long battleItemCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl,
       Long battleId, String battleTitle,
       Long itemId, String itemTitle) {
     sendSafely(NotificationType.BATTLE_ITEM_LIKE, KafkaNotificationDto.builder()
-        .userId(itemOwnerId)
+        .userId(battleItemCreatorId)
         .type(NotificationType.BATTLE_ITEM_LIKE)
         .title(NotificationType.BATTLE_ITEM_LIKE.getTitle())
         .content(NotificationType.BATTLE_ITEM_LIKE.formatContent(actorNickname, battleTitle, itemTitle))
