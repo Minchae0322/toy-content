@@ -89,4 +89,60 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
       "AND (view_count_24h_ago IS NULL OR (view_count - view_count_24h_ago) < :threshold)",
       nativeQuery = true)
   int unmarkTrending(@Param("threshold") int threshold);
+
+
+  /**
+   * 피드 핫 스코어 벌크 업데이트 (최근 활동 대상)
+   *
+   * 매시간 실행되며, 최근 일정 시간 내 활동(좋아요, 조회 등)이 있어
+   * updated_at이 갱신된 피드만 대상으로 핫 스코어를 재계산한다.
+   *
+   * <p>핫 스코어 계산식:</p>
+   * <pre>
+   *   hotScore = engagementScore / decayFactor
+   *
+   *   engagementScore = (like_count × 2) + (view_count × 0.1)
+   *   decayFactor     = POWER(GREATEST(경과시간(h) + 2, 1), 1.5)
+   * </pre>
+   *
+   * <p>계산 근거:</p>
+   * <ul>
+   *   <li>좋아요(×2): 적극적인 참여 행동으로 가중치를 높게 부여</li>
+   *   <li>조회수(×0.1): 수동적 행동이므로 낮은 가중치 부여</li>
+   *   <li>시간 감쇠(1.5승): 시간이 지날수록 스코어가 급격히 하락하여 최신 콘텐츠 우선 노출</li>
+   *   <li>+2 보정: 생성 직후(0시간)에도 0으로 나누는 것을 방지</li>
+   * </ul>
+   *
+   * @param since 이 시각 이후 updated_at이 갱신된 피드만 대상
+   * @return 업데이트된 피드 수
+   */
+  @Modifying(clearAutomatically = true)
+  @Query(value = """
+    UPDATE tb_feed
+    SET hot_score = (like_count * 2 + view_count * 0.1)
+                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 2, 1), 1.5)
+    WHERE is_deleted = false
+      AND updated_at >= :since
+    """, nativeQuery = true)
+  int bulkUpdateHotScoreRecent(@Param("since") LocalDateTime since);
+
+  /**
+   * 피드 핫 스코어 벌크 업데이트 (전체 재계산)
+   *
+   * 새벽 시간대에 실행되며, 최근 N일 이내 생성된 모든 활성 피드를 대상으로
+   * 시간 감쇠를 반영하여 핫 스코어를 재계산한다.
+   *
+   * @param recentDays 재계산 대상 기간 (일)
+   * @return 업데이트된 피드 수
+   * @see #bulkUpdateHotScoreRecent(LocalDateTime) 핫 스코어 계산식 상세
+   */
+  @Modifying(clearAutomatically = true)
+  @Query(value = """
+    UPDATE tb_feed
+    SET hot_score = (like_count * 2 + view_count * 0.1)
+                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 2, 1), 1.5)
+    WHERE is_deleted = false
+      AND created_at >= DATE_SUB(NOW(), INTERVAL :recentDays DAY)
+    """, nativeQuery = true)
+  int bulkUpdateHotScoreAll(@Param("recentDays") int recentDays);
 }

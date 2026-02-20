@@ -48,15 +48,12 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     @Index(name = "idx_feed_category", columnList = "category_id"),
     @Index(name = "idx_user_id", columnList = "user_id"),
     @Index(name = "idx_product_id", columnList = "product_id"),
-
-    // 커서 페이징용 복합 인덱스 (핵심)
     @Index(name = "idx_feed_cursor", columnList = "deleted, id DESC"),
-
-    // 카테고리별 조회용
     @Index(name = "idx_feed_category_cursor", columnList = "deleted, category_id, id DESC"),
+    @Index(name = "idx_feed_user_cursor", columnList = "deleted, user_id, id DESC"),
 
-    // 사용자별 피드 조회용
-    @Index(name = "idx_feed_user_cursor", columnList = "deleted, user_id, id DESC")
+    // 핫 스코어 정렬용
+    @Index(name = "idx_feed_hot_score", columnList = "deleted, hot_score DESC, created_at DESC")
 })
 public class Feed extends BaseTimeEntity {
   @Id
@@ -121,8 +118,8 @@ public class Feed extends BaseTimeEntity {
 
   @Column(nullable = false)
   @Builder.Default
-  @Comment("HOT 리액션 수")
-  private Integer hotCount = 0;
+  @Comment("HOT 스코어")
+  private Double hotScore = 0.0;
 
   @Column(nullable = false)
   @Builder.Default
@@ -220,21 +217,6 @@ public class Feed extends BaseTimeEntity {
     }
   }
 
-  /**
-   * 핫 수 증가
-   */
-  public void incrementHotCount() {
-    this.hotCount++;
-  }
-
-  /**
-   * 핫 수 감소
-   */
-  public void decrementHotCount() {
-    if (this.hotCount > 0) {
-      this.hotCount--;
-    }
-  }
 
   /**
    * 핫 수 증가
@@ -262,8 +244,6 @@ public class Feed extends BaseTimeEntity {
     //카운트 증가
     if (reactionType == FeedReactionType.LIKE) {
       incrementLikeCount();
-    } else if (reactionType == FeedReactionType.HOT) {
-      incrementHotCount();
     }
   }
 
@@ -276,8 +256,6 @@ public class Feed extends BaseTimeEntity {
     //카운트 감소
     if (reaction.getReactionType() == FeedReactionType.LIKE) {
       decrementLikeCount();
-    } else if (reaction.getReactionType() == FeedReactionType.HOT) {
-      decrementHotCount();
     }
   }
 

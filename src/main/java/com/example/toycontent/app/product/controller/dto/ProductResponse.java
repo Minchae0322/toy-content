@@ -283,9 +283,6 @@ public abstract class ProductResponse {
         @Schema(description = "좋아요 수", example = "42")
         private Integer likeCount;
 
-        @Schema(description = "인기 수", example = "15")
-        private Integer hotCount;
-
         @Schema(description = "댓글 수", example = "7")
         private Integer commentCount;
 
@@ -306,7 +303,6 @@ public abstract class ProductResponse {
                         .orElse(null)
                 )
                 .likeCount(feed.getLikeCount())
-                .hotCount(feed.getHotCount())
                 .commentCount(feed.getCommentCount())
                 .build();
         }

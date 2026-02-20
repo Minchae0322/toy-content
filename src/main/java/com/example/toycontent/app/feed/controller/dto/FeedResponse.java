@@ -61,6 +61,9 @@ public abstract class FeedResponse {
     @Schema(description = "조회수")
     private Integer viewCount;
 
+    @Schema(description = "댓글 수")
+    private Integer commentCount;
+
     @Schema(description = "대표 이미지 URL")
     private AttachmentFileResponse thumbnailUrl;
 
@@ -101,6 +104,7 @@ public abstract class FeedResponse {
           .buyPrice(feed.getBuyPrice())
           .price(feed.getPrice())
           .viewCount(feed.getViewCount())
+          .commentCount(feed.getCommentCount())
           .thumbnailUrl(
               feed.getAttachmentFiles()
                   .stream()
@@ -110,7 +114,6 @@ public abstract class FeedResponse {
           )
           .hashtags(extractHashtags(feed.getHashtags()))
           .buyPlace(feed.getBuyPlace())
-          .hotCount(feed.getHotCount())
           .likeCount(feed.getLikeCount())
           .userReactions(UserReactions.from(userReactions))
           .feedEvaluation(feed.getEvaluation())
@@ -217,7 +220,6 @@ public abstract class FeedResponse {
           .price(feed.getPrice())
           .viewCount(feed.getViewCount())
           .likeCount(feed.getLikeCount())
-          .hotCount(feed.getHotCount())
           .isTrending(feed.getIsTrending())
           .commentCount(feed.getCommentCount())
           .attachmentFiles(

@@ -106,8 +106,16 @@ scheduler:
       enabled: ${BATTLE_HOT_SCORE_FULL_RECALC_ENABLED:true}
   feed-trending:
     enabled: ${FEED_TRENDING_ENABLE:true}
-    threshold: ${FEED_TRENDING_THRESHOLD:50}
+    threshold: ${FEED_TRENDING_THRESHOLD:10}
     cron: "0 0 0 * * *"
+  feed-hot-score:
+    time-weight-update:
+      cron: "0 0 * * * *"
+      enabled: ${FEED_HOT_SCORE_TIME_WEIGHT_ENABLED:true}
+    full-recalculate:
+      cron: "0 0 3 * * *"
+      enabled: ${FEED_HOT_SCORE_FULL_RECALC_ENABLED:true}
+      recent-days: ${FEED_HOT_SCORE_RECENT_DAYS:30}
 
 
 logging:
