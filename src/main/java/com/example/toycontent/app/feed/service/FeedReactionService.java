@@ -8,6 +8,9 @@ import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedReaction;
 import com.example.toycontent.app.feed.repository.FeedReactionRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
+import com.example.toycontent.app.notification.NotificationService;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
@@ -23,30 +26,47 @@ public class FeedReactionService {
 
   private final FeedRepository feedRepository;
   private final FeedReactionRepository feedReactionRepository;
+  private final NotificationService notificationService;
+  private final ExternalUserInfoService externalUserInfoService;
 
   /**
    * 특정 타입 리액션 토글 (좋아요 또는 핫 개별 토글)
+   *
+   * 피드에 비관적 락을 걸고, 해당 유저의 동일 타입 리액션이 존재하면 제거하고 없으면 추가한다.
    */
+  @Transactional
   public FeedReactionResponse.ReactionResult toggleReaction(
-      Long feedId, Long userId, FeedReactionType reactionType) {
+      Long feedId, Long actionUserId, FeedReactionType reactionType) {
 
     Feed feed = findFeedWithLockOrElseThrow(feedId);
 
     return feedReactionRepository
-        .findByFeedIdAndUserIdAndReactionType(feedId, userId, reactionType)
+        .findByFeedIdAndUserIdAndReactionType(feedId, actionUserId, reactionType)
         .map(existing -> removeReactionAndSave(feed, existing, reactionType))
-        .orElseGet(() -> addReactionAndSave(feed, userId, reactionType));
+        .orElseGet(() -> addReactionAndSave(feed, actionUserId, reactionType));
   }
 
   /**
    * 리액션 추가
+   *
+   * 피드에 리액션을 등록하고, 피드 작성자에게 좋아요 알림을 발송한다.
+   * 알림에는 리액션을 누른 유저의 닉네임과 프로필 이미지가 포함된다.
    */
   private FeedReactionResponse.ReactionResult addReactionAndSave(
-      Feed feed, Long userId, FeedReactionType type) {
+      Feed feed, Long actionUserId, FeedReactionType type) {
 
-    FeedReaction reaction = feed.addReaction(userId, type);
-    feedReactionRepository.save(reaction);
-    feedRepository.save(feed);
+    feed.addReaction(actionUserId, type);
+
+    ExternalUserInfo externalUserInfo = externalUserInfoService.getUserInfo(actionUserId);
+
+    notificationService.notifyFeedLike(
+        feed.getUserId(),
+        actionUserId,
+        externalUserInfo.getNickname(),
+        externalUserInfo.getProfileImageFile().getFileUrl(),
+        feed.getId(),
+        feed.getProductNameCustom()
+    );
 
     return FeedReactionResponse.ReactionResult.added(type, feed.getLikeCount(), feed.getHotCount());
   }

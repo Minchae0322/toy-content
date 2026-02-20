@@ -195,7 +195,8 @@ public class FeedService {
     return Feed.builder()
         .userId(request.getUserId())
         .product(product)
-        .productNameCustom(request.getProductNameCustom())
+        .productNameCustom(
+            request.getProductNameCustom() == null && product != null ? product.getName() : null)
         .category(category)
         .review(request.getReview())
         .evaluation(request.getEvaluation())
