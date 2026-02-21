@@ -67,8 +67,9 @@ public class BattleController {
 
   @Operation(summary = "배틀 핫 목록 조회")
   @GetMapping("/hot")
-  public ResponseEntity<ApiResponse<List<BattleHotList>>> getHotBattleList() {
-    List<BattleResponse.BattleHotList> response = battleService.getHotBattleList();
+  public ResponseEntity<ApiResponse<Page<BattleHotList>>> getHotBattleList(
+      @ParameterObject @PageableDefault(size = 10, sort = "hotScore", direction = Sort.Direction.DESC) Pageable pageable) {
+    Page<BattleHotList> response = battleService.getHotBattleList(pageable);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 

@@ -3,6 +3,7 @@ package com.example.toycontent.app.battle.repository;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.repository.querydsl.BattleItemRepositoryCustom;
+import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,4 +24,7 @@ public interface BattleItemRepository extends JpaRepository<BattleItem, Long>,
   List<BattleItem> findItemsByBattleIds(@Param("battleIds") List<Long> battleIds);
 
   long countByProductIdAndCreatedAtAfter(Long productId, LocalDateTime recentPeriod);
+
+  List<BattleItem> findByBattleIdInAndStatusOrderByTotalScoreDesc(List<Long> battleIds, BattleItemStatus status);
+
 }

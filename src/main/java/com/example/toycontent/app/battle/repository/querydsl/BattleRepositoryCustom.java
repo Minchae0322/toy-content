@@ -6,13 +6,14 @@ import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.domain.Battle;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface BattleRepositoryCustom {
 
   List<BattleList> findBattlesWithSearchCondition(BattleSearchCondition condition, Pageable pageable);
 
-  List<BattleHotList> findHotBattlesWithSearchCondition();
+  Page<BattleHotList> findHotBattlesWithSearchCondition(Pageable pageable);
   Long countBattlesWithSearchCondition(BattleSearchCondition condition);
 
   List<Battle> findBattlesNeedingTimeWeightUpdate(LocalDateTime activeThreshold);

@@ -110,7 +110,10 @@ public class Battle extends BaseTimeEntity {
   @Comment("총 점수")
   private Integer totalScore = 0;
 
-
+  @Builder.Default
+  @Column(nullable = false)
+  @Comment("총 댓글 수")
+  private Integer totalCommentCount = 0;
 
   @Builder.Default
   @Column(nullable = false)
