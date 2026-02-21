@@ -5,6 +5,7 @@ import static com.example.toycontent.app.common.utils.BattleItemRankingCalculato
 import com.example.toycontent.app.battle.controller.dto.BattleItemCommentResponse.BattleItemCommentSummary;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
+import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotItem;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleItemInfo;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleList;
@@ -31,9 +32,11 @@ import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -47,6 +50,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class BattleService {
+
+  private static final int TOP_ITEM_LIMIT = 3;
 
   private final BattleItemService battleItemService;
   private final BattleRepository battleRepository;
@@ -121,10 +126,35 @@ public class BattleService {
     return new PageImpl<>(battleLists, pageable, totalCount);
   }
 
-  public List<BattleHotList> getHotBattleList() {
+  @Transactional(readOnly = true)
+  public Page<BattleHotList> getHotBattleList(Pageable pageable) {
+    Page<BattleHotList> content = battleRepository.findHotBattlesWithSearchCondition(pageable);
 
-    return battleRepository.findHotBattlesWithSearchCondition();
+    List<Long> battleIds = content.getContent().stream().map(BattleHotList::getId).toList();
+    if (battleIds.isEmpty()) return content;
+
+    Map<Long, List<BattleHotItem>> topItemsMap = battleItemRepository
+        .findByBattleIdInAndStatusOrderByTotalScoreDesc(battleIds, BattleItemStatus.ACTIVE)
+        .stream()
+        .collect(Collectors.groupingBy(
+            item -> item.getBattle().getId(),
+            LinkedHashMap::new,
+            Collectors.collectingAndThen(
+                Collectors.toList(),
+                items -> IntStream.range(0, Math.min(TOP_ITEM_LIMIT, items.size()))
+                    .mapToObj(i -> BattleHotItem.from(items.get(i), i + 1))
+                    .toList()
+            )
+        ));
+
+    content.getContent()
+        .forEach(battleHotList -> battleHotList.setTopItems(
+            topItemsMap.getOrDefault(battleHotList.getId(), List.of()))
+        );
+    return content;
   }
+
+
 
   @Transactional
   public BattleResponse.BattleDetail getBattleDetail(Long battleId, Long currentUserId) {

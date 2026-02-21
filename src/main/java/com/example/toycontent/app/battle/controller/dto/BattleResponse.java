@@ -54,9 +54,47 @@ public abstract class BattleResponse {
     @Schema(description = "총 조회 수", example = "523")
     private Integer totalViews;
 
+    @Schema(description = "총 댓글 수", example = "5")
+    private Integer totalCommentCount;
+
     @Schema(description = "배틀 상태", example = "ACTIVE")
     private BattleStatus status;
 
+    @Schema(description = "TOP 3 아이템 목록")
+    private List<BattleHotItem> topItems;
+
+  }
+
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @Schema(description = "핫 배틀 TOP 3 아이템")
+  public static class BattleHotItem {
+    @Schema(hidden = true)
+    @JsonIgnore
+    private Long battleId;
+
+    @Schema(description = "아이템 ID")
+    private Long id;
+
+    @Schema(description = "아이템명")
+    private String displayName;
+
+    @Schema(description = "득표 스코어")
+    private Integer totalScore;
+
+    @Schema(description = "순위")
+    private Integer rank;
+
+    public static BattleHotItem from(BattleItem item, int rank) {
+      return BattleHotItem.builder()
+          .id(item.getId())
+          .displayName(item.getDisplayName())
+          .totalScore(item.getTotalScore())
+          .rank(rank)
+          .build();
+    }
   }
 
   @Schema(description = "배틀 목록 조회 응답")
@@ -92,6 +130,9 @@ public abstract class BattleResponse {
 
     @Schema(description = "총 조회 수", example = "523")
     private Integer totalViews;
+
+    @Schema(description = "총 댓글 수", example = "5")
+    private Integer totalCommentCount;
 
     @Schema(description = "시작일", example = "2025-02-01T00:00:00")
     private LocalDateTime startDate;
@@ -165,6 +206,8 @@ public abstract class BattleResponse {
     @Schema(description = "총 조회 수", example = "523")
     private Integer totalViews;
 
+    @Schema(description = "총 댓글 수", example = "5")
+    private Integer totalCommentCount;
 
     @Schema(description = "생성일", example = "2025-01-25T14:30:00")
     private LocalDateTime createdAt;
@@ -187,6 +230,7 @@ public abstract class BattleResponse {
           .voteType(battle.getVoteType()).totalParticipants(battle.getTotalParticipants())
           .totalVotes(battle.getTotalVotes())
           .totalViews(battle.getTotalViews())
+          .totalCommentCount(battle.getTotalCommentCount())
           .createdAt(battle.getCreatedAt())
           .items(items)
           .build();

@@ -21,6 +21,7 @@ import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,8 +29,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Repository;
 
 @RequiredArgsConstructor
@@ -60,6 +63,7 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
             battle.totalParticipants,
             battle.totalVotes,
             battle.totalViews,
+            battle.totalCommentCount,
             battle.startDate,
             battle.endDate,
             battle.createdAt,
@@ -107,9 +111,8 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
   }
 
   @Override
-  public List<BattleResponse.BattleHotList> findHotBattlesWithSearchCondition() {
+  public Page<BattleHotList> findHotBattlesWithSearchCondition(Pageable pageable) {
 
-    // 배틀 기본 정보 조회
     List<BattleResponse.BattleHotList> content = queryFactory
         .select(Projections.fields(BattleHotList.class,
             battle.id,
@@ -117,8 +120,8 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
             battle.totalParticipants,
             battle.totalVotes,
             battle.totalViews,
+            battle.totalCommentCount,
             battle.status,
-            // 썸네일 DTO 매핑
             Projections.fields(AttachmentFileResponse.class,
                 battleAttachmentFile.id,
                 battleAttachmentFile.orgFileNm,
@@ -133,30 +136,31 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
         .on(battleAttachmentFile.isPrimary.isTrue())
         .where(battle.isDeleted.isFalse())
         .orderBy(battle.hotScore.desc())
-        .offset(0)
-        .limit(10)
+        .offset(pageable.getOffset())
+        .limit(pageable.getPageSize())
         .fetch();
 
-    // 썸네일이 없는 배틀 ID 수집
+    // 썸네일이 없는 배틀은 상위 아이템 이미지로 대체
     List<Long> battleIdsWithoutThumbnail = content.stream()
-        .filter(battleList -> battleList.getThumbnailDto() == null)
-        .map(BattleResponse.BattleHotList::getId)
+        .filter(b -> b.getThumbnailDto() == null)
+        .map(BattleHotList::getId)
         .toList();
 
-    // 한 번의 쿼리로 모든 상위 아이템 이미지 조회
     if (!battleIdsWithoutThumbnail.isEmpty()) {
-      Map<Long, List<String>> topImagesMap = fetchTopItemImagesForBattles(
-          battleIdsWithoutThumbnail);
-
-      // 매핑
-      content.forEach(battleList -> {
-        if (battleList.getThumbnailDto() == null) {
-          battleList.setTopItemImages(topImagesMap.getOrDefault(battleList.getId(), List.of()));
+      Map<Long, List<String>> topImagesMap = fetchTopItemImagesForBattles(battleIdsWithoutThumbnail);
+      content.forEach(b -> {
+        if (b.getThumbnailDto() == null) {
+          b.setTopItemImages(topImagesMap.getOrDefault(b.getId(), List.of()));
         }
       });
     }
 
-    return content;
+    JPAQuery<Long> countQuery = queryFactory
+        .select(battle.count())
+        .from(battle)
+        .where(battle.isDeleted.isFalse());
+
+    return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
   }
 
 
