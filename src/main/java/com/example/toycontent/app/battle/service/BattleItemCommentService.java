@@ -3,6 +3,7 @@ package com.example.toycontent.app.battle.service;
 
 import com.example.toycontent.app.battle.controller.dto.BattleItemCommentRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleItemCommentResponse;
+import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.domain.BattleItemComment;
 import com.example.toycontent.app.battle.domain.BattleItemCommentLike;
@@ -46,6 +47,8 @@ public class BattleItemCommentService {
         .content(request.getContent())
         .build();
 
+    battleItem.getBattle().incrementTotalCommentCount();
+
     notificationService.notifyBattleItemComment(
         battleItem.getRegisterId(),
         actionUserId,
@@ -59,7 +62,6 @@ public class BattleItemCommentService {
 
     commentRepository.save(comment);
   }
-
   @Transactional(readOnly = true)
   public Slice<BattleItemCommentResponse.Detail> getComments(
       Long battleId, Long itemId, Long userId, Pageable pageable) {
@@ -83,6 +85,10 @@ public class BattleItemCommentService {
   public void deleteComment(Long commentId, Long userId) {
     BattleItemComment comment = getCommentById(commentId);
     validateWriter(comment, userId);
+
+    Battle battle = comment.getBattleItem().getBattle();
+    battle.decrementTotalCommentCount();
+
     comment.softDelete();
   }
 

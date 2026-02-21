@@ -229,4 +229,12 @@ public class Battle extends BaseTimeEntity {
   }
 
 
+
+  public void incrementTotalCommentCount() {
+    this.totalCommentCount++;
+  }
+
+  public void decrementTotalCommentCount() {
+    this.totalCommentCount = Math.max(0, this.totalCommentCount - 1);
+  }
 }
