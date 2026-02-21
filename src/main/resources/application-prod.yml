@@ -92,22 +92,22 @@ springdoc:
 scheduler:
   product-popularity:
     time-weight-update:
-      cron: "0 0 * * * *"
+      cron: "0 30 * * * *"
       enabled: ${PRODUCT_POPULARITY_TIME_WEIGHT_ENABLED:true}
     full-recalculate:
-      cron: "0 0 3 * * *"
+      cron: "0 0 1 * * *"
       enabled: ${PRODUCT_POPULARITY_FULL_RECALC_ENABLED:true}
   hot-score:
     time-weight-update:
       cron: "0 0 * * * *"
       enabled: ${BATTLE_HOT_SCORE_TIME_WEIGHT_ENABLED:true}
     full-recalculate:
-      cron: "0 0 3 * * *"
+      cron: "0 0 2 * * *"
       enabled: ${BATTLE_HOT_SCORE_FULL_RECALC_ENABLED:true}
   feed-trending:
     enabled: ${FEED_TRENDING_ENABLE:true}
     threshold: ${FEED_TRENDING_THRESHOLD:10}
-    cron: "0 0 0 * * *"
+    cron: "0 15 0 * * *"
   feed-hot-score:
     time-weight-update:
       cron: "0 0 * * * *"
