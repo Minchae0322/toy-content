@@ -60,6 +60,9 @@ public abstract class BattleResponse {
     @Schema(description = "배틀 상태", example = "ACTIVE")
     private BattleStatus status;
 
+    @Schema(description = "종료일", example = "2025-02-28T23:59:59")
+    private LocalDateTime endDate;
+
     @Schema(description = "TOP 3 아이템 목록")
     private List<BattleHotItem> topItems;
 
