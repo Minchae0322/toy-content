@@ -237,7 +237,7 @@ public class Feed extends BaseTimeEntity {
   /**
    * 리액션 추가 (카운트도 함께 업데이트)
    */
-  public void addReaction(Long userId, FeedReactionType reactionType) {
+  public FeedReaction addReaction(Long userId, FeedReactionType reactionType) {
     FeedReaction reaction = FeedReaction.create(this, userId, reactionType);
     this.reactions.add(reaction);
 
@@ -245,6 +245,8 @@ public class Feed extends BaseTimeEntity {
     if (reactionType == FeedReactionType.LIKE) {
       incrementLikeCount();
     }
+
+    return reaction;
   }
 
   /**
