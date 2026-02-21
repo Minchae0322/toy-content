@@ -225,6 +225,8 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .flatMap(order -> {
           Order direction = order.isAscending() ? Order.ASC : Order.DESC;
           return switch (order.getProperty()) {
+            case "hotScore"     -> Stream.of(new OrderSpecifier<>(direction, feed.hotScore),
+                new OrderSpecifier<>(direction, feed.createdAt));
             case "createdAt"    -> Stream.of(new OrderSpecifier<>(direction, feed.createdAt));
             case "viewCount"    -> Stream.of(
                 new OrderSpecifier<>(direction, feed.viewCount.subtract(feed.viewCount24hAgo)));

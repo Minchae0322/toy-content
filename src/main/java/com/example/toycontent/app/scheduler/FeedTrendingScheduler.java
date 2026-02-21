@@ -14,7 +14,6 @@ import org.springframework.util.StopWatch;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "scheduler.feed-trending", name = "enabled", havingValue = "true")
 public class FeedTrendingScheduler {
 
   private final FeedRepository feedRepository;
