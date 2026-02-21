@@ -1,5 +1,6 @@
 package com.example.toycontent.app.battle.repository.querydsl.impl;
 
+import static com.example.toycontent.app.battle.domain.QBattle.battle;
 import static com.example.toycontent.app.battle.domain.QBattleItem.battleItem;
 import static com.example.toycontent.app.battle.domain.QBattleVote.battleVote;
 import static com.example.toycontent.app.product.domain.QProduct.product;
@@ -53,6 +54,25 @@ public class BattleItemRepositoryCustomImpl implements BattleItemRepositoryCusto
         );
 
     return query.fetch();
+  }
+
+  /**
+   * 배틀 ID 목록에 해당하는 활성 아이템을 점수 내림차순으로 조회
+   *
+   * displayName, votePercentage 계산을 위해 battle, product fetch join 적용
+   * TODO: 추후 배틀 핫 목록을 엔티티로 조회하면 영속성 컨텍스트 활용으로 battle fetch join 제거 가능
+   */
+  public List<BattleItem> findByBattleIdInAndStatusOrderByTotalScoreDesc(List<Long> battleIds, BattleItemStatus status) {
+    return queryFactory
+        .selectFrom(battleItem)
+        .join(battleItem.battle, battle).fetchJoin()
+        .leftJoin(battleItem.product).fetchJoin()
+        .where(
+            battleItem.battle.id.in(battleIds),
+            battleItem.status.eq(status)
+        )
+        .orderBy(battleItem.totalScore.desc())
+        .fetch();
   }
 
 

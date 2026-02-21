@@ -10,4 +10,6 @@ public interface BattleItemRepositoryCustom {
 
   List<BattleItem> findByBattleId(Long battleId, Long currentUserId, BattleItemStatus status);
 
+  List<BattleItem> findByBattleIdInAndStatusOrderByTotalScoreDesc(List<Long> battleIds, BattleItemStatus status);
+
 }

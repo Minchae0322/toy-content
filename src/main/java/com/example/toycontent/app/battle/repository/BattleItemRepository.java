@@ -25,6 +25,5 @@ public interface BattleItemRepository extends JpaRepository<BattleItem, Long>,
 
   long countByProductIdAndCreatedAtAfter(Long productId, LocalDateTime recentPeriod);
 
-  List<BattleItem> findByBattleIdInAndStatusOrderByTotalScoreDesc(List<Long> battleIds, BattleItemStatus status);
 
 }
