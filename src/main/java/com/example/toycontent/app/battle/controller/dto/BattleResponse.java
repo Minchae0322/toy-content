@@ -71,10 +71,6 @@ public abstract class BattleResponse {
   @AllArgsConstructor
   @Schema(description = "핫 배틀 TOP 3 아이템")
   public static class BattleHotItem {
-    @Schema(hidden = true)
-    @JsonIgnore
-    private Long battleId;
-
     @Schema(description = "아이템 ID")
     private Long id;
 
@@ -84,14 +80,21 @@ public abstract class BattleResponse {
     @Schema(description = "득표 스코어")
     private Integer totalScore;
 
+    @Schema(description = "득표율 (%)", example = "33.07")
+    private Double votePercentage;
+
     @Schema(description = "순위")
     private Integer rank;
 
     public static BattleHotItem from(BattleItem item, int rank) {
+      int battleTotalScore = item.getBattle().getTotalScore();
       return BattleHotItem.builder()
           .id(item.getId())
           .displayName(item.getDisplayName())
           .totalScore(item.getTotalScore())
+          .votePercentage(battleTotalScore > 0
+              ? (double) item.getTotalScore() / battleTotalScore
+              : 0.0)
           .rank(rank)
           .build();
     }
