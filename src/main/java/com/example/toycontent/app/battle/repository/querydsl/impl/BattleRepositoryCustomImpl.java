@@ -122,6 +122,7 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
             battle.totalViews,
             battle.totalCommentCount,
             battle.status,
+            battle.endDate,
             Projections.fields(AttachmentFileResponse.class,
                 battleAttachmentFile.id,
                 battleAttachmentFile.orgFileNm,
