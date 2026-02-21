@@ -55,7 +55,9 @@ public class FeedReactionService {
   private FeedReactionResponse.ReactionResult addReactionAndSave(
       Feed feed, Long actionUserId, FeedReactionType type) {
 
-    feed.addReaction(actionUserId, type);
+    FeedReaction reaction = feed.addReaction(actionUserId, type);
+    feedReactionRepository.save(reaction);
+    feedRepository.save(feed);
 
     ExternalUserInfo externalUserInfo = externalUserInfoService.getUserInfo(actionUserId);
 
