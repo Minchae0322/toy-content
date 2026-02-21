@@ -17,7 +17,6 @@ import org.springframework.util.StopWatch;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "scheduler.hot-score", name = "enabled", havingValue = "true")
 public class BattleHotScoreScheduler {
 
   private final BattleRepository battleRepository;

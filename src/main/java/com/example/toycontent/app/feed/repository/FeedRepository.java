@@ -121,7 +121,7 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
     UPDATE tb_feed
     SET hot_score = (like_count * 2 + view_count * 0.1)
                     / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 2, 1), 1.5)
-    WHERE is_deleted = false
+    WHERE deleted = false
       AND updated_at >= :since
     """, nativeQuery = true)
   int bulkUpdateHotScoreRecent(@Param("since") LocalDateTime since);
@@ -141,7 +141,7 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
     UPDATE tb_feed
     SET hot_score = (like_count * 2 + view_count * 0.1)
                     / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 2, 1), 1.5)
-    WHERE is_deleted = false
+    WHERE deleted = false
       AND created_at >= DATE_SUB(NOW(), INTERVAL :recentDays DAY)
     """, nativeQuery = true)
   int bulkUpdateHotScoreAll(@Param("recentDays") int recentDays);
