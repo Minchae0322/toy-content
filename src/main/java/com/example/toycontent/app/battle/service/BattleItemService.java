@@ -50,6 +50,7 @@ public class BattleItemService {
 
     validateItemAddition(battle, userId, items);
     addItemsByPermission(battle, userId, items);
+
   }
 
   private void validateItemAddition(Battle battle, Long userId, List<ItemRequest> items) {
