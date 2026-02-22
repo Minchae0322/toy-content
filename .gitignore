@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+
+application-dev.yml
+application-local.yml
+Dockerfile
+logback-spring.xml
