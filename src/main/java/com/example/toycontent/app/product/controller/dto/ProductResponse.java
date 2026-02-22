@@ -65,6 +65,8 @@ public abstract class ProductResponse {
         @Schema(description = "공유 수", example = "12")
         private Integer shareCount;
 
+        private Double popularityScore;
+
         @Schema(description = "카테고리명", example = "피규어")
         private String categoryName;
 

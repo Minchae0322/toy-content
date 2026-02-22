@@ -86,6 +86,7 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             product.viewCount,
             product.likeCount,
             product.shareCount,
+            product.popularityScore,
             product.rejectReason,
             product.avgRating.as("averageRating"),
             ExpressionUtils.as(
