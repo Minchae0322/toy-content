@@ -25,7 +25,14 @@ import java.util.List;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Entity
-@Table(name = "TB_BATTLE_ITEM")
+@Table(name = "TB_BATTLE_ITEM", indexes = {
+        @Index(name = "idx_battle_item_battle", columnList = "battle_id"),
+        @Index(name = "idx_battle_item_product", columnList = "product_id"),
+        @Index(name = "idx_battle_item_status", columnList = "status"),
+        @Index(name = "idx_battle_item_battle_status", columnList = "battle_id, status"),
+        @Index(name = "idx_battle_item_registered_by", columnList = "registered_by"),
+        @Index(name = "idx_battle_item_type", columnList = "itemType")
+})
 public class BattleItem extends BaseTimeEntity {
 
   @Id

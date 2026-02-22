@@ -25,7 +25,8 @@ public class CarrierService {
     private final CarrierRepository carrierRepository;
 
     public List<CarrierResponse.Summary> getMyCarriers(Long userId) {
-        return carrierRepository.findAllByUserIdOrderByIsDefaultDescCreatedAtAsc(userId).stream()
+        return carrierRepository.findAllByUserIdOrderByIsDefaultDescCreatedAtAsc(userId)
+                .stream()
                 .map(CarrierResponse.Summary::from)
                 .toList();
     }

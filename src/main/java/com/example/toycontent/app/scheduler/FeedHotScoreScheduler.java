@@ -51,7 +51,7 @@ public class FeedHotScoreScheduler {
 
     try {
       long count = feedRepository.bulkUpdateHotScoreRecent(
-          LocalDateTime.now().minusMinutes(30));
+          LocalDateTime.now().minusMinutes(60));
 
       stopWatch.stop();
       log.info("[피드 핫 스코어] 시간 가중치 업데이트 완료 - {}건, {}ms",
