@@ -34,8 +34,6 @@ public class CarrierItemController {
 
     private final CarrierItemService carrierItemService;
 
-    // ===== 아이템 =====
-
     @Operation(summary = "아이템 담기", description = "캐리어에 상품을 추가합니다.")
     @PostMapping("/items")
     public ResponseEntity<ApiResponse<CarrierItemResponse.Detail>> addItem(

@@ -2,18 +2,8 @@ package com.example.toycontent.app.battle.domain;
 
 
 import com.example.toycontent.app.common.BaseTimeEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
+
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -33,7 +23,11 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Entity
-@Table(name = "TB_BATTLE_ITEM_COMMENT")
+@Table(name = "TB_BATTLE_ITEM_COMMENT", indexes = {
+        @Index(name = "idx_comment_battle_item", columnList = "battle_item_id"),
+        @Index(name = "idx_comment_creator", columnList = "creator_id"),
+        @Index(name = "idx_comment_battle_item_deleted", columnList = "battle_item_id, isDeleted")
+})
 public class BattleItemComment extends BaseTimeEntity {
 
   @Id
