@@ -125,4 +125,15 @@ public class CarrierItemController {
         carrierItemService.removeSticker(carrierId, stickerId, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "스티커를 제거했습니다."));
     }
+
+    @Operation(summary = "스티커 일괄 삭제", description = "여러 스티커를 한번에 삭제합니다.")
+    @PostMapping("/stickers/delete")
+    public ResponseEntity<ApiResponse<Void>> removeStickers(
+        @Parameter(description = "캐리어 ID") @PathVariable Long carrierId,
+        @Valid @RequestBody CarrierStickerRequest.RemoveBulk request,
+        @CurrentUserId Long userId) {
+
+        carrierItemService.removeStickers(carrierId, request.getStickerIds(), userId);
+        return ResponseEntity.ok(ApiResponse.success(null, "스티커를 일괄 삭제했습니다."));
+    }
 }
