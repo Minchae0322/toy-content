@@ -8,8 +8,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum CarrierSkinType {
+
     DEFAULT("DEFAULT", "기본"),
-    // 필요한 스킨 타입 추가
+    RETRO("RETRO", "레트로 트래블"),
+    SPACE("SPACE", "스페이스"),
+    KITTY("KITTY", "헬로키티"),
     ;
 
     private final String code;
