@@ -1,6 +1,8 @@
 package com.example.toycontent.app.carrier.domain;
 
+import com.example.toycontent.app.carrier.controller.dto.CarrierStickerRequest;
 import com.example.toycontent.app.common.BaseTimeEntity;
+import com.example.toycontent.app.common.enumuration.StickerType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,9 +37,18 @@ public class CarrierSticker extends BaseTimeEntity {
     @Comment("소속 캐리어")
     private Carrier carrier;
 
-    @Column(name = "sticker_type", nullable = false, length = 50)
-    @Comment("스티커 타입 (STAR, HEART, FIRE 등)")
-    private String stickerType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sticker_type", nullable = false, length = 20)
+    @Comment("스티커 타입")
+    private StickerType stickerType;
+
+    @Column(name = "content", length = 100)
+    @Comment("이모지 또는 프리셋 코드")
+    private String content;
+
+    @Column(name = "image_url", length = 500)
+    @Comment("이미지 URL (PHOTO_TAG 등에서 사용)")
+    private String imageUrl;
 
     @Column(name = "position_x", nullable = false)
     @Comment("X 위치 비율 (0.0 ~ 1.0)")
@@ -62,14 +73,24 @@ public class CarrierSticker extends BaseTimeEntity {
     @Comment("크기 비율 (1.0 = 기본)")
     private Double scaleRatio = 1.0;
 
-    public void updatePosition(Double positionX, Double positionY, Integer zIndex) {
+    private void updatePositionAndTransform(Double positionX, Double positionY,
+        Integer zIndex, Double rotation, Double scaleRatio) {
         this.positionX = positionX;
         this.positionY = positionY;
-        this.zIndex = zIndex;
+        this.zIndex = zIndex != null ? zIndex : this.zIndex;
+        this.rotation = rotation != null ? rotation : this.rotation;
+        this.scaleRatio = scaleRatio != null ? scaleRatio : this.scaleRatio;
     }
 
-    public void updateTransform(Double rotation, Double scaleRatio) {
-        this.rotation = rotation;
-        this.scaleRatio = scaleRatio;
+    public void update(CarrierStickerRequest.UpdateSticker request) {
+        updatePositionAndTransform(request.getPositionX(), request.getPositionY(),
+            request.getZIndex(), request.getRotation(), request.getScaleRatio());
+        this.content = request.getContent() != null ? request.getContent() : this.content;
+        this.imageUrl = request.getImageUrl() != null ? request.getImageUrl() : this.imageUrl;
+    }
+
+    public void updateBulk(CarrierStickerRequest.UpdateStickerBulk request) {
+        updatePositionAndTransform(request.getPositionX(), request.getPositionY(),
+            request.getZIndex(), request.getRotation(), request.getScaleRatio());
     }
 }

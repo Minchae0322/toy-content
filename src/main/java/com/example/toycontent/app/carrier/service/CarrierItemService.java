@@ -121,7 +121,6 @@ public class CarrierItemService {
     }
 
     // ===== 스티커 =====
-
     @Transactional
     public CarrierStickerResponse.Detail addSticker(Long carrierId, CarrierStickerRequest.AddSticker request, Long userId) {
         Carrier carrier = carrierService.getCarrierByOwner(carrierId, userId);
@@ -131,36 +130,29 @@ public class CarrierItemService {
         }
 
         CarrierSticker sticker = CarrierSticker.builder()
-                .carrier(carrier)
-                .stickerType(request.getStickerType())
-                .positionX(request.getPositionX())
-                .positionY(request.getPositionY())
-                .zIndex(request.getZIndex() != null ? request.getZIndex() : 0)
-                .rotation(request.getRotation() != null ? request.getRotation() : 0.0)
-                .scaleRatio(request.getScaleRatio() != null ? request.getScaleRatio() : 1.0)
-                .build();
+            .carrier(carrier)
+            .stickerType(request.getStickerType())
+            .content(request.getContent())
+            .imageUrl(request.getImageUrl())
+            .positionX(request.getPositionX())
+            .positionY(request.getPositionY())
+            .zIndex(request.getZIndex() != null ? request.getZIndex() : 0)
+            .rotation(request.getRotation() != null ? request.getRotation() : 0.0)
+            .scaleRatio(request.getScaleRatio() != null ? request.getScaleRatio() : 1.0)
+            .build();
 
         carrierStickerRepository.save(sticker);
 
         return CarrierStickerResponse.Detail.from(sticker);
     }
-
     @Transactional
     public CarrierStickerResponse.Detail updateSticker(Long carrierId, Long stickerId, CarrierStickerRequest.UpdateSticker request, Long userId) {
         carrierService.getCarrierByOwner(carrierId, userId);
 
         CarrierSticker sticker = carrierStickerRepository.findById(stickerId)
-                .orElseThrow(() -> new RestApiException(CarrierErrorCode.STICKER_NOT_FOUND));
+            .orElseThrow(() -> new RestApiException(CarrierErrorCode.STICKER_NOT_FOUND));
 
-        sticker.updatePosition(
-                request.getPositionX(),
-                request.getPositionY(),
-                request.getZIndex() != null ? request.getZIndex() : sticker.getZIndex()
-        );
-        sticker.updateTransform(
-                request.getRotation() != null ? request.getRotation() : sticker.getRotation(),
-                request.getScaleRatio() != null ? request.getScaleRatio() : sticker.getScaleRatio()
-        );
+        sticker.update(request);
 
         return CarrierStickerResponse.Detail.from(sticker);
     }
@@ -170,8 +162,8 @@ public class CarrierItemService {
         carrierService.getCarrierByOwner(carrierId, userId);
 
         List<Long> stickerIds = request.stream()
-                .map(CarrierStickerRequest.UpdateStickerBulk::getStickerId)
-                .toList();
+            .map(CarrierStickerRequest.UpdateStickerBulk::getStickerId)
+            .toList();
 
         List<CarrierSticker> stickers = carrierStickerRepository.findAllByIdInAndCarrierId(stickerIds, carrierId);
 
@@ -180,24 +172,16 @@ public class CarrierItemService {
         }
 
         Map<Long, CarrierStickerRequest.UpdateStickerBulk> requestMap = request.stream()
-                .collect(Collectors.toMap(CarrierStickerRequest.UpdateStickerBulk::getStickerId, r -> r));
+            .collect(Collectors.toMap(CarrierStickerRequest.UpdateStickerBulk::getStickerId, r -> r));
 
         stickers.forEach(sticker -> {
             CarrierStickerRequest.UpdateStickerBulk req = requestMap.get(sticker.getId());
-            sticker.updatePosition(
-                    req.getPositionX(),
-                    req.getPositionY(),
-                    req.getZIndex() != null ? req.getZIndex() : sticker.getZIndex()
-            );
-            sticker.updateTransform(
-                    req.getRotation() != null ? req.getRotation() : sticker.getRotation(),
-                    req.getScaleRatio() != null ? req.getScaleRatio() : sticker.getScaleRatio()
-            );
+            sticker.updateBulk(req);
         });
 
         return stickers.stream()
-                .map(CarrierStickerResponse.Detail::from)
-                .toList();
+            .map(CarrierStickerResponse.Detail::from)
+            .toList();
     }
 
     @Transactional
@@ -205,8 +189,21 @@ public class CarrierItemService {
         carrierService.getCarrierByOwner(carrierId, userId);
 
         CarrierSticker sticker = carrierStickerRepository.findById(stickerId)
-                .orElseThrow(() -> new RestApiException(CarrierErrorCode.STICKER_NOT_FOUND));
+            .orElseThrow(() -> new RestApiException(CarrierErrorCode.STICKER_NOT_FOUND));
 
         carrierStickerRepository.delete(sticker);
+    }
+
+    @Transactional
+    public void removeStickers(Long carrierId, List<Long> stickerIds, Long userId) {
+        carrierService.getCarrierByOwner(carrierId, userId);
+
+        List<CarrierSticker> stickers = carrierStickerRepository.findAllById(stickerIds);
+
+        if (stickers.size() != stickerIds.size()) {
+            throw new RestApiException(CarrierErrorCode.STICKER_NOT_FOUND);
+        }
+
+        carrierStickerRepository.deleteAllInBatch(stickers);
     }
 }
