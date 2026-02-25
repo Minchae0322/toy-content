@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FeedHashtagRepository extends JpaRepository<FeedHashtag, Long> {
 
+  void deleteAllByFeed_Id(Long feedId);
 }
