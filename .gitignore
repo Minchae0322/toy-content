@@ -39,3 +39,5 @@ out/
 application-local.yml
 Dockerfile
 logback-spring.xml
+app.jar
+app.jar
