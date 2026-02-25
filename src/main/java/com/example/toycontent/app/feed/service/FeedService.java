@@ -5,6 +5,7 @@ import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.FeedCursorResponse;
 import com.example.toycontent.app.feed.domain.FeedReaction;
+import com.example.toycontent.app.feed.repository.FeedHashtagRepository;
 import com.example.toycontent.app.feed.repository.FeedReactionRepository;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
@@ -53,6 +54,7 @@ public class FeedService {
   private final ExternalUserInfoService externalUserInfoService;
   private final ExternalUserFollowingService externalUserFollowingService;
   private final FeedReactionRepository feedReactionRepository;
+  private final FeedHashtagRepository feedHashtagRepository;
 
   private static final int HOT_FEED_RECENT_DAYS = 30;
   
@@ -263,15 +265,21 @@ public class FeedService {
     feed.update(request, category, product);
 
     // 해시태그 업데이트
-    List<FeedHashtag> newHashtags = Optional.ofNullable(request.getHashtags())
+    deleteAllFeedHashtagsByFeedId(feed);
+
+    Optional.ofNullable(request.getHashtags())
         .orElse(Collections.emptyList())
         .stream()
         .map(this::findOrCreateHashtag)
         .map(hashtag -> FeedHashtag.create(feed, hashtag))
-        .toList();
-    feed.updateHashtags(newHashtags);
+        .forEach(feed.getHashtags()::add);
 
     return FeedResponse.FeedCreated.of(feed);
+  }
+
+  private void deleteAllFeedHashtagsByFeedId(Feed feed) {
+    feedHashtagRepository.deleteAllByFeed_Id(feed.getId());
+    feed.getHashtags().clear();
   }
 
   /**
