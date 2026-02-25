@@ -73,6 +73,11 @@ public class CarrierSticker extends BaseTimeEntity {
     @Comment("크기 비율 (1.0 = 기본)")
     private Double scaleRatio = 1.0;
 
+    /**
+     * 위치 및 변환 정보 업데이트 (공통)
+     * - positionX, positionY는 필수값으로 덮어씀
+     * - zIndex, rotation, scaleRatio는 null이면 기존값 유지
+     */
     private void updatePositionAndTransform(Double positionX, Double positionY,
         Integer zIndex, Double rotation, Double scaleRatio) {
         this.positionX = positionX;
@@ -82,6 +87,20 @@ public class CarrierSticker extends BaseTimeEntity {
         this.scaleRatio = scaleRatio != null ? scaleRatio : this.scaleRatio;
     }
 
+    /**
+     * PHOTO_TAG 스티커 upsert 시 업데이트
+     * - 위치/변환 + 이미지 정보 갱신
+     */
+    public void updatePhotoTag(CarrierStickerRequest.AddSticker request) {
+        updatePositionAndTransform(request.getPositionX(), request.getPositionY(),
+            request.getZIndex(), request.getRotation(), request.getScaleRatio());
+        this.imageUrl = request.getImageUrl() != null ? request.getImageUrl() : this.imageUrl;
+    }
+
+    /**
+     * 단건 스티커 수정
+     * - 위치/변환 + 콘텐츠/이미지 정보 갱신
+     */
     public void update(CarrierStickerRequest.UpdateSticker request) {
         updatePositionAndTransform(request.getPositionX(), request.getPositionY(),
             request.getZIndex(), request.getRotation(), request.getScaleRatio());
@@ -89,6 +108,10 @@ public class CarrierSticker extends BaseTimeEntity {
         this.imageUrl = request.getImageUrl() != null ? request.getImageUrl() : this.imageUrl;
     }
 
+    /**
+     * 벌크 스티커 수정
+     * - 위치/변환 정보만 갱신 (콘텐츠/이미지 변경 불가)
+     */
     public void updateBulk(CarrierStickerRequest.UpdateStickerBulk request) {
         updatePositionAndTransform(request.getPositionX(), request.getPositionY(),
             request.getZIndex(), request.getRotation(), request.getScaleRatio());
