@@ -9,6 +9,7 @@ import com.example.toycontent.app.carrier.domain.CarrierItem;
 import com.example.toycontent.app.carrier.domain.CarrierSticker;
 import com.example.toycontent.app.carrier.repository.CarrierItemRepository;
 import com.example.toycontent.app.carrier.repository.CarrierStickerRepository;
+import com.example.toycontent.app.common.enumuration.StickerType;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.CarrierErrorCode;
 import com.example.toycontent.app.product.domain.Product;
@@ -120,16 +121,51 @@ public class CarrierItemService {
         carrierItemRepository.delete(item);
     }
 
-    // ===== 스티커 =====
     @Transactional
     public CarrierStickerResponse.Detail addSticker(Long carrierId, CarrierStickerRequest.AddSticker request, Long userId) {
         Carrier carrier = carrierService.getCarrierByOwner(carrierId, userId);
 
+        // PHOTO_TAG 스티커는 캐리어당 1개만 존재 (upsert 처리)
+        if (request.getStickerType() == StickerType.PHOTO_TAG) {
+            return upsertPhotoTagSticker(carrier, request);
+        }
+
+        return createNormalSticker(carrier, request, carrierId);
+    }
+
+    /**
+     * PHOTO_TAG 스티커 upsert
+     * - 이미 존재하면 내용 업데이트, 없으면 새로 생성
+     */
+    private CarrierStickerResponse.Detail upsertPhotoTagSticker(Carrier carrier, CarrierStickerRequest.AddSticker request) {
+        CarrierSticker sticker = carrierStickerRepository
+            .findByCarrierIdAndStickerType(carrier.getId(), StickerType.PHOTO_TAG)
+            .map(existing -> {
+                existing.updatePhotoTag(request);
+                return existing;
+            })
+            .orElseGet(() -> createSticker(carrier, request));
+
+        carrierStickerRepository.save(sticker);
+        return CarrierStickerResponse.Detail.from(sticker);
+    }
+
+    /**
+     * 일반 스티커 생성
+     * - 최대 개수 초과 시 예외 발생
+     */
+    private CarrierStickerResponse.Detail createNormalSticker(Carrier carrier, CarrierStickerRequest.AddSticker request, Long carrierId) {
         if (carrierStickerRepository.countByCarrierId(carrierId) >= MAX_STICKER_COUNT) {
             throw new RestApiException(CarrierErrorCode.MAX_STICKER_EXCEEDED);
         }
 
-        CarrierSticker sticker = CarrierSticker.builder()
+        CarrierSticker sticker = createSticker(carrier, request);
+        carrierStickerRepository.save(sticker);
+        return CarrierStickerResponse.Detail.from(sticker);
+    }
+
+    private CarrierSticker createSticker(Carrier carrier, CarrierStickerRequest.AddSticker request) {
+        return CarrierSticker.builder()
             .carrier(carrier)
             .stickerType(request.getStickerType())
             .content(request.getContent())
@@ -140,11 +176,8 @@ public class CarrierItemService {
             .rotation(request.getRotation() != null ? request.getRotation() : 0.0)
             .scaleRatio(request.getScaleRatio() != null ? request.getScaleRatio() : 1.0)
             .build();
-
-        carrierStickerRepository.save(sticker);
-
-        return CarrierStickerResponse.Detail.from(sticker);
     }
+
     @Transactional
     public CarrierStickerResponse.Detail updateSticker(Long carrierId, Long stickerId, CarrierStickerRequest.UpdateSticker request, Long userId) {
         carrierService.getCarrierByOwner(carrierId, userId);
