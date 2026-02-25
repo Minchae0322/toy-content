@@ -94,7 +94,7 @@ public class CarrierSticker extends BaseTimeEntity {
     public void updatePhotoTag(CarrierStickerRequest.AddSticker request) {
         updatePositionAndTransform(request.getPositionX(), request.getPositionY(),
             request.getZIndex(), request.getRotation(), request.getScaleRatio());
-        this.imageUrl = request.getImageUrl() != null ? request.getImageUrl() : this.imageUrl;
+        this.imageUrl = request.getImageUrl();
     }
 
     /**
