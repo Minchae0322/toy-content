@@ -145,4 +145,6 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
       AND created_at >= DATE_SUB(NOW(), INTERVAL :recentDays DAY)
     """, nativeQuery = true)
   int bulkUpdateHotScoreAll(@Param("recentDays") int recentDays);
+
+  Long countByHotScoreGreaterThanEqualAndIsDeletedFalse(double hotScoreThreshold);
 }
