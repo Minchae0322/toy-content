@@ -29,4 +29,11 @@ public interface BattleRepository extends JpaRepository<Battle, Long>, BattleRep
       @Param("cursor") Long cursor,
       @Param("limit") int limit
   );
+
+  /**
+   * 진행중인 배틀 수 조회
+   * - 삭제되지 않은 배틀 중 현재 시각이 startDate ~ endDate 사이인 것
+   */
+  @Query("SELECT COUNT(b) FROM Battle b WHERE b.isDeleted = false AND b.startDate <= :now AND b.endDate > :now")
+  long countActiveBattles(@Param("now") LocalDateTime now);
 }
