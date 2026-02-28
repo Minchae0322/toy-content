@@ -195,17 +195,19 @@ public class FeedService {
 
   private Feed toEntity(FeedRequest.CreateFeed request, Category category, Product product) {
     return Feed.builder()
-        .userId(request.getUserId())
-        .product(product)
-        .productNameCustom(
-            request.getProductNameCustom() == null && product != null ? product.getName() : null)
-        .category(category)
-        .review(request.getReview())
-        .evaluation(request.getEvaluation())
-        .buyPlace(request.getBuyPlace())
-        .buyPrice(request.getBuyPrice())
-        .price(request.getPrice())
-        .build();
+            .userId(request.getUserId())
+            .product(product)
+            .productNameCustom(
+                    request.getProductNameCustom() == null && product != null
+                            ? product.getName()
+                            : request.getProductNameCustom())
+            .category(category)
+            .review(request.getReview())
+            .evaluation(request.getEvaluation())
+            .buyPlace(request.getBuyPlace())
+            .buyPrice(request.getBuyPrice())
+            .price(request.getPrice())
+            .build();
   }
 
   /**
