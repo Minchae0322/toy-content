@@ -23,6 +23,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, Product
         """)
   List<Product> findByPopularityDirtyTrue(PageRequest of);
 
+  /** 승인 완료된 제품 수 조회 */
+  long countByStatus(ProductStatus status);
+
   // 상태별 조회
   Slice<Product> findByStatus(ProductStatus status, Pageable pageable);
 
