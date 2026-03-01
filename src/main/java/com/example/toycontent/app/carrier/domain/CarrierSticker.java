@@ -79,7 +79,7 @@ public class CarrierSticker extends BaseTimeEntity {
      * - zIndex, rotation, scaleRatio는 null이면 기존값 유지
      */
     private void updatePositionAndTransform(Double positionX, Double positionY,
-        Integer zIndex, Double rotation, Double scaleRatio) {
+                                            Integer zIndex, Double rotation, Double scaleRatio) {
         this.positionX = positionX;
         this.positionY = positionY;
         this.zIndex = zIndex != null ? zIndex : this.zIndex;
@@ -88,32 +88,17 @@ public class CarrierSticker extends BaseTimeEntity {
     }
 
     /**
-     * PHOTO_TAG 스티커 upsert 시 업데이트
-     * - 위치/변환 + 이미지 정보 갱신
+     * bulk upsert 시 업데이트
+     * - 위치/변환 + 콘텐츠/이미지 갱신
+     * - content, imageUrl은 null이면 기존값 유지
      */
-    public void updatePhotoTag(CarrierStickerRequest.AddSticker request) {
+    public void updateFromBulkSave(CarrierStickerRequest.BulkSave.StickerUpsert request) {
         updatePositionAndTransform(request.getPositionX(), request.getPositionY(),
-            request.getZIndex(), request.getRotation(), request.getScaleRatio());
-        this.imageUrl = request.getImageUrl();
-    }
-
-    /**
-     * 단건 스티커 수정
-     * - 위치/변환 + 콘텐츠/이미지 정보 갱신
-     */
-    public void update(CarrierStickerRequest.UpdateSticker request) {
-        updatePositionAndTransform(request.getPositionX(), request.getPositionY(),
-            request.getZIndex(), request.getRotation(), request.getScaleRatio());
+                request.getZIndex(), request.getRotation(), request.getScaleRatio());
         this.content = request.getContent() != null ? request.getContent() : this.content;
-        this.imageUrl = request.getImageUrl() != null ? request.getImageUrl() : this.imageUrl;
-    }
 
-    /**
-     * 벌크 스티커 수정
-     * - 위치/변환 정보만 갱신 (콘텐츠/이미지 변경 불가)
-     */
-    public void updateBulk(CarrierStickerRequest.UpdateStickerBulk request) {
-        updatePositionAndTransform(request.getPositionX(), request.getPositionY(),
-            request.getZIndex(), request.getRotation(), request.getScaleRatio());
+        if (this.stickerType == StickerType.PHOTO_TAG) {
+            this.imageUrl = request.getImageUrl();
+        }
     }
 }

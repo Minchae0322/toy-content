@@ -1,127 +1,85 @@
 package com.example.toycontent.app.carrier.controller.dto;
-
 import com.example.toycontent.app.common.enumuration.StickerType;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-public class CarrierStickerRequest {
+public abstract class CarrierStickerRequest {
 
     @Getter
-    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "스티커 추가 요청")
-    public static class AddSticker {
+    @Schema(description = "스티커 일괄 저장 요청 (신규 생성 + 기존 수정을 한 번에 처리)")
+    public static class BulkSave {
 
-        @NotNull(message = "스티커 타입은 필수입니다.")
-        @Schema(description = "스티커 타입")
-        private StickerType stickerType;
+        @Valid
+        @NotEmpty(message = "스티커 목록은 비어있을 수 없습니다.")
+        @Size(max = 20, message = "한 번에 최대 20개까지 저장할 수 있습니다.")
+        @Schema(description = "upsert 대상 스티커 목록")
+        private List<StickerUpsert> stickers;
 
-        @Size(max = 100)
-        @Schema(description = "이모지 또는 캡션")
-        private String content;
+        @Getter
+        @NoArgsConstructor
+        @AllArgsConstructor
+        @Schema(description = "개별 스티커 upsert 데이터")
+        public static class StickerUpsert {
 
-        @Size(max = 500)
-        @Schema(description = "이미지 URL (PHOTO_TAG일 때 사용)")
-        private String imageUrl;
+            @Schema(description = "스티커 ID (null이면 신규 생성, 값이 있으면 기존 수정)", example = "15", nullable = true)
+            private Long stickerId;
 
-        @NotNull @DecimalMin("0.0") @DecimalMax("1.0")
-        @Schema(description = "X 위치 비율")
-        private Double positionX;
+            @NotNull(message = "스티커 타입은 필수입니다.")
+            @Schema(description = "스티커 타입", example = "TEXT", requiredMode = Schema.RequiredMode.REQUIRED)
+            private StickerType stickerType;
 
-        @NotNull @DecimalMin("0.0") @DecimalMax("1.0")
-        @Schema(description = "Y 위치 비율")
-        private Double positionY;
+            @Size(max = 200, message = "스티커 내용은 200자 이내로 입력해주세요.")
+            @Schema(description = "스티커 텍스트 내용 (TEXT, PHOTO_TAG 타입에서 사용)", example = "맛있다!", nullable = true)
+            private String content;
 
-        @Schema(description = "레이어 순서")
-        private Integer zIndex;
+            @Schema(description = "스티커 이미지 URL (IMAGE 타입에서 사용)", example = "https://cdn.example.com/sticker.png", nullable = true)
+            private String imageUrl;
 
-        @Schema(description = "회전 각도 (0 ~ 360)", defaultValue = "0.0")
-        private Double rotation;
+            @DecimalMin(value = "0.0", message = "X 좌표는 0 이상이어야 합니다.")
+            @DecimalMax(value = "1.0", message = "X 좌표는 1 이하여야 합니다.")
+            @Schema(description = "X 좌표 (0.0 ~ 1.0 비율값)", example = "0.5")
+            private Double positionX;
 
-        @Schema(description = "크기 비율 (1.0 = 기본)", defaultValue = "1.0")
-        private Double scaleRatio;
-    }
+            @DecimalMin(value = "0.0", message = "Y 좌표는 0 이상이어야 합니다.")
+            @DecimalMax(value = "1.0", message = "Y 좌표는 1 이하여야 합니다.")
+            @Schema(description = "Y 좌표 (0.0 ~ 1.0 비율값)", example = "0.3")
+            private Double positionY;
 
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Schema(description = "스티커 변경 요청")
-    public static class UpdateSticker {
+            @Schema(description = "z-index (겹침 순서, 클수록 위에 표시)", example = "1", nullable = true)
+            private Integer zIndex;
 
-        @NotNull @DecimalMin("0.0") @DecimalMax("1.0")
-        @Schema(description = "X 위치 비율")
-        private Double positionX;
+            @DecimalMin(value = "-360.0", message = "회전 각도는 -360 이상이어야 합니다.")
+            @DecimalMax(value = "360.0", message = "회전 각도는 360 이하여야 합니다.")
+            @Schema(description = "회전 각도 (degree, 기본값 0)", example = "15.5", nullable = true)
+            private Double rotation;
 
-        @NotNull @DecimalMin("0.0") @DecimalMax("1.0")
-        @Schema(description = "Y 위치 비율")
-        private Double positionY;
-
-        @Schema(description = "레이어 순서")
-        private Integer zIndex;
-
-        @Schema(description = "회전 각도")
-        private Double rotation;
-
-        @Schema(description = "크기 비율")
-        private Double scaleRatio;
-
-        @Size(max = 100)
-        @Schema(description = "이모지 또는 캡션")
-        private String content;
-
-        @Size(max = 500)
-        @Schema(description = "이미지 URL (PHOTO_TAG일 때 사용)")
-        private String imageUrl;
-    }
-
-
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Schema(description = "스티커 일괄 변경 요청")
-    public static class UpdateStickerBulk {
-
-        @NotNull
-        @Schema(description = "스티커 ID")
-        private Long stickerId;
-
-        @NotNull @DecimalMin("0.0") @DecimalMax("1.0")
-        @Schema(description = "X 위치 비율")
-        private Double positionX;
-
-        @NotNull @DecimalMin("0.0") @DecimalMax("1.0")
-        @Schema(description = "Y 위치 비율")
-        private Double positionY;
-
-        @Schema(description = "레이어 순서")
-        private Integer zIndex;
-
-        @Schema(description = "회전 각도")
-        private Double rotation;
-
-        @Schema(description = "크기 비율")
-        private Double scaleRatio;
+            @DecimalMin(value = "0.1", message = "스케일은 0.1 이상이어야 합니다.")
+            @DecimalMax(value = "3.0", message = "스케일은 3.0 이하여야 합니다.")
+            @Schema(description = "확대/축소 비율 (기본값 1.0)", example = "1.2", nullable = true)
+            private Double scaleRatio;
+        }
     }
 
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(description = "스티커 일괄 삭제 요청")
     public static class RemoveBulk {
+
         @NotEmpty(message = "삭제할 스티커 ID를 입력해주세요.")
         @Size(max = 50, message = "한 번에 최대 50개까지 삭제할 수 있습니다.")
+        @Schema(description = "삭제할 스티커 ID 목록", example = "[1, 2, 3]")
         private List<Long> stickerIds;
     }
 }

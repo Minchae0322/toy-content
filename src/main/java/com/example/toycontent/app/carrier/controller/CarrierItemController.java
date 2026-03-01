@@ -81,38 +81,15 @@ public class CarrierItemController {
 
     // ===== 스티커 =====
 
-    @Operation(summary = "스티커 붙이기", description = "캐리어에 스티커를 추가합니다.")
-    @PostMapping("/stickers")
-    public ResponseEntity<ApiResponse<CarrierStickerResponse.Detail>> addSticker(
-            @Parameter(description = "캐리어 ID") @PathVariable Long carrierId,
-            @Valid @RequestBody CarrierStickerRequest.AddSticker request,
+    @Operation(summary = "스티커 일괄 저장", description = "캐리어의 스티커를 일괄 upsert합니다. (신규 생성 + 기존 수정)")
+    @PutMapping("/stickers")
+    public ResponseEntity<ApiResponse<List<CarrierStickerResponse.Detail>>> saveStickers(
+            @PathVariable Long carrierId,
+            @Valid @RequestBody CarrierStickerRequest.BulkSave request,
             @CurrentUserId Long userId) {
 
-        CarrierStickerResponse.Detail sticker = carrierItemService.addSticker(carrierId, request, userId);
-        return ResponseEntity.ok(ApiResponse.success(sticker, "스티커를 붙였습니다."));
-    }
-
-    @Operation(summary = "스티커 위치/변환 변경", description = "스티커의 위치, 회전, 크기를 변경합니다.")
-    @PatchMapping("/stickers/{stickerId}")
-    public ResponseEntity<ApiResponse<CarrierStickerResponse.Detail>> updateSticker(
-            @Parameter(description = "캐리어 ID") @PathVariable Long carrierId,
-            @Parameter(description = "스티커 ID") @PathVariable Long stickerId,
-            @Valid @RequestBody CarrierStickerRequest.UpdateSticker request,
-            @CurrentUserId Long userId) {
-
-        CarrierStickerResponse.Detail sticker = carrierItemService.updateSticker(carrierId, stickerId, request, userId);
-        return ResponseEntity.ok(ApiResponse.success(sticker, "스티커가 변경되었습니다."));
-    }
-
-    @Operation(summary = "스티커 일괄 저장", description = "여러 스티커의 위치를 한번에 저장합니다.")
-    @PutMapping("/stickers/positions")
-    public ResponseEntity<ApiResponse<List<CarrierStickerResponse.Detail>>> updateStickerPositions(
-            @Parameter(description = "캐리어 ID") @PathVariable Long carrierId,
-            @Valid @RequestBody List<CarrierStickerRequest.UpdateStickerBulk> request,
-            @CurrentUserId Long userId) {
-
-        List<CarrierStickerResponse.Detail> stickers = carrierItemService.updateStickerPositions(carrierId, request, userId);
-        return ResponseEntity.ok(ApiResponse.success(stickers, "스티커 위치가 저장되었습니다."));
+        List<CarrierStickerResponse.Detail> result = carrierItemService.bulkSaveStickers(carrierId, request, userId);
+        return ResponseEntity.ok(ApiResponse.success(result, "스티커가 저장되었습니다."));
     }
 
     @Operation(summary = "스티커 제거", description = "캐리어에서 스티커를 제거합니다.")
