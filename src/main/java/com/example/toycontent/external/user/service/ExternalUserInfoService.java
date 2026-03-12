@@ -55,15 +55,25 @@ public class ExternalUserInfoService {
       return createFallbackUserInfo(null);
     }
 
+    long start = System.currentTimeMillis();
+
     return cacheService.getCachedUserInfos(userId)
-        .map(cachedInfo -> {
-          log.info("[외부사용자 조회] 캐시 히트 - userId: {}", userId);
-          return cachedInfo;
-        })
-        .orElseGet(() -> {
-          log.info("[외부사용자 조회] 캐시 미스 - userId: {}, 서비스에서 조회합니다.", userId);
-          return serviceClient.getUserInfoOrElseFetchAndCache(userId);
-        });
+            .map(cachedInfo -> {
+              long elapsed = System.currentTimeMillis() - start;
+              log.info("[외부사용자 조회] 캐시 HIT - userId: {}, elapsed: {}ms", userId, elapsed);
+              return cachedInfo;
+            })
+            .orElseGet(() -> {
+              long elapsed = System.currentTimeMillis() - start;
+              log.info("[외부사용자 조회] 캐시 MISS - userId: {}, elapsed: {}ms, API 호출합니다.", userId, elapsed);
+
+              long apiStart = System.currentTimeMillis();
+              ExternalUserInfo result = serviceClient.getUserInfoOrElseFetchAndCache(userId);
+              long apiElapsed = System.currentTimeMillis() - apiStart;
+              log.info("[외부사용자 조회] API 호출 완료 - userId: {}, API elapsed: {}ms, total: {}ms",
+                      userId, apiElapsed, System.currentTimeMillis() - start);
+              return result;
+            });
   }
 
   /**

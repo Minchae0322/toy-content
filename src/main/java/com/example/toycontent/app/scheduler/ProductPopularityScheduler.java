@@ -24,15 +24,16 @@ public class ProductPopularityScheduler {
 
   @Value("${scheduler.product-popularity.full-recalculate.enabled}")
   private Boolean fullRecalculateEnabled;
+
   /**
    * 시간 가중치 업데이트 (매시간)
    * - 최근 활동이 있거나 dirty 마킹된 상품만 처리
    */
   @Scheduled(cron = "${scheduler.product-popularity.time-weight-update.cron}")
   @SchedulerLock(
-      name = "productPopularity",
-      lockAtLeastFor = "30m",
-      lockAtMostFor = "50m"
+          name = "productPopularity",
+          lockAtLeastFor = "30m",
+          lockAtMostFor = "50m"
   )
   public void timeWeightUpdate() {
     if (!timeWeightEnabled) {
@@ -48,7 +49,7 @@ public class ProductPopularityScheduler {
       int count = popularityService.updateDirtyProducts();
       stopWatch.stop();
       log.info("[제품 인기도] 시간 가중치 업데이트 완료 - {}건, {}ms",
-          count, stopWatch.getTotalTimeMillis());
+              count, stopWatch.getTotalTimeMillis());
     } catch (Exception e) {
       log.error("[제품 인기도] 시간 가중치 업데이트 실패", e);
     }
@@ -59,12 +60,13 @@ public class ProductPopularityScheduler {
    * - 시간 감쇠 반영을 위해 전체 상품 재계산
    */
   @SchedulerLock(
-      name = "productPopularity",
-      lockAtLeastFor = "1h",
-      lockAtMostFor = "6h"
+          name = "productPopularity-fullRecalc",   // ← 이름 분리
+          lockAtLeastFor = "1h",
+          lockAtMostFor = "6h"
   )
   @Scheduled(cron = "${scheduler.product-popularity.full-recalculate.cron}")
   public void fullRecalculate() {
+
     if (!fullRecalculateEnabled) {
       log.debug("[제품 인기도] 전체 재계산 스케줄러 OFF");
       return;
@@ -73,12 +75,12 @@ public class ProductPopularityScheduler {
     log.info("[제품 인기도] 전체 재계산 시작");
     StopWatch stopWatch = new StopWatch();
     stopWatch.start();
-
+  //2026-03-12 23:00:50.478 [scheduling-1] INFO  c.e.t.a.s.ProductPopularityScheduler - [제품 인기도] 전체 재계산 완료 - 2010건, 50191ms
     try {
       int count = popularityService.recalculateAll();
       stopWatch.stop();
       log.info("[제품 인기도] 전체 재계산 완료 - {}건, {}ms",
-          count, stopWatch.getTotalTimeMillis());
+              count, stopWatch.getTotalTimeMillis());
     } catch (Exception e) {
       log.error("[제품 인기도] 전체 재계산 실패", e);
     }
