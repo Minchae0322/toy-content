@@ -16,6 +16,7 @@ import com.example.toycontent.app.notification.NotificationService;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class BattleItemCommentService {
 
   private final BattleItemRepository battleItemRepository;
@@ -34,34 +36,55 @@ public class BattleItemCommentService {
 
   @Transactional
   public void createComment(Long battleId, Long itemId, Long actionUserId, BattleItemCommentRequest.Create request) {
-    BattleItem battleItem = battleItemRepository.findById(itemId)
-        .orElseThrow(() -> new RestApiException(BattleErrorCode.BATTLE_ITEM_NOT_FOUND));
+    log.info("댓글 작성 시작 - battleId: {}, itemId: {}, userId: {}", battleId, itemId, actionUserId);
 
-    ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(actionUserId);
+    try {
+      BattleItem battleItem = battleItemRepository.findById(itemId)
+              .orElseThrow(() -> {
+                log.warn("배틀 아이템 조회 실패 - itemId: {}", itemId);
+                return new RestApiException(BattleErrorCode.BATTLE_ITEM_NOT_FOUND);
+              });
+      log.debug("1단계 통과 - 배틀 아이템 조회 완료");
 
-    BattleItemComment comment = BattleItemComment.builder()
-        .battleItem(battleItem)
-        .creatorId(actionUserId)
-        .creatorNickname(userInfo.getNickname())
-        .creatorProfileImageUrl(userInfo.getProfileImageFile().getFileUrl())
-        .content(request.getContent())
-        .build();
+      ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(actionUserId);
+      log.debug("2단계 통과 - 유저 정보 조회 완료: nickname={}", userInfo.getNickname());
 
-    battleItem.getBattle().incrementTotalCommentCount();
+      BattleItemComment comment = BattleItemComment.builder()
+              .battleItem(battleItem)
+              .creatorId(actionUserId)
+              .creatorNickname(userInfo.getNickname())
+              .creatorProfileImageUrl(userInfo.getProfileImageFile().getFileUrl())
+              .content(request.getContent())
+              .build();
+      log.debug("3단계 통과 - 댓글 엔티티 생성 완료");
 
-    notificationService.notifyBattleItemComment(
-        battleItem.getRegisterId(),
-        actionUserId,
-        userInfo.getNickname(),
-        userInfo.getProfileImageFile().getFileUrl(),
-        battleItem.getBattle().getId(),
-        battleItem.getBattle().getTitle(),
-        battleItem.getId(),
-        battleItem.getDisplayName()
-    );
+      battleItem.getBattle().incrementTotalCommentCount();
+      log.debug("4단계 통과 - 댓글 수 증가 완료");
 
-    commentRepository.save(comment);
+      notificationService.notifyBattleItemComment(
+              battleItem.getRegisterId(),
+              actionUserId,
+              userInfo.getNickname(),
+              userInfo.getProfileImageFile().getFileUrl(),
+              battleItem.getBattle().getId(),
+              battleItem.getBattle().getTitle(),
+              battleItem.getId(),
+              battleItem.getDisplayName()
+      );
+      log.debug("5단계 통과 - 알림 발송 완료");
+
+      commentRepository.save(comment);
+      log.info("댓글 작성 완료 - commentId: {}, battleId: {}, itemId: {}", comment.getId(), battleId, itemId);
+
+    } catch (RestApiException e) {
+      throw e;
+    } catch (Exception e) {
+      log.error("댓글 작성 실패 - battleId: {}, itemId: {}, userId: {}, 원인: {}",
+              battleId, itemId, actionUserId, e.getMessage(), e);
+      throw e;
+    }
   }
+
   @Transactional(readOnly = true)
   public Slice<BattleItemCommentResponse.Detail> getComments(
       Long battleId, Long itemId, Long userId, Pageable pageable) {
