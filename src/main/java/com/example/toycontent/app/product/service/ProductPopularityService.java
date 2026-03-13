@@ -7,6 +7,8 @@ import com.example.toycontent.app.product.repository.ProductRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -19,8 +21,9 @@ public class ProductPopularityService {
 
   private final ProductRepository productRepository;
   private final ProductPopularityCalculator calculator;
+  private final EntityManager entityManager;
 
-  private static final int CHUNK_SIZE = 500;
+  private static final int CHUNK_SIZE = 1000;
   private static final int MAX_DIRTY_PER_BATCH = 2000;
 
   @Transactional
@@ -44,12 +47,13 @@ public class ProductPopularityService {
     Slice<Product> products;
     do {
       products = productRepository.findByStatus(
-          ProductStatus.APPROVED,
-          PageRequest.of(page++, CHUNK_SIZE)
+              ProductStatus.APPROVED,
+              PageRequest.of(page++, CHUNK_SIZE)
       );
 
       if (products.hasContent()) {
         totalCount += updateProductScores(products.getContent());
+        entityManager.clear();
       }
 
     } while (products.hasNext());
@@ -61,14 +65,13 @@ public class ProductPopularityService {
    * 상품 점수 계산 및 업데이트
    */
   private int updateProductScores(List<Product> products) {
-    // TODO: 성능 개선 - JdbcTemplate 배치 처리로 변경
-    Map<Long, Double> scores = products.parallelStream()
-        .collect(Collectors.toMap(
-            Product::getId,
-            calculator::calculate
-        ));
+    Map<Long, Double> scores = products.stream()
+            .collect(Collectors.toMap(
+                    Product::getId,
+                    calculator::calculate
+            ));
 
-    scores.forEach(productRepository::updatePopularityScore);
+    productRepository.bulkUpdateScores(scores);
 
     return scores.size();
   }
