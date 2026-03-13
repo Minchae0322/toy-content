@@ -21,10 +21,14 @@ import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -32,6 +36,8 @@ import org.springframework.stereotype.Repository;
 public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
 
   private final JPAQueryFactory queryFactory;
+  private final JdbcTemplate jdbcTemplate;  // 추가
+
 
   @Override
   public List<ProductList> findBySearchCondition(ProductSearchCondition searchCondition,
@@ -116,6 +122,32 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
         .leftJoin(product.productAttachmentFiles, productAttachmentFile)
         .on(productAttachmentFile.product.id.eq(product.id)
             .and(productAttachmentFile.isPrimary.isTrue()));
+  }
+
+
+  @Override
+  public void bulkUpdateScores(Map<Long, Double> scores) {
+    executeCaseWhenUpdate(new ArrayList<>(scores.entrySet()));
+  }
+
+  private void executeCaseWhenUpdate(List<Map.Entry<Long, Double>> chunk) {
+    String caseClause = chunk.stream()
+            .map(e -> "WHEN %d THEN %f".formatted(e.getKey(), e.getValue()))
+            .collect(Collectors.joining(" "));
+
+    String idList = chunk.stream()
+            .map(e -> e.getKey().toString())
+            .collect(Collectors.joining(","));
+
+    String sql = """
+        UPDATE product
+        SET popularity_score = CASE id %s END,
+            popularity_dirty = false,
+            popularity_calculated_at = CURRENT_TIMESTAMP
+        WHERE id IN (%s)
+        """.formatted(caseClause, idList);
+
+    jdbcTemplate.update(sql);
   }
 
   // 공통 count 쿼리
