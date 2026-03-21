@@ -13,6 +13,7 @@ import com.example.toycontent.app.feed.repository.FeedCommentRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.kafka.KafkaNotificationProducer;
 import com.example.toycontent.app.notification.NotificationService;
+import com.example.toycontent.external.user.dto.ExternalAttachmentFileDto;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import com.example.toycontent.external.user.service.UserCacheStore;
@@ -21,6 +22,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -50,12 +53,14 @@ public class FeedCommentService {
     feed.incrementCommentCount();
 
     notificationService.notifyFeedComment(
-        feed.getUserId(),
-        creatorId,
-        externalUserInfo.getNickname(),
-        externalUserInfo.getProfileImageFile().getFileUrl(),
-        feedId,
-        feed.getProductNameCustom()
+            feed.getUserId(),
+            creatorId,
+            externalUserInfo.getNickname(),
+            Optional.ofNullable(externalUserInfo.getProfileImageFile())
+                    .map(ExternalAttachmentFileDto::getFileUrl)
+                    .orElse(null),
+            feedId,
+            feed.getProductNameCustom()
     );
 
     return FeedCommentResponse.Created.of(comment);

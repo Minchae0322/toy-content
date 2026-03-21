@@ -13,6 +13,7 @@ import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.notification.NotificationService;
+import com.example.toycontent.external.user.dto.ExternalAttachmentFileDto;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -53,9 +56,12 @@ public class BattleItemCommentService {
               .battleItem(battleItem)
               .creatorId(actionUserId)
               .creatorNickname(userInfo.getNickname())
-              .creatorProfileImageUrl(userInfo.getProfileImageFile().getFileUrl())
+              .creatorProfileImageUrl(Optional.ofNullable(userInfo.getProfileImageFile())
+                      .map(ExternalAttachmentFileDto::getFileUrl)
+                      .orElse(null))
               .content(request.getContent())
               .build();
+
       log.debug("3단계 통과 - 댓글 엔티티 생성 완료");
 
       battleItem.getBattle().incrementTotalCommentCount();
@@ -65,12 +71,16 @@ public class BattleItemCommentService {
               battleItem.getRegisterId(),
               actionUserId,
               userInfo.getNickname(),
-              userInfo.getProfileImageFile().getFileUrl(),
+              Optional.ofNullable(userInfo.getProfileImageFile())
+                      .map(ExternalAttachmentFileDto::getFileUrl)
+                      .orElse(null),
               battleItem.getBattle().getId(),
               battleItem.getBattle().getTitle(),
               battleItem.getId(),
               battleItem.getDisplayName()
       );
+
+
       log.debug("5단계 통과 - 알림 발송 완료");
 
       commentRepository.save(comment);
