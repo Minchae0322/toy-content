@@ -9,6 +9,7 @@ import com.example.toycontent.app.feed.domain.FeedReaction;
 import com.example.toycontent.app.feed.repository.FeedReactionRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.notification.NotificationService;
+import com.example.toycontent.external.user.dto.ExternalAttachmentFileDto;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import jakarta.transaction.Transactional;
@@ -62,12 +63,14 @@ public class FeedReactionService {
     ExternalUserInfo externalUserInfo = externalUserInfoService.getUserInfo(actionUserId);
 
     notificationService.notifyFeedLike(
-        feed.getUserId(),
-        actionUserId,
-        externalUserInfo.getNickname(),
-        externalUserInfo.getProfileImageFile().getFileUrl(),
-        feed.getId(),
-        feed.getProductNameCustom()
+            feed.getUserId(),
+            actionUserId,
+            externalUserInfo.getNickname(),
+            Optional.ofNullable(externalUserInfo.getProfileImageFile())
+                    .map(ExternalAttachmentFileDto::getFileUrl)
+                    .orElse(null),
+            feed.getId(),
+            feed.getProductNameCustom()
     );
 
     return FeedReactionResponse.ReactionResult.added(type, feed.getLikeCount());

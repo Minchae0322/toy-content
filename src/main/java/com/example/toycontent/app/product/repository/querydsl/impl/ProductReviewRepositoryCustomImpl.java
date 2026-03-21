@@ -47,10 +47,10 @@ public class ProductReviewRepositoryCustomImpl implements ProductReviewRepositor
 
   @Override
   public List<ProductReview> findProductReviews(Long productId, ReviewStatus reviewStatus, Pageable pageable) {
-    return queryFactory
-        .select(productReview)
+    // 1단계: ID만 페이징 조회
+    List<Long> reviewIds = queryFactory
+        .select(productReview.id)
         .from(productReview)
-        .leftJoin(productReview.productReviewAttachmentFiles, productReviewAttachmentFile).fetchJoin()
         .where(
             productReview.product.id.eq(productId),
             productReview.status.eq(reviewStatus)
@@ -58,6 +58,19 @@ public class ProductReviewRepositoryCustomImpl implements ProductReviewRepositor
         .orderBy(productReview.createdAt.desc())
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize())
+        .fetch();
+
+    if (reviewIds.isEmpty()) {
+      return List.of();
+    }
+
+    //ID 기반으로 fetch join (페이징 없이)
+    return queryFactory
+        .select(productReview)
+        .from(productReview)
+        .leftJoin(productReview.productReviewAttachmentFiles, productReviewAttachmentFile).fetchJoin()
+        .where(productReview.id.in(reviewIds))
+        .orderBy(productReview.createdAt.desc())
         .fetch();
   }
 }
