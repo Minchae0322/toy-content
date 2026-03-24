@@ -48,7 +48,7 @@ public class ProductPopularityScheduler {
     try {
       int count = popularityService.updateDirtyProducts();
       stopWatch.stop();
-      log.info("[제품 인기도] 시간 가중치 업데이트 완료 - {}건, {}ms",
+      log.info("[제품 인기도] 시간 가중치 업데이트 완료 -  {}건, {}ms",
               count, stopWatch.getTotalTimeMillis());
     } catch (Exception e) {
       log.error("[제품 인기도] 시간 가중치 업데이트 실패", e);
@@ -60,7 +60,7 @@ public class ProductPopularityScheduler {
    * - 시간 감쇠 반영을 위해 전체 상품 재계산
    */
   @SchedulerLock(
-          name = "productPopularity-fullRecalc",   // ← 이름 분리
+          name = "productPopularity-fullRecalc",  // ← 이름 분리
           lockAtLeastFor = "1h",
           lockAtMostFor = "6h"
   )

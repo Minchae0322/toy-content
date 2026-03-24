@@ -55,6 +55,9 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
 
   long countByProductIdAndCreatedAtAfter(Long productId, LocalDateTime recentPeriod);
 
+  @Query("SELECT f.product.id, COUNT(f) FROM Feed f WHERE f.product.id IN :productIds AND f.createdAt > :since GROUP BY f.product.id")
+  List<Object[]> countByProductIdsAndCreatedAtAfter(@Param("productIds") List<Long> productIds, @Param("since") LocalDateTime since);
+
   /**
    * 24시간 전 조회수 스냅샷 저장
    * - 매일 자정 실행

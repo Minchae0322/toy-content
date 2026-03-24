@@ -140,11 +140,11 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             .collect(Collectors.joining(","));
 
     String sql = """
-        UPDATE product
-        SET popularity_score = CASE id %s END,
+        UPDATE tb_product
+        SET popularity_score = CASE product_id %s END,
             popularity_dirty = false,
             popularity_calculated_at = CURRENT_TIMESTAMP
-        WHERE id IN (%s)
+        WHERE product_id IN (%s)
         """.formatted(caseClause, idList);
 
     jdbcTemplate.update(sql);
