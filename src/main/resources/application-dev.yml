@@ -95,7 +95,7 @@ scheduler:
       cron: "0 30 * * * *"
       enabled: ${PRODUCT_POPULARITY_TIME_WEIGHT_ENABLED:true}
     full-recalculate:
-      cron: "0 * * * * *"
+      cron: "0 0 1 * * *"
       enabled: ${PRODUCT_POPULARITY_FULL_RECALC_ENABLED:true}
   hot-score:
     time-weight-update:
