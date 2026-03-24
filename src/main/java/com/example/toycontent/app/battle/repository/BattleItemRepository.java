@@ -25,5 +25,7 @@ public interface BattleItemRepository extends JpaRepository<BattleItem, Long>,
 
   long countByProductIdAndCreatedAtAfter(Long productId, LocalDateTime recentPeriod);
 
+  @Query("SELECT bi.product.id, COUNT(bi) FROM BattleItem bi WHERE bi.product.id IN :productIds AND bi.createdAt > :since GROUP BY bi.product.id")
+  List<Object[]> countByProductIdsAndCreatedAtAfter(@Param("productIds") List<Long> productIds, @Param("since") LocalDateTime since);
 
 }

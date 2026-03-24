@@ -6,6 +6,10 @@ import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductReviewRepository;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -40,6 +44,60 @@ public class ProductPopularityCalculator {
     double timeDecay = calculateTimeDecay(product);
 
     return (baseScore + activityScore) * timeDecay;
+  }
+
+  /**
+   * 벌크 인기도 점수 계산 (N+1 쿼리 방지)
+   * 3개 벌크 count 쿼리로 모든 상품의 활동 데이터를 한 번에 조회
+   */
+  public Map<Long, Double> calculateBulk(List<Product> products) {
+    if (products.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    List<Long> productIds = products.stream()
+        .map(Product::getId)
+        .collect(Collectors.toList());
+
+    LocalDateTime recentPeriod = LocalDateTime.now().minusDays(RECENT_DAYS);
+
+    Map<Long, Long> feedCounts = toCountMap(
+        feedRepository.countByProductIdsAndCreatedAtAfter(productIds, recentPeriod));
+    Map<Long, Long> battleCounts = toCountMap(
+        battleItemRepository.countByProductIdsAndCreatedAtAfter(productIds, recentPeriod));
+    Map<Long, Long> reviewCounts = toCountMap(
+        productReviewRepository.countByProductIdsAndCreatedAtAfter(productIds, recentPeriod));
+
+    return products.stream()
+        .collect(Collectors.toMap(
+            Product::getId,
+            product -> {
+              Long productId = product.getId();
+              double baseScore = calculateBaseScoreBulk(product,
+                  reviewCounts.getOrDefault(productId, 0L));
+              double activityScore =
+                  FEED_WEIGHT * feedCounts.getOrDefault(productId, 0L)
+                  + BATTLE_WEIGHT * battleCounts.getOrDefault(productId, 0L)
+                  + REVIEW_WEIGHT * reviewCounts.getOrDefault(productId, 0L);
+              double timeDecay = calculateTimeDecay(product);
+              return (baseScore + activityScore) * timeDecay;
+            }
+        ));
+  }
+
+  private Map<Long, Long> toCountMap(List<Object[]> results) {
+    return results.stream()
+        .collect(Collectors.toMap(
+            row -> (Long) row[0],
+            row -> (Long) row[1]
+        ));
+  }
+
+  private double calculateBaseScoreBulk(Product product, long recentReviewCount) {
+    return VIEW_WEIGHT * nullSafe(product.getViewCount())
+        + LIKE_WEIGHT * nullSafe(product.getLikeCount())
+        + SHARE_WEIGHT * nullSafe(product.getShareCount())
+        + RATING_WEIGHT * nullSafe(product.getAvgRating()) * recentReviewCount;
   }
 
   /**
