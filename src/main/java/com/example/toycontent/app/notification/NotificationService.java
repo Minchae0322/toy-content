@@ -25,6 +25,10 @@ public class NotificationService {
   @Async("notificationExecutor")
   public void notifyFeedComment(Long feedCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl, Long feedId, String feedTitle) {
+    if(feedCreatorId.equals(actorId)) {
+      return;
+    }
+
     sendSafely(NotificationType.FEED_COMMENT, KafkaNotificationDto.builder()
         .userId(feedCreatorId)
         .type(NotificationType.FEED_COMMENT)
@@ -44,6 +48,10 @@ public class NotificationService {
   @Async("notificationExecutor")
   public void notifyFeedLike(Long feedCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl, Long feedId, String feedTitle) {
+    if(feedCreatorId.equals(actorId)) {
+      return;
+    }
+
     sendSafely(NotificationType.FEED_LIKE, KafkaNotificationDto.builder()
         .userId(feedCreatorId)
         .type(NotificationType.FEED_LIKE)
@@ -69,6 +77,10 @@ public class NotificationService {
       String actorProfileImageUrl,
       Long battleId, String battleTitle,
       Long itemId, String itemTitle) {
+    if(battleItemCreatorId.equals(actorId)) {
+      return;
+    }
+
     sendSafely(NotificationType.BATTLE_ITEM_COMMENT, KafkaNotificationDto.builder()
         .userId(battleItemCreatorId)
         .type(NotificationType.BATTLE_ITEM_COMMENT)
@@ -91,6 +103,10 @@ public class NotificationService {
       String actorProfileImageUrl,
       Long battleId, String battleTitle,
       Long itemId, String itemTitle) {
+    if(battleItemCreatorId.equals(actorId)) {
+      return;
+    }
+
     sendSafely(NotificationType.BATTLE_ITEM_LIKE, KafkaNotificationDto.builder()
         .userId(battleItemCreatorId)
         .type(NotificationType.BATTLE_ITEM_LIKE)
