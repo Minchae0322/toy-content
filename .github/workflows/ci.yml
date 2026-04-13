@@ -31,7 +31,7 @@ jobs:
         run: ./gradlew build -x test
 
       - name: Rename jar for Docker
-        run: cp build/libs/*.jar app.jar
+        run: cp $(ls build/libs/*.jar | grep -v plain | head -1) app.jar
 
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
