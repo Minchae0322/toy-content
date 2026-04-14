@@ -80,4 +80,11 @@ public class BattlePrediction extends BaseTimeEntity {
   @Column(name = "settled_at")
   @Comment("적중 판정 일시")
   private LocalDateTime settledAt;
+
+  public void settle(BattleItem winnerItem) {
+    this.winnerItem = winnerItem;
+    this.hit = this.predictedItem.getId().equals(winnerItem.getId());
+    this.settledAt = LocalDateTime.now();
+  }
+
 }

@@ -66,4 +66,32 @@ public class UserStreak extends BaseTimeEntity {
   @Column(name = "last_milestone_reached")
   @Comment("마지막 도달한 마일스톤 (3/7/14/30/100)")
   private Integer lastMilestoneReached;
+
+  public boolean recordPosting(LocalDate today) {
+    if (today.equals(this.lastPostedDate)) {
+      return false;
+    }
+    if (this.lastPostedDate != null && this.lastPostedDate.plusDays(1).equals(today)) {
+      this.currentStreak++;
+    } else {
+      this.currentStreak = 1;
+    }
+    this.lastPostedDate = today;
+    if (this.currentStreak > this.maxStreak) {
+      this.maxStreak = this.currentStreak;
+    }
+    return true;
+  }
+
+  public void useRecoveryTicket() {
+    this.recoveryTickets--;
+    this.currentStreak++;
+    if (this.currentStreak > this.maxStreak) {
+      this.maxStreak = this.currentStreak;
+    }
+  }
+
+  public void grantRecoveryTickets(int count) {
+    this.recoveryTickets += count;
+  }
 }

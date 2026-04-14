@@ -76,4 +76,17 @@ public class Badge extends BaseTimeEntity {
   @Column(name = "activated", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
   @Comment("활성 여부")
   private Boolean activated = true;
+
+  public void update(String name, String description, String iconEmoji,
+      String iconImageUrl, String category) {
+    this.name = name;
+    this.description = description;
+    this.iconEmoji = iconEmoji;
+    this.iconImageUrl = iconImageUrl;
+    this.category = category;
+  }
+
+  public void deactivate() {
+    this.activated = false;
+  }
 }

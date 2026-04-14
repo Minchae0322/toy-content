@@ -76,4 +76,31 @@ public class UserReward extends BaseTimeEntity {
   @Column(name = "season_code", length = 20)
   @Comment("현재 시즌 코드 (예: 2026-Q2)")
   private String seasonCode;
+
+  public void addExp(long amount) {
+    this.totalExp += amount;
+    this.currentLevelExp += amount;
+    this.seasonExp += amount;
+    checkLevelUp();
+  }
+
+  public void addSeasonExp(long amount, String seasonCode) {
+    if (!seasonCode.equals(this.seasonCode)) {
+      this.seasonCode = seasonCode;
+      this.seasonExp = 0L;
+    }
+    this.seasonExp += amount;
+  }
+
+  private void checkLevelUp() {
+    while (this.currentLevelExp >= this.nextLevelExp) {
+      this.currentLevelExp -= this.nextLevelExp;
+      this.level++;
+      this.nextLevelExp = calculateNextLevelExp(this.level);
+    }
+  }
+
+  private long calculateNextLevelExp(int level) {
+    return 100L * level;
+  }
 }

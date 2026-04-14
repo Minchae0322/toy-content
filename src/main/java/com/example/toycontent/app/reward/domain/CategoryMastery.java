@@ -103,4 +103,44 @@ public class CategoryMastery extends BaseTimeEntity {
   @Column(name = "monthly_prediction_king_count", nullable = false)
   @Comment("월간 예측왕 달성 횟수")
   private Integer monthlyPredictionKingCount = 0;
+
+  public void incrementFeedCount() {
+    this.feedCount++;
+  }
+
+  public void incrementBattleVoteCount() {
+    this.battleVoteCount++;
+  }
+
+  public void incrementPickCommentCount() {
+    this.pickCommentCount++;
+  }
+
+  public void recordPrediction(boolean hit) {
+    this.predictionTotalCount++;
+    if (hit) {
+      this.predictionHitCount++;
+    }
+    this.predictionAccuracy = this.predictionTotalCount == 0 ? 0.0
+        : (double) this.predictionHitCount / this.predictionTotalCount;
+  }
+
+  public void recalculateTier() {
+    int totalActivity = this.feedCount + this.battleVoteCount + this.pickCommentCount;
+    if (totalActivity >= 100) {
+      this.tier = CategoryMasteryTier.EXPERT;
+    } else if (totalActivity >= 50) {
+      this.tier = CategoryMasteryTier.CURATOR;
+    } else if (totalActivity >= 20) {
+      this.tier = CategoryMasteryTier.ENTHUSIAST;
+    } else if (totalActivity >= 5) {
+      this.tier = CategoryMasteryTier.INTERESTED;
+    } else {
+      this.tier = CategoryMasteryTier.NONE;
+    }
+  }
+
+  public void incrementMonthlyPredictionKingCount() {
+    this.monthlyPredictionKingCount++;
+  }
 }

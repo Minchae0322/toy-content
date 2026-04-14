@@ -82,4 +82,15 @@ public class DailyMission extends BaseTimeEntity {
   @Column(name = "activated", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
   @Comment("활성 여부")
   private Boolean activated = true;
+
+  public void update(String title, String description, int targetCount, int rewardExp) {
+    this.title = title;
+    this.description = description;
+    this.targetCount = targetCount;
+    this.rewardExp = rewardExp;
+  }
+
+  public void deactivate() {
+    this.activated = false;
+  }
 }

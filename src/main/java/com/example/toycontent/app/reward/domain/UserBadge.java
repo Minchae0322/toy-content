@@ -81,4 +81,18 @@ public class UserBadge extends BaseTimeEntity {
   @Column(name = "revoke_reason", length = 200)
   @Comment("회수 사유")
   private String revokeReason;
+
+  public void revoke(String reason) {
+    this.revoked = true;
+    this.revokedAt = LocalDateTime.now();
+    this.revokeReason = reason;
+  }
+
+  public void pin() {
+    this.pinned = true;
+  }
+
+  public void unpin() {
+    this.pinned = false;
+  }
 }
