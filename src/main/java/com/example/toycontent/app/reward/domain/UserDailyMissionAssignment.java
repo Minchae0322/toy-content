@@ -89,4 +89,22 @@ public class UserDailyMissionAssignment extends BaseTimeEntity {
   @Column(name = "claimed_at")
   @Comment("보상 수령 일시")
   private LocalDateTime claimedAt;
+
+  public boolean incrementProgress(int amount) {
+    if (this.status != MissionProgressStatus.IN_PROGRESS) {
+      return false;
+    }
+    this.currentCount = Math.min(this.currentCount + amount, this.targetCount);
+    if (this.currentCount >= this.targetCount) {
+      this.status = MissionProgressStatus.COMPLETED;
+      this.completedAt = LocalDateTime.now();
+      return true;
+    }
+    return false;
+  }
+
+  public void claim() {
+    this.status = MissionProgressStatus.CLAIMED;
+    this.claimedAt = LocalDateTime.now();
+  }
 }

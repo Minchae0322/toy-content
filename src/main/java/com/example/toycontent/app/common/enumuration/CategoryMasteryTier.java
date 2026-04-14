@@ -11,10 +11,10 @@ import lombok.Getter;
 public enum CategoryMasteryTier {
 
   NONE("NONE", "미달성", 0),
-  INTERESTED("INTERESTED", "관심자 🥉", 1),
-  ENTHUSIAST("ENTHUSIAST", "애호가 🥈", 2),
-  CURATOR("CURATOR", "큐레이터 🥇", 3),
-  EXPERT("EXPERT", "전문가 👑", 4);
+  INTERESTED("INTERESTED", "관심자", 1),
+  ENTHUSIAST("ENTHUSIAST", "애호가", 2),
+  CURATOR("CURATOR", "큐레이터", 3),
+  EXPERT("EXPERT", "전문가", 4);
 
   private final String code;
   private final String description;
