@@ -131,6 +131,11 @@ public class Feed extends BaseTimeEntity {
   @Comment("신고 누적 수")
   private Integer reportCount = 0;
 
+  @Column(name = "quality_bonus_granted", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+  @Builder.Default
+  @Comment("완성도 보너스 EXP 지급 여부 (중복 지급 방지)")
+  private Boolean qualityBonusGranted = false;
+
   // ===== 트렌딩 =====
   @Column(name = "view_count_24h_ago")
   @Comment("24시간 전 조회수")
