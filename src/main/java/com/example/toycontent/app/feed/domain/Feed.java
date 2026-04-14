@@ -168,10 +168,12 @@ public class Feed extends BaseTimeEntity {
   private List<FeedHashtag> hashtags = new ArrayList<>();
 
   @OneToMany(mappedBy = "feed", fetch = FetchType.LAZY)
+  @Builder.Default
   @Comment("리액션 목록")
   private List<FeedReaction> reactions = new ArrayList<>();
 
   @OneToMany(mappedBy = "feed", fetch = FetchType.LAZY)
+  @Builder.Default
   @Comment("피드 스레드")
   private List<FeedThread> threads = new ArrayList<>();
 

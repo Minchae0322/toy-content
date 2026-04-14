@@ -133,15 +133,19 @@ public class Battle extends BaseTimeEntity {
   @NotAudited
   private LocalDateTime hotScoreUpdatedAt;
 
+  @Builder.Default
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<BattleItem> items = new ArrayList<>();
 
+  @Builder.Default
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<BattleVote> votes = new ArrayList<>();
 
+  @Builder.Default
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<BattleParticipation> battleParticipationsList = new ArrayList<>();
 
+  @Builder.Default
   @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<BattleAttachmentFile> battleAttachmentFiles = new ArrayList<>();
 
