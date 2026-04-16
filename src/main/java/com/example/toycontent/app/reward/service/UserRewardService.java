@@ -1,8 +1,11 @@
 package com.example.toycontent.app.reward.service;
 
+import com.example.toycontent.app.common.enumuration.ExpSource;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.RewardErrorCode;
+import com.example.toycontent.app.reward.domain.ExpHistory;
 import com.example.toycontent.app.reward.domain.UserReward;
+import com.example.toycontent.app.reward.repository.ExpHistoryRepository;
 import com.example.toycontent.app.reward.repository.UserRewardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,14 +19,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserRewardService {
 
   private final UserRewardRepository userRewardRepository;
+  private final ExpHistoryRepository expHistoryRepository;
 
   @Transactional
-  public UserReward addExp(Long userId, long amount) {
+  public UserReward addExp(Long userId, long amount, ExpSource source, Long sourceId) {
     if (amount <= 0) {
       throw new RestApiException(RewardErrorCode.INVALID_EXP_AMOUNT);
     }
     UserReward userReward = getOrCreateUserRewardWithLock(userId);
     userReward.addExp(amount);
+
+    expHistoryRepository.save(ExpHistory.builder()
+        .userId(userId)
+        .amount(amount)
+        .source(source)
+        .sourceId(sourceId)
+        .resultTotalExp(userReward.getTotalExp())
+        .build());
+
     return userReward;
   }
 
