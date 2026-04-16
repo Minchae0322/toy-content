@@ -106,21 +106,4 @@ class UserRewardServiceTest {
     }
   }
 
-  @Nested
-  @DisplayName("getUserLevel - 레벨 조회")
-  class GetUserLevel {
-
-    @Test
-    @DisplayName("보상 정보가 없으면 기본 레벨 1을 반환한다")
-    void 기본_레벨() {
-      // given
-      given(userRewardRepository.findByUserId(USER_ID)).willReturn(Optional.empty());
-
-      // when
-      int level = userRewardService.getUserLevel(USER_ID);
-
-      // then
-      assertThat(level).isEqualTo(1);
-    }
-  }
 }

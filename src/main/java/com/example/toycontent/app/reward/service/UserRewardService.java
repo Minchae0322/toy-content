@@ -22,9 +22,7 @@ public class UserRewardService {
     if (amount <= 0) {
       throw new RestApiException(RewardErrorCode.INVALID_EXP_AMOUNT);
     }
-    UserReward userReward = userRewardRepository.findByUserIdWithLock(userId)
-        .orElseGet(() -> userRewardRepository.save(
-            UserReward.builder().userId(userId).build()));
+    UserReward userReward = getOrCreateUserRewardWithLock(userId);
     userReward.addExp(amount);
     return userReward;
   }
@@ -34,22 +32,18 @@ public class UserRewardService {
         .orElseThrow(() -> new RestApiException(RewardErrorCode.USER_REWARD_NOT_FOUND));
   }
 
-  public UserReward getOrCreateUserReward(Long userId) {
-    return userRewardRepository.findByUserId(userId)
+  private UserReward getOrCreateUserRewardWithLock(Long userId) {
+    return userRewardRepository.findByUserIdWithLock(userId)
         .orElseGet(() -> userRewardRepository.save(
             UserReward.builder().userId(userId).build()));
   }
 
-  public int getUserLevel(Long userId) {
+  public UserReward getOrCreateUserReward(Long userId) {
     return userRewardRepository.findByUserId(userId)
-        .map(UserReward::getLevel)
-        .orElse(1);
-  }
-
-  public long getUserTotalExp(Long userId) {
-    return userRewardRepository.findByUserId(userId)
-        .map(UserReward::getTotalExp)
-        .orElse(0L);
+        .orElseGet(() -> userRewardRepository.save(
+            UserReward.builder()
+                .userId(userId)
+                .build()));
   }
 
   @Transactional
