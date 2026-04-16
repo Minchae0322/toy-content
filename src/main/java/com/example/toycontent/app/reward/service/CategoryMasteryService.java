@@ -72,11 +72,14 @@ public class CategoryMasteryService {
         .orElseGet(() -> {
           Category category = categoryRepository.findById(categoryId)
               .orElseThrow(() -> new RestApiException(CategoryErrorCode.CATEGORY_NOT_FOUND));
-          return categoryMasteryRepository.save(
-              CategoryMastery.builder()
-                  .userId(userId)
-                  .category(category)
-                  .build());
+          return categoryMasteryRepository.save(createMastery(userId, category));
         });
+  }
+
+  private CategoryMastery createMastery(Long userId, Category category) {
+    return CategoryMastery.builder()
+        .userId(userId)
+        .category(category)
+        .build();
   }
 }

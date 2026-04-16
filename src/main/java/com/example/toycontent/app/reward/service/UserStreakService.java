@@ -19,6 +19,16 @@ public class UserStreakService {
   private final UserStreakRepository userStreakRepository;
 
   @Transactional
+  public UserStreak getOrCreateUserStreak(Long userId) {
+    return userStreakRepository.findByUserId(userId)
+            .orElseGet(() -> userStreakRepository.save(createStreak(userId)));
+  }
+
+  private UserStreak createStreak(Long userId) {
+    return UserStreak.builder().userId(userId).build();
+  }
+
+  @Transactional
   public UserStreak recordPosting(Long userId) {
     UserStreak streak = getOrCreateUserStreak(userId);
     boolean recorded = streak.recordPosting(LocalDate.now());
@@ -33,11 +43,7 @@ public class UserStreakService {
         .orElseThrow(() -> new RestApiException(RewardErrorCode.USER_STREAK_NOT_FOUND));
   }
 
-  public UserStreak getOrCreateUserStreak(Long userId) {
-    return userStreakRepository.findByUserId(userId)
-        .orElseGet(() -> userStreakRepository.save(
-            UserStreak.builder().userId(userId).build()));
-  }
+
 
   public int getCurrentStreak(Long userId) {
     return userStreakRepository.findByUserId(userId)

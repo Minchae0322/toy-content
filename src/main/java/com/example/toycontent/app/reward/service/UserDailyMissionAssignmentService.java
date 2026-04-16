@@ -30,15 +30,7 @@ public class UserDailyMissionAssignmentService {
       return assignmentRepository.findByUserIdAndAssignedDate(userId, date);
     }
     List<UserDailyMissionAssignment> assignments = missionIds.stream()
-        .map(missionId -> {
-          DailyMission mission = dailyMissionService.getMissionById(missionId);
-          return UserDailyMissionAssignment.builder()
-              .userId(userId)
-              .mission(mission)
-              .assignedDate(date)
-              .targetCount(mission.getTargetCount())
-              .build();
-        })
+        .map(missionId -> createAssignment(userId, dailyMissionService.getMissionById(missionId), date))
         .toList();
     return assignmentRepository.saveAll(assignments);
   }
@@ -80,5 +72,14 @@ public class UserDailyMissionAssignmentService {
 
   public List<MissionAssignmentInfo> getAssignmentsByDate(Long userId, LocalDate date) {
     return assignmentRepository.findAssignmentsWithMissionByUserIdAndDate(userId, date);
+  }
+
+  private UserDailyMissionAssignment createAssignment(Long userId, DailyMission mission, LocalDate date) {
+    return UserDailyMissionAssignment.builder()
+        .userId(userId)
+        .mission(mission)
+        .assignedDate(date)
+        .targetCount(mission.getTargetCount())
+        .build();
   }
 }
