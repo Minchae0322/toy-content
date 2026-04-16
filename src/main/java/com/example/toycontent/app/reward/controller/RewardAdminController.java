@@ -5,8 +5,13 @@ import com.example.toycontent.app.common.response.ApiResponse;
 import com.example.toycontent.app.reward.controller.dto.RewardRequest;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.BadgeInfo;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.DailyMissionInfo;
+import com.example.toycontent.app.reward.controller.dto.RewardResponse.ExpHistoryInfo;
 import com.example.toycontent.app.reward.service.BadgeService;
 import com.example.toycontent.app.reward.service.DailyMissionService;
+import com.example.toycontent.app.reward.service.UserRewardService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,6 +36,7 @@ public class RewardAdminController {
 
   private final BadgeService badgeService;
   private final DailyMissionService dailyMissionService;
+  private final UserRewardService userRewardService;
 
   // ── 뱃지 관리 ──
 
@@ -115,5 +121,17 @@ public class RewardAdminController {
   @GetMapping("/missions/fixed-candidates")
   public ApiResponse<List<DailyMissionInfo>> getFixedCandidateMissions() {
     return ApiResponse.success(dailyMissionService.getFixedCandidateMissions());
+  }
+
+  // ── EXP 이력 관리 ──
+
+  @CheckAdmin
+  @Operation(summary = "유저 EXP 이력 조회")
+  @GetMapping("/exp-history/{userId}")
+  public ApiResponse<Page<ExpHistoryInfo>> getExpHistory(
+      @Parameter(description = "유저 ID") @PathVariable Long userId,
+      @PageableDefault(size = 20) Pageable pageable) {
+    return ApiResponse.success(
+        userRewardService.getExpHistory(userId, pageable).map(ExpHistoryInfo::from));
   }
 }

@@ -1,12 +1,14 @@
 package com.example.toycontent.app.reward.controller.dto;
 
 import com.example.toycontent.app.common.enumuration.CategoryMasteryTier;
+import com.example.toycontent.app.common.enumuration.ExpSource;
 import com.example.toycontent.app.common.enumuration.MissionDifficulty;
 import com.example.toycontent.app.common.enumuration.MissionProgressStatus;
 import com.example.toycontent.app.reward.domain.Badge;
 import com.example.toycontent.app.reward.domain.BattlePrediction;
 import com.example.toycontent.app.reward.domain.CategoryMastery;
 import com.example.toycontent.app.reward.domain.DailyMission;
+import com.example.toycontent.app.reward.domain.ExpHistory;
 import com.example.toycontent.app.reward.domain.UserBadge;
 import com.example.toycontent.app.reward.domain.UserDailyMissionAssignment;
 import com.example.toycontent.app.reward.domain.UserReward;
@@ -356,6 +358,47 @@ public abstract class RewardResponse {
           .battleVoteCount(entity.getBattleVoteCount())
           .pickCommentCount(entity.getPickCommentCount())
           .predictionAccuracy(entity.getPredictionAccuracy())
+          .build();
+    }
+  }
+
+  @Schema(description = "EXP 이력 정보")
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class ExpHistoryInfo {
+
+    @Schema(description = "이력 ID")
+    private Long id;
+
+    @Schema(description = "유저 ID")
+    private Long userId;
+
+    @Schema(description = "적립/차감 EXP", example = "50")
+    private Long amount;
+
+    @Schema(description = "EXP 출처", example = "FEED_CREATE")
+    private ExpSource source;
+
+    @Schema(description = "출처 엔티티 ID")
+    private Long sourceId;
+
+    @Schema(description = "적립 후 총 누적 EXP", example = "1500")
+    private Long resultTotalExp;
+
+    @Schema(description = "발생 시각")
+    private LocalDateTime createdAt;
+
+    public static ExpHistoryInfo from(ExpHistory entity) {
+      return ExpHistoryInfo.builder()
+          .id(entity.getId())
+          .userId(entity.getUserId())
+          .amount(entity.getAmount())
+          .source(entity.getSource())
+          .sourceId(entity.getSourceId())
+          .resultTotalExp(entity.getResultTotalExp())
+          .createdAt(entity.getCreatedAt())
           .build();
     }
   }
