@@ -293,6 +293,32 @@ public abstract class RewardResponse {
     }
   }
 
+  @Schema(description = "예측 통계 정보")
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class PredictionStats {
+
+    @Schema(description = "적중 수", example = "12")
+    private Long hitCount;
+
+    @Schema(description = "전체 예측 수", example = "20")
+    private Long totalCount;
+
+    @Schema(description = "적중률 (%)", example = "60.0")
+    private Double hitRate;
+
+    public static PredictionStats of(long hitCount, long totalCount) {
+      double hitRate = totalCount > 0 ? (double) hitCount / totalCount * 100 : 0.0;
+      return PredictionStats.builder()
+          .hitCount(hitCount)
+          .totalCount(totalCount)
+          .hitRate(hitRate)
+          .build();
+    }
+  }
+
   @Schema(description = "카테고리 숙련도 정보")
   @Data
   @Builder
