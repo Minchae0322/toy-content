@@ -28,12 +28,7 @@ public class UserBadgeService {
     if (userBadgeRepository.existsByUserIdAndBadgeIdAndRevokedFalse(userId, badge.getId())) {
       throw new RestApiException(RewardErrorCode.BADGE_ALREADY_ACQUIRED);
     }
-    UserBadge userBadge = UserBadge.builder()
-        .userId(userId)
-        .badge(badge)
-        .acquiredAt(LocalDateTime.now())
-        .build();
-    return userBadgeRepository.save(userBadge);
+    return userBadgeRepository.save(createUserBadge(userId, badge));
   }
 
   @Transactional
@@ -42,12 +37,7 @@ public class UserBadgeService {
     if (userBadgeRepository.existsByUserIdAndBadgeIdAndRevokedFalse(userId, badge.getId())) {
       return null;
     }
-    UserBadge userBadge = UserBadge.builder()
-        .userId(userId)
-        .badge(badge)
-        .acquiredAt(LocalDateTime.now())
-        .build();
-    return userBadgeRepository.save(userBadge);
+    return userBadgeRepository.save(createUserBadge(userId, badge));
   }
 
   @Transactional
@@ -87,5 +77,13 @@ public class UserBadgeService {
         .filter(ub -> ub.getUserId().equals(userId))
         .orElseThrow(() -> new RestApiException(RewardErrorCode.USER_BADGE_NOT_FOUND));
     userBadge.unpin();
+  }
+
+  private UserBadge createUserBadge(Long userId, Badge badge) {
+    return UserBadge.builder()
+        .userId(userId)
+        .badge(badge)
+        .acquiredAt(LocalDateTime.now())
+        .build();
   }
 }

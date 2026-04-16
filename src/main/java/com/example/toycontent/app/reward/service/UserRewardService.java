@@ -24,6 +24,12 @@ public class UserRewardService {
   private final ExpHistoryRepository expHistoryRepository;
 
   @Transactional
+  public UserReward getOrCreateUserReward(Long userId) {
+    return userRewardRepository.findByUserId(userId)
+            .orElseGet(() -> userRewardRepository.save(createUserReward(userId)));
+  }
+
+  @Transactional
   public UserReward addExp(Long userId, long amount, ExpSource source, Long sourceId) {
     if (amount <= 0) {
       throw new RestApiException(RewardErrorCode.INVALID_EXP_AMOUNT);
@@ -31,13 +37,7 @@ public class UserRewardService {
     UserReward userReward = getOrCreateUserRewardWithLock(userId);
     userReward.addExp(amount);
 
-    expHistoryRepository.save(ExpHistory.builder()
-        .userId(userId)
-        .amount(amount)
-        .source(source)
-        .sourceId(sourceId)
-        .resultTotalExp(userReward.getTotalExp())
-        .build());
+    expHistoryRepository.save(createExpHistory(userId, amount, source, sourceId, userReward.getTotalExp()));
 
     return userReward;
   }
@@ -49,16 +49,7 @@ public class UserRewardService {
 
   private UserReward getOrCreateUserRewardWithLock(Long userId) {
     return userRewardRepository.findByUserIdWithLock(userId)
-        .orElseGet(() -> userRewardRepository.save(
-            UserReward.builder().userId(userId).build()));
-  }
-
-  public UserReward getOrCreateUserReward(Long userId) {
-    return userRewardRepository.findByUserId(userId)
-        .orElseGet(() -> userRewardRepository.save(
-            UserReward.builder()
-                .userId(userId)
-                .build()));
+        .orElseGet(() -> userRewardRepository.save(createUserReward(userId)));
   }
 
   public Page<ExpHistory> getExpHistory(Long userId, Pageable pageable) {
@@ -68,8 +59,25 @@ public class UserRewardService {
   @Transactional
   public void addSeasonExp(Long userId, long amount, String seasonCode) {
     UserReward userReward = userRewardRepository.findByUserIdWithLock(userId)
-        .orElseGet(() -> userRewardRepository.save(
-            UserReward.builder().userId(userId).seasonCode(seasonCode).build()));
+        .orElseGet(() -> userRewardRepository.save(createUserRewardWithSeason(userId, seasonCode)));
     userReward.addSeasonExp(amount, seasonCode);
+  }
+
+  private UserReward createUserReward(Long userId) {
+    return UserReward.builder().userId(userId).build();
+  }
+
+  private UserReward createUserRewardWithSeason(Long userId, String seasonCode) {
+    return UserReward.builder().userId(userId).seasonCode(seasonCode).build();
+  }
+
+  private ExpHistory createExpHistory(Long userId, long amount, ExpSource source, Long sourceId, long resultTotalExp) {
+    return ExpHistory.builder()
+        .userId(userId)
+        .amount(amount)
+        .source(source)
+        .sourceId(sourceId)
+        .resultTotalExp(resultTotalExp)
+        .build();
   }
 }

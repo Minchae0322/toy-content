@@ -63,4 +63,5 @@ public class BattlePredictionService {
   public long getUserTotalPredictions(Long userId) {
     return battlePredictionRepository.countByUserId(userId);
   }
+
 }
