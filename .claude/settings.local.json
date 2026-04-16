@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/sources/toy-content -type f \\\\\\( -name \"*test*.java\" -o -name \"*Test.java\" -o -name \"*.k6.js\" -o -name \"*.js\" -o -name \"*.json\" \\\\\\) 2>/dev/null | grep -E \"\\(test|k6\\)\" | head -20)",
+      "Bash(find /c/sources/toy-content -type f -name \"*.k6.*\" -o -name \"load*\" -o -name \"*perf*\" 2>/dev/null | head -20)",
+      "Bash(winget search:*)",
+      "Bash(winget install:*)",
+      "Bash(where.exe k6:*)",
+      "Read(//c/Program Files/k6//**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Read(//c/Users/$USERNAME/**)",
+      "Read(//c/Program Files/**)",
+      "Read(//c//**)",
+      "Bash(cmd.exe //c 'where k6')",
+      "Bash(reg.exe query:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(xargs -I {} find {} -maxdepth 2 -type d)",
+      "mcp__claude_ai_Notion__notion-search",
+      "mcp__claude_ai_Notion__notion-create-pages",
+      "Bash(./gradlew compileJava -q)",
+      "Bash(./gradlew test:*)",
+      "Bash(grep -E \"\\(category|hashtag|carrier|file\\)$\")",
+      "Bash(xargs grep:*)",
+      "Bash(awk '{s+=$1} END {print \"총 테스트 수:\", s}')",
+      "Bash(awk '{s+=$1} END {print \"총 테스트:\", s}')",
+      "Bash(grep -n \"class Create\\\\|class Update\\\\|class Report\\\\|class CreateBattle\\\\|class AddBattleItems\\\\|class Vote\\\\|class VoteItem\\\\|class ItemRequest\" C:/sources/toy-content/src/main/java/com/example/toycontent/app/battle/controller/dto/*.java)",
+      "Bash(./gradlew compileJava)",
+      "Bash(./gradlew compileJava compileTestJava)",
+      "Bash(git reset *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
+    ]
+  }
+}

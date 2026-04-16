@@ -9,6 +9,8 @@ import com.example.toycontent.app.reward.repository.ExpHistoryRepository;
 import com.example.toycontent.app.reward.repository.UserRewardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,6 +59,10 @@ public class UserRewardService {
             UserReward.builder()
                 .userId(userId)
                 .build()));
+  }
+
+  public Page<ExpHistory> getExpHistory(Long userId, Pageable pageable) {
+    return expHistoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
   }
 
   @Transactional
