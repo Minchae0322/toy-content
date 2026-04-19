@@ -9,6 +9,7 @@ import com.example.toycontent.app.feed.domain.FeedReaction;
 import com.example.toycontent.app.feed.repository.FeedReactionRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.notification.NotificationService;
+import com.example.toycontent.app.reward.service.ExpGrantService;
 import com.example.toycontent.external.user.dto.ExternalAttachmentFileDto;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
@@ -29,6 +30,7 @@ public class FeedReactionService {
   private final FeedReactionRepository feedReactionRepository;
   private final NotificationService notificationService;
   private final ExternalUserInfoService externalUserInfoService;
+  private final ExpGrantService expGrantService;
 
   /**
    * 특정 타입 리액션 토글 (좋아요 또는 핫 개별 토글)
@@ -72,6 +74,11 @@ public class FeedReactionService {
             feed.getId(),
             feed.getProductNameCustom()
     );
+
+    // 피드 작성자에게 리액션 수신 EXP 지급 (본인 리액션 제외)
+    if (!actionUserId.equals(feed.getUserId())) {
+      expGrantService.grantFeedReaction(feed.getUserId(), feed.getId());
+    }
 
     return FeedReactionResponse.ReactionResult.added(type, feed.getLikeCount());
   }

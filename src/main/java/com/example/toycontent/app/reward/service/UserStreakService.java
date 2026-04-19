@@ -5,6 +5,7 @@ import com.example.toycontent.app.common.exception.impl.RewardErrorCode;
 import com.example.toycontent.app.reward.domain.UserStreak;
 import com.example.toycontent.app.reward.repository.UserStreakRepository;
 import java.time.LocalDate;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class UserStreakService {
 
+  private static final Set<Integer> STREAK_MILESTONES = Set.of(3, 7, 14, 30, 100);
+
   private final UserStreakRepository userStreakRepository;
+  private final ExpGrantService expGrantService;
 
   @Transactional
   public UserStreak getOrCreateUserStreak(Long userId) {
@@ -34,7 +38,16 @@ public class UserStreakService {
     boolean recorded = streak.recordPosting(LocalDate.now());
     if (!recorded) {
       log.debug("이미 오늘 인증 완료 - userId: {}", userId);
+      return streak;
     }
+
+    // 스트릭 마일스톤 보너스 EXP 지급
+    int current = streak.getCurrentStreak();
+    if (STREAK_MILESTONES.contains(current)) {
+      expGrantService.grantStreakBonus(userId, current);
+      log.info("스트릭 마일스톤 달성 - userId: {}, streak: {}", userId, current);
+    }
+
     return streak;
   }
 

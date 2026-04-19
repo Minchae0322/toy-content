@@ -18,6 +18,7 @@ import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
 import com.example.toycontent.app.common.utils.YoutubeUtils;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
+import com.example.toycontent.app.reward.service.ExpGrantService;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class BattleItemService {
   private final BattleItemRepository battleItemRepository;
   private final BattleVoteRepository battleVoteRepository;
   private final ProductRepository productRepository;
+  private final ExpGrantService expGrantService;
 
   private static final int MAX_ITEMS = 20;
   private static final int MAX_ADDITIONAL_ITEMS = 3;
@@ -208,6 +210,9 @@ public class BattleItemService {
     List<BattleVote> newVotes = createVotes(battle, currentUserId, voteItems);
     battleVoteRepository.saveAll(newVotes);
     applyVoteStatistics(battle, newVotes);
+
+    // 배틀 투표 EXP 지급
+    expGrantService.grantBattleVote(currentUserId, battleId);
   }
 
   /**

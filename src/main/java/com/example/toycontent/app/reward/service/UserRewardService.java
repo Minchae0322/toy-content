@@ -3,6 +3,8 @@ package com.example.toycontent.app.reward.service;
 import com.example.toycontent.app.common.enumuration.ExpSource;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.RewardErrorCode;
+import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserRewardInfo;
+import com.example.toycontent.app.reward.service.dto.LevelInfo;
 import com.example.toycontent.app.reward.domain.ExpHistory;
 import com.example.toycontent.app.reward.domain.UserReward;
 import com.example.toycontent.app.reward.repository.ExpHistoryRepository;
@@ -22,11 +24,14 @@ public class UserRewardService {
 
   private final UserRewardRepository userRewardRepository;
   private final ExpHistoryRepository expHistoryRepository;
+  private final LevelExpService levelExpService;
 
   @Transactional
-  public UserReward getOrCreateUserReward(Long userId) {
-    return userRewardRepository.findByUserId(userId)
-            .orElseGet(() -> userRewardRepository.save(createUserReward(userId)));
+  public UserRewardInfo getOrCreateUserRewardInfo(Long userId) {
+    UserReward reward = userRewardRepository.findByUserId(userId)
+        .orElseGet(() -> userRewardRepository.save(createUserReward(userId)));
+
+    return UserRewardInfo.of(reward, levelExpService.computeLevelInfo(reward.getTotalExp()));
   }
 
   @Transactional
@@ -40,11 +45,6 @@ public class UserRewardService {
     expHistoryRepository.save(createExpHistory(userId, amount, source, sourceId, userReward.getTotalExp()));
 
     return userReward;
-  }
-
-  public UserReward getUserReward(Long userId) {
-    return userRewardRepository.findByUserId(userId)
-        .orElseThrow(() -> new RestApiException(RewardErrorCode.USER_REWARD_NOT_FOUND));
   }
 
   private UserReward getOrCreateUserRewardWithLock(Long userId) {

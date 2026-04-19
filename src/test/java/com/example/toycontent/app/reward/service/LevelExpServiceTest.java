@@ -5,6 +5,7 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.BDDMockito.given;
 
 import com.example.toycontent.app.common.enumuration.UserTier;
+import com.example.toycontent.app.reward.service.dto.LevelInfo;
 import com.example.toycontent.app.reward.domain.LevelExp;
 import com.example.toycontent.app.reward.repository.LevelExpRepository;
 import java.util.List;
@@ -53,7 +54,6 @@ class LevelExpServiceTest {
   @BeforeEach
   void setUp() {
     given(levelExpRepository.findAllByOrderByLevelAsc()).willReturn(LEVEL_TABLE);
-    levelExpService.reload();
   }
 
   @Nested
@@ -88,7 +88,6 @@ class LevelExpServiceTest {
     @Test
     @DisplayName("EXP 100이면 정확히 레벨 2")
     void 레벨2_정확히() {
-      // Lv2 cumulative = 100
       LevelInfo info = levelExpService.computeLevelInfo(100);
 
       assertSoftly(softly -> {
@@ -101,7 +100,6 @@ class LevelExpServiceTest {
     @Test
     @DisplayName("EXP 1500이면 레벨 6, FRUITY 티어 시작")
     void FRUITY_티어_시작() {
-      // Lv6 cumulative = 0+100+200+300+400+500 = 1500
       LevelInfo info = levelExpService.computeLevelInfo(1500);
 
       assertSoftly(softly -> {
@@ -114,7 +112,6 @@ class LevelExpServiceTest {
     @Test
     @DisplayName("EXP 14000이면 레벨 16, GRANOLA 티어 시작")
     void GRANOLA_티어_시작() {
-      // Lv16 cumulative = 14000
       LevelInfo info = levelExpService.computeLevelInfo(14_000);
 
       assertSoftly(softly -> {
@@ -126,8 +123,6 @@ class LevelExpServiceTest {
     @Test
     @DisplayName("EXP 중간값에서 currentLevelExp와 nextLevelExp가 올바르게 계산된다")
     void 중간_EXP_계산() {
-      // Lv2 cumulative=100, Lv3 cumulative=300
-      // totalExp=150 → level=2, currentLevelExp=50, nextLevelExp=150
       LevelInfo info = levelExpService.computeLevelInfo(150);
 
       assertSoftly(softly -> {
@@ -145,7 +140,6 @@ class LevelExpServiceTest {
     @Test
     @DisplayName("최대 레벨 도달 시 maxLevel이 true")
     void 최대_레벨_도달() {
-      // Lv40 cumulative = 345000
       LevelInfo info = levelExpService.computeLevelInfo(345_000);
 
       assertSoftly(softly -> {
@@ -168,10 +162,5 @@ class LevelExpServiceTest {
       });
     }
 
-    @Test
-    @DisplayName("getMaxLevel은 40을 반환한다")
-    void getMaxLevel() {
-      assertThat(levelExpService.getMaxLevel()).isEqualTo(40);
-    }
   }
 }

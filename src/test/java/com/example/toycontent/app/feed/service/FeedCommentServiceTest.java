@@ -18,6 +18,7 @@ import com.example.toycontent.app.feed.domain.FeedComment;
 import com.example.toycontent.app.feed.repository.FeedCommentRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.notification.NotificationService;
+import com.example.toycontent.app.reward.service.ExpGrantService;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import com.example.toycontent.support.fixture.FeedFixture;
@@ -45,6 +46,7 @@ class FeedCommentServiceTest {
   @Mock private FeedCommentRepository feedCommentRepository;
   @Mock private ExternalUserInfoService externalUserInfoService;
   @Mock private NotificationService notificationService;
+  @Mock private ExpGrantService expGrantService;
 
   @InjectMocks private FeedCommentService feedCommentService;
 

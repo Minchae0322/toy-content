@@ -25,6 +25,7 @@ class UserStreakServiceTest {
   private static final Long USER_ID = 100L;
 
   @Mock private UserStreakRepository userStreakRepository;
+  @Mock private ExpGrantService expGrantService;
   @InjectMocks private UserStreakService userStreakService;
 
   @Nested

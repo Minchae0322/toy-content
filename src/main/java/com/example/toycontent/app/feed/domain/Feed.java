@@ -269,6 +269,27 @@ public class Feed extends BaseTimeEntity {
   }
 
   /**
+   * 완성도 보너스 지급 완료 처리
+   */
+  public void markQualityBonusGranted() {
+    this.qualityBonusGranted = true;
+  }
+
+  /**
+   * 피드 완성도 점수 계산 (0~5).
+   * 평가, 구매처, 구매가격, 첨부파일, 해시태그 각 1점.
+   */
+  public int calculateQualityScore() {
+    int score = 0;
+    if (evaluation != null) score++;
+    if (buyPlace != null) score++;
+    if (buyPrice != null) score++;
+    if (!attachmentFiles.isEmpty()) score++;
+    if (!hashtags.isEmpty()) score++;
+    return score;
+  }
+
+  /**
    * 트렌딩 여부 계산
    */
   public boolean checkTrending(int threshold) {

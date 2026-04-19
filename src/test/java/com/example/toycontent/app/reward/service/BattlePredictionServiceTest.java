@@ -29,6 +29,7 @@ class BattlePredictionServiceTest {
   private static final Long USER_ID = 100L;
 
   @Mock private BattlePredictionRepository battlePredictionRepository;
+  @Mock private ExpGrantService expGrantService;
   @InjectMocks private BattlePredictionService battlePredictionService;
 
   @Nested
