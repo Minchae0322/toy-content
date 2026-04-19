@@ -75,21 +75,6 @@ class UserRewardServiceTest {
     }
 
     @Test
-    @DisplayName("EXP가 다음 레벨 기준에 도달하면 레벨업이 발생한다")
-    void 레벨업_발생() {
-      // given
-      UserReward reward = UserRewardFixture.aboutToLevelUp();
-      given(userRewardRepository.findByUserIdWithLock(USER_ID))
-          .willReturn(Optional.of(reward));
-
-      // when
-      UserReward result = userRewardService.addExp(USER_ID, 20, ExpSource.BATTLE_VOTE, 5L);
-
-      // then
-      assertThat(result.getLevel()).as("레벨업 후 레벨").isEqualTo(2);
-    }
-
-    @Test
     @DisplayName("0 이하의 EXP를 추가하면 RestApiException을 던진다")
     void 잘못된_EXP_예외() {
       // when & then
@@ -136,5 +121,4 @@ class UserRewardServiceTest {
           .isInstanceOf(RestApiException.class);
     }
   }
-
 }

@@ -64,7 +64,9 @@ public class UserRewardService {
   }
 
   private UserReward createUserReward(Long userId) {
-    return UserReward.builder().userId(userId).build();
+    return UserReward.builder()
+            .userId(userId)
+            .build();
   }
 
   private UserReward createUserRewardWithSeason(Long userId, String seasonCode) {

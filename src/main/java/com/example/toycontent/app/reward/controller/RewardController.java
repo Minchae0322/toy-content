@@ -10,8 +10,10 @@ import com.example.toycontent.app.reward.controller.dto.RewardResponse.Predictio
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserBadgeInfo;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserRewardInfo;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserStreakInfo;
+import com.example.toycontent.app.reward.domain.UserReward;
 import com.example.toycontent.app.reward.service.BattlePredictionService;
 import com.example.toycontent.app.reward.service.CategoryMasteryService;
+import com.example.toycontent.app.reward.service.LevelExpService;
 import com.example.toycontent.app.reward.service.UserBadgeService;
 import com.example.toycontent.app.reward.service.UserDailyMissionAssignmentService;
 import com.example.toycontent.app.reward.service.UserRewardService;
@@ -44,6 +46,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class RewardController {
 
   private final UserRewardService userRewardService;
+  private final LevelExpService levelExpService;
   private final UserBadgeService userBadgeService;
   private final UserStreakService userStreakService;
   private final UserDailyMissionAssignmentService missionAssignmentService;
@@ -54,8 +57,9 @@ public class RewardController {
   @GetMapping("/me")
   public ResponseEntity<ApiResponse<UserRewardInfo>> getMyReward(
       @CurrentUserId Long userId) {
+    UserReward reward = userRewardService.getOrCreateUserReward(userId);
     return ResponseEntity.ok(
-        ApiResponse.success(UserRewardInfo.from(userRewardService.getOrCreateUserReward(userId))));
+        ApiResponse.success(UserRewardInfo.of(reward, levelExpService.computeLevelInfo(reward.getTotalExp()))));
   }
 
   @Operation(summary = "내 뱃지 목록 조회")

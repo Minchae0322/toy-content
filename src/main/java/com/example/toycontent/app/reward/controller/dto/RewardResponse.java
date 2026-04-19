@@ -4,6 +4,8 @@ import com.example.toycontent.app.common.enumuration.CategoryMasteryTier;
 import com.example.toycontent.app.common.enumuration.ExpSource;
 import com.example.toycontent.app.common.enumuration.MissionDifficulty;
 import com.example.toycontent.app.common.enumuration.MissionProgressStatus;
+import com.example.toycontent.app.common.enumuration.UserTier;
+import com.example.toycontent.app.reward.service.LevelInfo;
 import com.example.toycontent.app.reward.domain.Badge;
 import com.example.toycontent.app.reward.domain.BattlePrediction;
 import com.example.toycontent.app.reward.domain.CategoryMastery;
@@ -34,6 +36,9 @@ public abstract class RewardResponse {
     @Schema(description = "현재 레벨", example = "5")
     private Integer level;
 
+    @Schema(description = "현재 티어")
+    private UserTier tier;
+
     @Schema(description = "누적 총 EXP", example = "1500")
     private Long totalExp;
 
@@ -43,18 +48,23 @@ public abstract class RewardResponse {
     @Schema(description = "다음 레벨까지 필요 EXP", example = "500")
     private Long nextLevelExp;
 
+    @Schema(description = "최대 레벨 여부")
+    private Boolean maxLevel;
+
     @Schema(description = "시즌 EXP", example = "200")
     private Long seasonExp;
 
     @Schema(description = "시즌 코드", example = "2026-Q2")
     private String seasonCode;
 
-    public static UserRewardInfo from(UserReward entity) {
+    public static UserRewardInfo of(UserReward entity, LevelInfo levelInfo) {
       return UserRewardInfo.builder()
-          .level(entity.getLevel())
+          .level(levelInfo.level())
+          .tier(levelInfo.tier())
           .totalExp(entity.getTotalExp())
-          .currentLevelExp(entity.getCurrentLevelExp())
-          .nextLevelExp(entity.getNextLevelExp())
+          .currentLevelExp(levelInfo.currentLevelExp())
+          .nextLevelExp(levelInfo.nextLevelExp())
+          .maxLevel(levelInfo.maxLevel())
           .seasonExp(entity.getSeasonExp())
           .seasonCode(entity.getSeasonCode())
           .build();
