@@ -13,6 +13,7 @@ import com.example.toycontent.app.feed.repository.FeedCommentRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.kafka.KafkaNotificationProducer;
 import com.example.toycontent.app.notification.NotificationService;
+import com.example.toycontent.app.reward.service.ExpGrantService;
 import com.example.toycontent.external.user.dto.ExternalAttachmentFileDto;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
@@ -34,6 +35,7 @@ public class FeedCommentService {
   private final ExternalUserInfoService externalUserInfoService;
 
   private final NotificationService notificationService;
+  private final ExpGrantService expGrantService;
 
   @Transactional
   public Page<CommentItem> getComments(Long feedId, Pageable pageable) {
@@ -62,6 +64,9 @@ public class FeedCommentService {
             feedId,
             feed.getProductNameCustom()
     );
+
+    // 댓글 작성 EXP 지급
+    expGrantService.grantCommentCreate(creatorId, comment.getId());
 
     return FeedCommentResponse.Created.of(comment);
   }

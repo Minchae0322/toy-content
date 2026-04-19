@@ -32,6 +32,7 @@ class UserDailyMissionAssignmentServiceTest {
 
   @Mock private UserDailyMissionAssignmentRepository assignmentRepository;
   @Mock private DailyMissionService dailyMissionService;
+  @Mock private ExpGrantService expGrantService;
   @InjectMocks private UserDailyMissionAssignmentService assignmentService;
 
   @Nested

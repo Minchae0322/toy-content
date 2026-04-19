@@ -22,6 +22,7 @@ public class UserDailyMissionAssignmentService {
 
   private final UserDailyMissionAssignmentRepository assignmentRepository;
   private final DailyMissionService dailyMissionService;
+  private final ExpGrantService expGrantService;
 
   @Transactional
   public List<UserDailyMissionAssignment> assignDailyMissions(Long userId, LocalDate date,
@@ -62,6 +63,10 @@ public class UserDailyMissionAssignmentService {
       throw new RestApiException(RewardErrorCode.MISSION_NOT_COMPLETED);
     }
     assignment.claim();
+
+    // 미션 보상 EXP 지급 (캡 제외)
+    expGrantService.grantMissionClaim(userId, assignmentId, assignment.getMission().getRewardExp());
+
     return assignment;
   }
 

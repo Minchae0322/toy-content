@@ -1,68 +1,65 @@
 package com.example.toycontent.app.reward.service;
 
 import com.example.toycontent.app.common.enumuration.UserTier;
+import com.example.toycontent.app.reward.service.dto.LevelInfo;
 import com.example.toycontent.app.reward.domain.LevelExp;
 import com.example.toycontent.app.reward.repository.LevelExpRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class LevelExpService {
 
   private final LevelExpRepository levelExpRepository;
-  private volatile List<LevelExp> levelTable;
-
-  public void reload() {
-    this.levelTable = levelExpRepository.findAllByOrderByLevelAsc();
-    log.info("레벨 테이블 로드 완료 - {}개 레벨", levelTable.size());
-  }
 
   public LevelInfo computeLevelInfo(long totalExp) {
-    List<LevelExp> table = getTable();
-    if (table.isEmpty()) {
+    List<LevelExp> levelTable = levelExpRepository.findAllByOrderByLevelAsc();
+
+    if (levelTable.isEmpty()) {
       return new LevelInfo(1, UserTier.PLAIN, totalExp, 0, false);
     }
 
-    int level = 1;
-    long currentLevelExp = totalExp;
-    long nextLevelExp = 0;
+    LevelExp current = findCurrentLevel(levelTable, totalExp);
+    LevelExp next = findNextLevel(levelTable, totalExp);
+    boolean isMaxLevel = next == null;
 
-    for (int i = 1; i < table.size(); i++) {
-      LevelExp next = table.get(i);
-      if (totalExp >= next.getCumulativeExp()) {
-        level = next.getLevel();
-        currentLevelExp = totalExp - next.getCumulativeExp();
-      } else {
-        nextLevelExp = next.getCumulativeExp() - totalExp;
-        break;
+    long currentLevelExp = totalExp - current.getCumulativeExp();
+    long nextLevelExp = isMaxLevel ? 0 : next.getCumulativeExp() - totalExp;
+
+    return new LevelInfo(
+        current.getLevel(),
+        UserTier.fromLevel(current.getLevel()),
+        currentLevelExp,
+        nextLevelExp,
+        isMaxLevel);
+  }
+
+  /**
+   * totalExp 이하의 cumulativeExp를 가진 가장 높은 레벨을 반환한다.
+   */
+  private LevelExp findCurrentLevel(List<LevelExp> table, long totalExp) {
+    for (int i = table.size() - 1; i >= 0; i--) {
+      if (table.get(i).getCumulativeExp() <= totalExp) {
+        return table.get(i);
       }
     }
-
-    boolean maxLevel = level >= getMaxLevel();
-    if (maxLevel) {
-      currentLevelExp = totalExp - table.get(table.size() - 1).getCumulativeExp();
-      nextLevelExp = 0;
-    }
-
-    return new LevelInfo(level, UserTier.fromLevel(level), currentLevelExp, nextLevelExp, maxLevel);
+    return table.get(0);
   }
 
-  public int getMaxLevel() {
-    List<LevelExp> table = getTable();
-    if (table.isEmpty()) {
-      return 1;
+  /**
+   * totalExp 초과의 cumulativeExp를 가진 가장 낮은 레벨(다음 레벨)을 반환한다.
+   * 최대 레벨이면 null을 반환한다.
+   */
+  private LevelExp findNextLevel(List<LevelExp> table, long totalExp) {
+    for (LevelExp entry : table) {
+      if (entry.getCumulativeExp() > totalExp) {
+        return entry;
+      }
     }
-    return table.get(table.size() - 1).getLevel();
-  }
-
-  private List<LevelExp> getTable() {
-    if (levelTable == null) {
-      reload();
-    }
-    return levelTable;
+    return null;
   }
 }

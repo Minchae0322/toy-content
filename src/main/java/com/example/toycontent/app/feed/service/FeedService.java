@@ -24,6 +24,7 @@ import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import com.example.toycontent.app.hashtag.domain.Hashtag;
 import com.example.toycontent.app.hashtag.repository.HashtagRepository;
+import com.example.toycontent.app.reward.service.ExpGrantService;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserFollowingService;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
@@ -55,6 +56,7 @@ public class FeedService {
   private final ExternalUserFollowingService externalUserFollowingService;
   private final FeedReactionRepository feedReactionRepository;
   private final FeedHashtagRepository feedHashtagRepository;
+  private final ExpGrantService expGrantService;
 
   private static final int HOT_FEED_RECENT_DAYS = 30;
   
@@ -189,6 +191,15 @@ public class FeedService {
         .map(hashtag -> FeedHashtag.create(feed, hashtag))
         .forEach(feed.getHashtags()::add);
 
+
+    // EXP 지급: 피드 작성 + 완성도 보너스
+    expGrantService.grantFeedCreate(request.getUserId(), savedFeed.getId());
+
+    int qualityScore = savedFeed.calculateQualityScore();
+    if (qualityScore >= 3 && !savedFeed.getQualityBonusGranted()) {
+      expGrantService.grantFeedQualityBonus(request.getUserId(), savedFeed.getId(), qualityScore);
+      savedFeed.markQualityBonusGranted();
+    }
 
     return FeedResponse.FeedCreated.of(savedFeed);
   }

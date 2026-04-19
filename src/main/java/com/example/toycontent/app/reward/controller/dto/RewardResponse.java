@@ -5,7 +5,7 @@ import com.example.toycontent.app.common.enumuration.ExpSource;
 import com.example.toycontent.app.common.enumuration.MissionDifficulty;
 import com.example.toycontent.app.common.enumuration.MissionProgressStatus;
 import com.example.toycontent.app.common.enumuration.UserTier;
-import com.example.toycontent.app.reward.service.LevelInfo;
+import com.example.toycontent.app.reward.service.dto.LevelInfo;
 import com.example.toycontent.app.reward.domain.Badge;
 import com.example.toycontent.app.reward.domain.BattlePrediction;
 import com.example.toycontent.app.reward.domain.CategoryMastery;

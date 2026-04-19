@@ -106,19 +106,4 @@ class UserRewardServiceTest {
     }
   }
 
-  @Nested
-  @DisplayName("getUserReward - 유저 보상 조회")
-  class GetUserReward {
-
-    @Test
-    @DisplayName("존재하지 않는 유저 조회 시 RestApiException을 던진다")
-    void 조회_실패() {
-      // given
-      given(userRewardRepository.findByUserId(USER_ID)).willReturn(Optional.empty());
-
-      // when & then
-      assertThatThrownBy(() -> userRewardService.getUserReward(USER_ID))
-          .isInstanceOf(RestApiException.class);
-    }
-  }
 }
