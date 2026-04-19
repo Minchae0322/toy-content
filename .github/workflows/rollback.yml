@@ -1,0 +1,41 @@
+name: Rollback Content Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: '롤백할 커밋 SHA (예: 25b20bbd625c0e8acebcd9d9731f9952301e5bfb)'
+        required: true
+        type: string
+
+env:
+  IMAGE_NAME: ghcr.io/minchae0322/content
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Verify SHA exists in GHCR
+        run: |
+          docker manifest inspect ${{ env.IMAGE_NAME }}:${{ inputs.sha }} > /dev/null \
+            || (echo "❌ SHA ${{ inputs.sha }} 이미지가 GHCR에 없습니다" && exit 1)
+          echo "✅ SHA 확인됨"
+
+      - name: Retag SHA as latest
+        run: |
+          docker pull ${{ env.IMAGE_NAME }}:${{ inputs.sha }}
+          docker tag ${{ env.IMAGE_NAME }}:${{ inputs.sha }} ${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.IMAGE_NAME }}:latest
+
+      - name: Summary
+        run: |
+          echo "## 🔄 롤백 완료" >> $GITHUB_STEP_SUMMARY
+          echo "- **타겟 SHA**: \`${{ inputs.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **latest 태그 갱신**: 완료" >> $GITHUB_STEP_SUMMARY
+          echo "- **다음 단계**: Master에서 \`kubectl rollout restart deployment/content-service -n default\` 실행" >> $GITHUB_STEP_SUMMARY
