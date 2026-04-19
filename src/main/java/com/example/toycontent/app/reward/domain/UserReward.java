@@ -31,11 +31,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     name = "tb_user_reward",
     uniqueConstraints = @UniqueConstraint(name = "uk_user_reward_user", columnNames = "user_id"),
     indexes = {
-        @Index(name = "idx_user_reward_total_exp", columnList = "total_exp DESC"),
-        @Index(name = "idx_user_reward_level", columnList = "level DESC")
+        @Index(name = "idx_user_reward_total_exp", columnList = "total_exp DESC")
     }
 )
-@Comment("유저별 EXP/레벨 집계 (1 user : 1 row)")
+@Comment("유저별 EXP 집계 (1 user : 1 row)")
 public class UserReward extends BaseTimeEntity {
 
   @Id
@@ -54,21 +53,6 @@ public class UserReward extends BaseTimeEntity {
   private Long totalExp = 0L;
 
   @Builder.Default
-  @Column(name = "level", nullable = false)
-  @Comment("현재 레벨")
-  private Integer level = 1;
-
-  @Builder.Default
-  @Column(name = "current_level_exp", nullable = false)
-  @Comment("현재 레벨에서 쌓인 EXP")
-  private Long currentLevelExp = 0L;
-
-  @Builder.Default
-  @Column(name = "next_level_exp", nullable = false)
-  @Comment("다음 레벨 도달에 필요한 EXP")
-  private Long nextLevelExp = 100L;
-
-  @Builder.Default
   @Column(name = "season_exp", nullable = false)
   @Comment("현재 시즌 EXP")
   private Long seasonExp = 0L;
@@ -79,9 +63,7 @@ public class UserReward extends BaseTimeEntity {
 
   public void addExp(long amount) {
     this.totalExp += amount;
-    this.currentLevelExp += amount;
     this.seasonExp += amount;
-    checkLevelUp();
   }
 
   public void addSeasonExp(long amount, String seasonCode) {
@@ -90,17 +72,5 @@ public class UserReward extends BaseTimeEntity {
       this.seasonExp = 0L;
     }
     this.seasonExp += amount;
-  }
-
-  private void checkLevelUp() {
-    while (this.currentLevelExp >= this.nextLevelExp) {
-      this.currentLevelExp -= this.nextLevelExp;
-      this.level++;
-      this.nextLevelExp = calculateNextLevelExp(this.level);
-    }
-  }
-
-  private long calculateNextLevelExp(int level) {
-    return 100L * level;
   }
 }

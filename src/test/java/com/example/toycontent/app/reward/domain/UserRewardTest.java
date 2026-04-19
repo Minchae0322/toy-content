@@ -16,7 +16,7 @@ class UserRewardTest {
   class AddExp {
 
     @Test
-    @DisplayName("EXP를 추가하면 totalExp, currentLevelExp, seasonExp가 모두 증가한다")
+    @DisplayName("EXP를 추가하면 totalExp, seasonExp가 모두 증가한다")
     void EXP_추가_정상() {
       // given
       UserReward reward = UserRewardFixture.fresh();
@@ -27,40 +27,22 @@ class UserRewardTest {
       // then
       assertSoftly(softly -> {
         softly.assertThat(reward.getTotalExp()).as("총 EXP").isEqualTo(50L);
-        softly.assertThat(reward.getCurrentLevelExp()).as("현재 레벨 EXP").isEqualTo(50L);
         softly.assertThat(reward.getSeasonExp()).as("시즌 EXP").isEqualTo(50L);
-        softly.assertThat(reward.getLevel()).as("레벨 변동 없음").isEqualTo(1);
       });
     }
 
     @Test
-    @DisplayName("EXP가 다음 레벨 기준에 도달하면 자동으로 레벨업한다")
-    void 레벨업_발생() {
-      // given
-      UserReward reward = UserRewardFixture.aboutToLevelUp();
-
-      // when
-      reward.addExp(20);
-
-      // then
-      assertSoftly(softly -> {
-        softly.assertThat(reward.getLevel()).as("레벨").isEqualTo(2);
-        softly.assertThat(reward.getCurrentLevelExp()).as("레벨업 후 잔여 EXP").isEqualTo(10L);
-        softly.assertThat(reward.getNextLevelExp()).as("다음 레벨 필요 EXP").isEqualTo(200L);
-      });
-    }
-
-    @Test
-    @DisplayName("한 번에 많은 EXP를 얻으면 여러 레벨을 건너뛸 수 있다")
-    void 다단_레벨업() {
+    @DisplayName("여러 번 EXP를 추가하면 누적된다")
+    void EXP_누적() {
       // given
       UserReward reward = UserRewardFixture.fresh();
 
       // when
-      reward.addExp(500);
+      reward.addExp(100);
+      reward.addExp(200);
 
       // then
-      assertThat(reward.getLevel()).as("레벨").isGreaterThan(2);
+      assertThat(reward.getTotalExp()).isEqualTo(300L);
     }
   }
 

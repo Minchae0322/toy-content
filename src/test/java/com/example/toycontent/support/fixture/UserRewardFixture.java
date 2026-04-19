@@ -13,35 +13,16 @@ public class UserRewardFixture {
         .id(1L)
         .userId(DEFAULT_USER_ID)
         .totalExp(0L)
-        .level(1)
-        .currentLevelExp(0L)
-        .nextLevelExp(100L)
         .seasonExp(0L)
         .build();
   }
 
-  public static UserReward atLevel(int level) {
-    long nextLevelExp = 100L * level;
+  public static UserReward withTotalExp(long totalExp) {
     return UserReward.builder()
         .id(1L)
         .userId(DEFAULT_USER_ID)
-        .totalExp(0L)
-        .level(level)
-        .currentLevelExp(0L)
-        .nextLevelExp(nextLevelExp)
+        .totalExp(totalExp)
         .seasonExp(0L)
-        .build();
-  }
-
-  public static UserReward aboutToLevelUp() {
-    return UserReward.builder()
-        .id(1L)
-        .userId(DEFAULT_USER_ID)
-        .totalExp(90L)
-        .level(1)
-        .currentLevelExp(90L)
-        .nextLevelExp(100L)
-        .seasonExp(90L)
         .build();
   }
 }
