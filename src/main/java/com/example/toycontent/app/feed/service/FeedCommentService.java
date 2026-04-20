@@ -13,7 +13,9 @@ import com.example.toycontent.app.feed.repository.FeedCommentRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.kafka.KafkaNotificationProducer;
 import com.example.toycontent.app.notification.NotificationService;
-import com.example.toycontent.app.reward.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
 import com.example.toycontent.external.user.dto.ExternalAttachmentFileDto;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
@@ -66,9 +68,9 @@ public class FeedCommentService {
     );
 
     // 댓글 작성 EXP 지급
-    expGrantService.grantCommentCreate(creatorId, comment.getId());
+    ExpGrantResult grant = expGrantService.grantCommentCreate(creatorId, comment.getId());
 
-    return FeedCommentResponse.Created.of(comment);
+    return FeedCommentResponse.Created.of(comment, ExpGrantInfo.aggregate(grant));
   }
 
   private FeedComment toFeedComment(Feed feed, CommentCreate create, Long creatorId, ExternalUserInfo externalUserInfo) {

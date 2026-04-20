@@ -1,12 +1,15 @@
-package com.example.toycontent.app.reward.service;
+package com.example.toycontent.app.reward.mission.service;
 
 import com.example.toycontent.app.common.enumuration.MissionProgressStatus;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.RewardErrorCode;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.MissionAssignmentInfo;
-import com.example.toycontent.app.reward.domain.DailyMission;
-import com.example.toycontent.app.reward.domain.UserDailyMissionAssignment;
-import com.example.toycontent.app.reward.repository.UserDailyMissionAssignmentRepository;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
+import com.example.toycontent.app.reward.mission.domain.DailyMission;
+import com.example.toycontent.app.reward.mission.domain.UserDailyMissionAssignment;
+import com.example.toycontent.app.reward.mission.repository.UserDailyMissionAssignmentRepository;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class UserDailyMissionAssignmentService {
+
+  public record ClaimResult(UserDailyMissionAssignment assignment, ExpGrantInfo expGrant) {}
 
   private final UserDailyMissionAssignmentRepository assignmentRepository;
   private final DailyMissionService dailyMissionService;
@@ -51,7 +56,7 @@ public class UserDailyMissionAssignmentService {
   }
 
   @Transactional
-  public UserDailyMissionAssignment claimReward(Long userId, Long assignmentId) {
+  public ClaimResult claimReward(Long userId, Long assignmentId) {
     UserDailyMissionAssignment assignment = assignmentRepository.findById(assignmentId)
         .filter(a -> a.getUserId().equals(userId))
         .orElseThrow(() -> new RestApiException(RewardErrorCode.MISSION_ASSIGNMENT_NOT_FOUND));
@@ -65,9 +70,10 @@ public class UserDailyMissionAssignmentService {
     assignment.claim();
 
     // 미션 보상 EXP 지급 (캡 제외)
-    expGrantService.grantMissionClaim(userId, assignmentId, assignment.getMission().getRewardExp());
+    ExpGrantResult grant = expGrantService.grantMissionClaim(
+        userId, assignmentId, assignment.getMission().getRewardExp());
 
-    return assignment;
+    return new ClaimResult(assignment, ExpGrantInfo.aggregate(grant));
   }
 
   public List<MissionAssignmentInfo> getTodayAssignments(Long userId) {

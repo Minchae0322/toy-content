@@ -1,4 +1,4 @@
-package com.example.toycontent.app.reward.service;
+package com.example.toycontent.app.reward.mission.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -8,9 +8,10 @@ import static org.mockito.BDDMockito.given;
 
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.MissionAssignmentInfo;
-import com.example.toycontent.app.reward.domain.DailyMission;
-import com.example.toycontent.app.reward.domain.UserDailyMissionAssignment;
-import com.example.toycontent.app.reward.repository.UserDailyMissionAssignmentRepository;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.mission.domain.DailyMission;
+import com.example.toycontent.app.reward.mission.domain.UserDailyMissionAssignment;
+import com.example.toycontent.app.reward.mission.repository.UserDailyMissionAssignmentRepository;
 import com.example.toycontent.support.fixture.DailyMissionFixture;
 import com.example.toycontent.support.fixture.UserDailyMissionAssignmentFixture;
 import java.time.LocalDate;
@@ -88,7 +89,7 @@ class UserDailyMissionAssignmentServiceTest {
       given(assignmentRepository.findById(1L)).willReturn(Optional.of(assignment));
 
       // when
-      UserDailyMissionAssignment result = assignmentService.claimReward(USER_ID, 1L);
+      UserDailyMissionAssignment result = assignmentService.claimReward(USER_ID, 1L).assignment();
 
       // then
       assertThat(result.getClaimedAt()).isNotNull();

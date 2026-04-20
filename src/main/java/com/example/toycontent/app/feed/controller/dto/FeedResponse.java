@@ -9,6 +9,7 @@ import com.example.toycontent.app.product.controller.dto.ProductResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.FeedProduct;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedHashtag;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -359,10 +360,18 @@ public abstract class FeedResponse {
     @Schema(description = "피드 ID")
     private Long feedId;
 
-    public static FeedCreated of(Feed feed) {
+    @Schema(description = "지급된 EXP 정보 (없으면 null)")
+    private ExpGrantInfo expGrant;
+
+    public static FeedCreated of(Feed feed, ExpGrantInfo expGrant) {
       return FeedCreated.builder()
           .feedId(feed.getId())
+          .expGrant(expGrant)
           .build();
+    }
+
+    public static FeedCreated of(Feed feed) {
+      return of(feed, null);
     }
 
   }
