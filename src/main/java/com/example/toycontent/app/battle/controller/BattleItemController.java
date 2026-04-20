@@ -6,6 +6,7 @@ import com.example.toycontent.app.battle.controller.dto.BattleItemCommentRespons
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleVoteRequest;
 import com.example.toycontent.app.battle.service.BattleItemCommentService;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.battle.service.BattleItemService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.response.ApiResponse;
@@ -61,12 +62,12 @@ public class BattleItemController {
 
   @Operation(summary = "배틀 아이템 투표")
   @PostMapping("/vote")
-  public ResponseEntity<ApiResponse<Void>> vote(
+  public ResponseEntity<ApiResponse<ExpGrantInfo>> vote(
       @Parameter(description = "배틀 아이템 ID") @PathVariable Long battleId,
       @CurrentUserId Long userId,
       @Valid @RequestBody BattleVoteRequest.Vote request) {
-    battleItemService.vote(battleId, userId, request);
-    return ResponseEntity.ok(ApiResponse.success(null, "투표가 완료되었습니다."));
+    ExpGrantInfo expGrant = battleItemService.vote(battleId, userId, request);
+    return ResponseEntity.ok(ApiResponse.success(expGrant, "투표가 완료되었습니다."));
   }
 
   @Operation(summary = "배틀 아이템 투표 취소")

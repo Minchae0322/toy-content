@@ -11,11 +11,11 @@ import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserBadge
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserRewardInfo;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserStreakInfo;
 import com.example.toycontent.app.reward.service.BattlePredictionService;
-import com.example.toycontent.app.reward.service.CategoryMasteryService;
-import com.example.toycontent.app.reward.service.UserBadgeService;
-import com.example.toycontent.app.reward.service.UserDailyMissionAssignmentService;
-import com.example.toycontent.app.reward.service.UserRewardService;
-import com.example.toycontent.app.reward.service.UserStreakService;
+import com.example.toycontent.app.reward.badge.service.CategoryMasteryService;
+import com.example.toycontent.app.reward.badge.service.UserBadgeService;
+import com.example.toycontent.app.reward.mission.service.UserDailyMissionAssignmentService;
+import com.example.toycontent.app.reward.exp.service.UserRewardService;
+import com.example.toycontent.app.reward.mission.service.UserStreakService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -96,8 +96,9 @@ public class RewardController {
   @PostMapping("/me/streak/posting")
   public ResponseEntity<ApiResponse<UserStreakInfo>> recordPosting(
       @CurrentUserId Long userId) {
+    UserStreakService.RecordPostingResult result = userStreakService.recordPosting(userId);
     return ResponseEntity.ok(
-        ApiResponse.success(UserStreakInfo.from(userStreakService.recordPosting(userId)), "인증되었습니다."));
+        ApiResponse.success(UserStreakInfo.from(result.streak(), result.expGrant()), "인증되었습니다."));
   }
 
   @Operation(summary = "스트릭 복구 티켓 사용")
@@ -142,8 +143,10 @@ public class RewardController {
   public ResponseEntity<ApiResponse<MissionAssignmentInfo>> claimMissionReward(
       @CurrentUserId Long userId,
       @Parameter(description = "미션 배정 ID") @PathVariable Long assignmentId) {
+    UserDailyMissionAssignmentService.ClaimResult result =
+        missionAssignmentService.claimReward(userId, assignmentId);
     return ResponseEntity.ok(
-        ApiResponse.success(MissionAssignmentInfo.from(missionAssignmentService.claimReward(userId, assignmentId)), "보상을 수령했습니다."));
+        ApiResponse.success(MissionAssignmentInfo.from(result.assignment(), result.expGrant()), "보상을 수령했습니다."));
   }
 
   // ── 배틀 예측 ──

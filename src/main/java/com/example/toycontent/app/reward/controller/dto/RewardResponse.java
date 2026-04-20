@@ -5,16 +5,17 @@ import com.example.toycontent.app.common.enumuration.ExpSource;
 import com.example.toycontent.app.common.enumuration.MissionDifficulty;
 import com.example.toycontent.app.common.enumuration.MissionProgressStatus;
 import com.example.toycontent.app.common.enumuration.UserTier;
-import com.example.toycontent.app.reward.service.dto.LevelInfo;
-import com.example.toycontent.app.reward.domain.Badge;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
+import com.example.toycontent.app.reward.exp.service.dto.LevelInfo;
+import com.example.toycontent.app.reward.badge.domain.Badge;
 import com.example.toycontent.app.reward.domain.BattlePrediction;
-import com.example.toycontent.app.reward.domain.CategoryMastery;
-import com.example.toycontent.app.reward.domain.DailyMission;
-import com.example.toycontent.app.reward.domain.ExpHistory;
-import com.example.toycontent.app.reward.domain.UserBadge;
-import com.example.toycontent.app.reward.domain.UserDailyMissionAssignment;
-import com.example.toycontent.app.reward.domain.UserReward;
-import com.example.toycontent.app.reward.domain.UserStreak;
+import com.example.toycontent.app.reward.badge.domain.CategoryMastery;
+import com.example.toycontent.app.reward.mission.domain.DailyMission;
+import com.example.toycontent.app.reward.exp.domain.ExpHistory;
+import com.example.toycontent.app.reward.badge.domain.UserBadge;
+import com.example.toycontent.app.reward.mission.domain.UserDailyMissionAssignment;
+import com.example.toycontent.app.reward.exp.domain.UserReward;
+import com.example.toycontent.app.reward.mission.domain.UserStreak;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -163,14 +164,22 @@ public abstract class RewardResponse {
     @Schema(description = "마지막 마일스톤", example = "7")
     private Integer lastMilestoneReached;
 
-    public static UserStreakInfo from(UserStreak entity) {
+    @Schema(description = "지급된 EXP 정보 (없으면 null)")
+    private ExpGrantInfo expGrant;
+
+    public static UserStreakInfo from(UserStreak entity, ExpGrantInfo expGrant) {
       return UserStreakInfo.builder()
           .currentStreak(entity.getCurrentStreak())
           .maxStreak(entity.getMaxStreak())
           .lastPostedDate(entity.getLastPostedDate())
           .recoveryTickets(entity.getRecoveryTickets())
           .lastMilestoneReached(entity.getLastMilestoneReached())
+          .expGrant(expGrant)
           .build();
+    }
+
+    public static UserStreakInfo from(UserStreak entity) {
+      return from(entity, null);
     }
   }
 
@@ -250,7 +259,10 @@ public abstract class RewardResponse {
     @Schema(description = "보상 수령 일시")
     private LocalDateTime claimedAt;
 
-    public static MissionAssignmentInfo from(UserDailyMissionAssignment entity) {
+    @Schema(description = "지급된 EXP 정보 (없으면 null)")
+    private ExpGrantInfo expGrant;
+
+    public static MissionAssignmentInfo from(UserDailyMissionAssignment entity, ExpGrantInfo expGrant) {
       return MissionAssignmentInfo.builder()
           .id(entity.getId())
           .mission(DailyMissionInfo.from(entity.getMission()))
@@ -260,7 +272,12 @@ public abstract class RewardResponse {
           .status(entity.getStatus())
           .completedAt(entity.getCompletedAt())
           .claimedAt(entity.getClaimedAt())
+          .expGrant(expGrant)
           .build();
+    }
+
+    public static MissionAssignmentInfo from(UserDailyMissionAssignment entity) {
+      return from(entity, null);
     }
   }
 

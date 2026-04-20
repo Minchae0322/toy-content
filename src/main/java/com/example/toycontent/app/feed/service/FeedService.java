@@ -24,7 +24,9 @@ import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import com.example.toycontent.app.hashtag.domain.Hashtag;
 import com.example.toycontent.app.hashtag.repository.HashtagRepository;
-import com.example.toycontent.app.reward.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserFollowingService;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
@@ -193,15 +195,20 @@ public class FeedService {
 
 
     // EXP 지급: 피드 작성 + 완성도 보너스
-    expGrantService.grantFeedCreate(request.getUserId(), savedFeed.getId());
+    ExpGrantResult createGrant = expGrantService.grantFeedCreate(request.getUserId(), savedFeed.getId());
 
+    ExpGrantResult qualityGrant = null;
     int qualityScore = savedFeed.calculateQualityScore();
     if (qualityScore >= 3 && !savedFeed.getQualityBonusGranted()) {
-      expGrantService.grantFeedQualityBonus(request.getUserId(), savedFeed.getId(), qualityScore);
+      qualityGrant = expGrantService.grantFeedQualityBonus(request.getUserId(), savedFeed.getId(), qualityScore);
       savedFeed.markQualityBonusGranted();
     }
 
-    return FeedResponse.FeedCreated.of(savedFeed);
+    ExpGrantInfo expGrant = qualityGrant != null
+        ? ExpGrantInfo.aggregate(createGrant, qualityGrant)
+        : ExpGrantInfo.aggregate(createGrant);
+
+    return FeedResponse.FeedCreated.of(savedFeed, expGrant);
   }
 
   private Feed toEntity(FeedRequest.CreateFeed request, Category category, Product product) {

@@ -18,7 +18,9 @@ import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
 import com.example.toycontent.app.common.utils.YoutubeUtils;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
-import com.example.toycontent.app.reward.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -195,7 +197,7 @@ public class BattleItemService {
    * - 복수 투표(MULTIPLE): 여러 아이템에 투표 가능, 재투표 시 기존 투표를 삭제하고 새로 반영
    */
   @Transactional
-  public void vote(Long battleId, Long currentUserId, BattleVoteRequest.Vote request) {
+  public ExpGrantInfo vote(Long battleId, Long currentUserId, BattleVoteRequest.Vote request) {
     Battle battle = getBattleById(battleId);
     List<BattleVoteRequest.VoteItem> voteItems = request.getVotes();
     List<BattleVote> existingVotes = battleVoteRepository.findByBattle_IdAndUserId(battleId, currentUserId);
@@ -211,8 +213,8 @@ public class BattleItemService {
     battleVoteRepository.saveAll(newVotes);
     applyVoteStatistics(battle, newVotes);
 
-    // 배틀 투표 EXP 지급
-    expGrantService.grantBattleVote(currentUserId, battleId);
+    ExpGrantResult grant = expGrantService.grantBattleVote(currentUserId, battleId);
+    return ExpGrantInfo.aggregate(grant);
   }
 
   /**

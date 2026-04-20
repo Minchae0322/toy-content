@@ -1,6 +1,7 @@
 package com.example.toycontent.app.feed.controller.dto;
 
 import com.example.toycontent.app.feed.domain.FeedComment;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
@@ -68,13 +69,21 @@ public abstract class FeedCommentResponse {
     @Schema(description = "작성자 ID", example = "42")
     private Long creatorID;
 
-    public static Created of(FeedComment comment) {
+    @Schema(description = "지급된 EXP 정보 (없으면 null)")
+    private ExpGrantInfo expGrant;
+
+    public static Created of(FeedComment comment, ExpGrantInfo expGrant) {
       return Created.builder()
           .commentId(comment.getId())
           .feedId(comment.getFeed().getId())
           .content(comment.getContent())
           .creatorID(comment.getCreatorId())
+          .expGrant(expGrant)
           .build();
+    }
+
+    public static Created of(FeedComment comment) {
+      return of(comment, null);
     }
 
   }

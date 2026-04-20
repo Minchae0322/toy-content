@@ -1,9 +1,12 @@
-package com.example.toycontent.app.reward.service;
+package com.example.toycontent.app.reward.mission.service;
 
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.RewardErrorCode;
-import com.example.toycontent.app.reward.domain.UserStreak;
-import com.example.toycontent.app.reward.repository.UserStreakRepository;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
+import com.example.toycontent.app.reward.mission.domain.UserStreak;
+import com.example.toycontent.app.reward.mission.repository.UserStreakRepository;
 import java.time.LocalDate;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class UserStreakService {
+
+  public record RecordPostingResult(UserStreak streak, ExpGrantInfo expGrant) {}
 
   private static final Set<Integer> STREAK_MILESTONES = Set.of(3, 7, 14, 30, 100);
 
@@ -33,22 +38,23 @@ public class UserStreakService {
   }
 
   @Transactional
-  public UserStreak recordPosting(Long userId) {
+  public RecordPostingResult recordPosting(Long userId) {
     UserStreak streak = getOrCreateUserStreak(userId);
     boolean recorded = streak.recordPosting(LocalDate.now());
     if (!recorded) {
       log.debug("이미 오늘 인증 완료 - userId: {}", userId);
-      return streak;
+      return new RecordPostingResult(streak, ExpGrantInfo.aggregate());
     }
 
     // 스트릭 마일스톤 보너스 EXP 지급
+    ExpGrantResult grant = null;
     int current = streak.getCurrentStreak();
     if (STREAK_MILESTONES.contains(current)) {
-      expGrantService.grantStreakBonus(userId, current);
+      grant = expGrantService.grantStreakBonus(userId, current);
       log.info("스트릭 마일스톤 달성 - userId: {}, streak: {}", userId, current);
     }
 
-    return streak;
+    return new RecordPostingResult(streak, ExpGrantInfo.aggregate(grant));
   }
 
   public UserStreak getUserStreak(Long userId) {

@@ -1,4 +1,4 @@
-package com.example.toycontent.app.reward.service;
+package com.example.toycontent.app.reward.mission.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -6,8 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
 import com.example.toycontent.app.common.exception.RestApiException;
-import com.example.toycontent.app.reward.domain.UserStreak;
-import com.example.toycontent.app.reward.repository.UserStreakRepository;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.mission.domain.UserStreak;
+import com.example.toycontent.app.reward.mission.repository.UserStreakRepository;
 import com.example.toycontent.support.fixture.UserStreakFixture;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +41,7 @@ class UserStreakServiceTest {
       given(userStreakRepository.findByUserId(USER_ID)).willReturn(Optional.of(streak));
 
       // when
-      UserStreak result = userStreakService.recordPosting(USER_ID);
+      UserStreak result = userStreakService.recordPosting(USER_ID).streak();
 
       // then
       assertThat(result.getCurrentStreak()).as("스트릭 증가").isEqualTo(4);
@@ -55,7 +56,7 @@ class UserStreakServiceTest {
           .willAnswer(invocation -> invocation.getArgument(0));
 
       // when
-      UserStreak result = userStreakService.recordPosting(USER_ID);
+      UserStreak result = userStreakService.recordPosting(USER_ID).streak();
 
       // then
       assertThat(result.getCurrentStreak()).as("첫 스트릭").isEqualTo(1);
