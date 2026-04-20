@@ -1,6 +1,6 @@
 package com.example.toycontent.support.fixture;
 
-import com.example.toycontent.app.reward.domain.UserStreak;
+import com.example.toycontent.app.reward.mission.domain.UserStreak;
 import java.time.LocalDate;
 
 public class UserStreakFixture {

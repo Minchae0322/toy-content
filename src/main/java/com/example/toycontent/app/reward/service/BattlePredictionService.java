@@ -6,6 +6,7 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.RewardErrorCode;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.PredictionInfo;
 import com.example.toycontent.app.reward.domain.BattlePrediction;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
 import com.example.toycontent.app.reward.repository.BattlePredictionRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

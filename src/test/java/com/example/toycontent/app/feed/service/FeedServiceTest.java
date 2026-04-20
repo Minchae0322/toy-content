@@ -19,7 +19,7 @@ import com.example.toycontent.app.feed.repository.FeedAttachmentFileRepository;
 import com.example.toycontent.app.feed.repository.FeedHashtagRepository;
 import com.example.toycontent.app.feed.repository.FeedReactionRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
-import com.example.toycontent.app.reward.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest;
 import com.example.toycontent.app.hashtag.domain.Hashtag;
 import com.example.toycontent.app.hashtag.repository.HashtagRepository;

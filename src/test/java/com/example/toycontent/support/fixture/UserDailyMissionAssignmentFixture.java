@@ -1,8 +1,8 @@
 package com.example.toycontent.support.fixture;
 
 import com.example.toycontent.app.common.enumuration.MissionProgressStatus;
-import com.example.toycontent.app.reward.domain.DailyMission;
-import com.example.toycontent.app.reward.domain.UserDailyMissionAssignment;
+import com.example.toycontent.app.reward.mission.domain.DailyMission;
+import com.example.toycontent.app.reward.mission.domain.UserDailyMissionAssignment;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 

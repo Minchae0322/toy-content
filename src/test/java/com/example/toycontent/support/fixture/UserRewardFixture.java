@@ -1,6 +1,6 @@
 package com.example.toycontent.support.fixture;
 
-import com.example.toycontent.app.reward.domain.UserReward;
+import com.example.toycontent.app.reward.exp.domain.UserReward;
 
 public class UserRewardFixture {
 

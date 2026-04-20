@@ -1,7 +1,7 @@
 package com.example.toycontent.support.fixture;
 
 import com.example.toycontent.app.common.enumuration.MissionDifficulty;
-import com.example.toycontent.app.reward.domain.DailyMission;
+import com.example.toycontent.app.reward.mission.domain.DailyMission;
 
 public class DailyMissionFixture {
 

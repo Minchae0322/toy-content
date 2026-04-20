@@ -2,7 +2,7 @@ package com.example.toycontent.support.fixture;
 
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.enumuration.CategoryMasteryTier;
-import com.example.toycontent.app.reward.domain.CategoryMastery;
+import com.example.toycontent.app.reward.badge.domain.CategoryMastery;
 
 public class CategoryMasteryFixture {
 
