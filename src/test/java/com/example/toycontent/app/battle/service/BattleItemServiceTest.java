@@ -21,7 +21,7 @@ import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.product.repository.ProductRepository;
-import com.example.toycontent.app.reward.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
 import com.example.toycontent.support.fixture.BattleFixture;
 import com.example.toycontent.support.fixture.BattleItemFixture;
 import java.time.LocalDateTime;

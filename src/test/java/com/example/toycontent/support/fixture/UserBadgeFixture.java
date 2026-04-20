@@ -1,7 +1,7 @@
 package com.example.toycontent.support.fixture;
 
-import com.example.toycontent.app.reward.domain.Badge;
-import com.example.toycontent.app.reward.domain.UserBadge;
+import com.example.toycontent.app.reward.badge.domain.Badge;
+import com.example.toycontent.app.reward.badge.domain.UserBadge;
 import java.time.LocalDateTime;
 
 public class UserBadgeFixture {

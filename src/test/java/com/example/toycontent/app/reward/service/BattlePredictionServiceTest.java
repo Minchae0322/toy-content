@@ -10,6 +10,7 @@ import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.PredictionInfo;
 import com.example.toycontent.app.reward.domain.BattlePrediction;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
 import com.example.toycontent.app.reward.repository.BattlePredictionRepository;
 import com.example.toycontent.support.fixture.BattleFixture;
 import java.util.List;

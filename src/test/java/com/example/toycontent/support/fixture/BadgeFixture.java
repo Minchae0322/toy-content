@@ -1,6 +1,6 @@
 package com.example.toycontent.support.fixture;
 
-import com.example.toycontent.app.reward.domain.Badge;
+import com.example.toycontent.app.reward.badge.domain.Badge;
 
 public class BadgeFixture {
 

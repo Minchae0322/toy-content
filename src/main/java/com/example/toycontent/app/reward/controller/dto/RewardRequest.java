@@ -1,8 +1,8 @@
 package com.example.toycontent.app.reward.controller.dto;
 
 import com.example.toycontent.app.common.enumuration.MissionDifficulty;
-import com.example.toycontent.app.reward.domain.Badge;
-import com.example.toycontent.app.reward.domain.DailyMission;
+import com.example.toycontent.app.reward.badge.domain.Badge;
+import com.example.toycontent.app.reward.mission.domain.DailyMission;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
