@@ -33,3 +33,8 @@ springdoc:
 jwt:
   secret: ${JWT_SECRET}
 
+app:
+  reward:
+    daily-exp-cap: 1000
+    time-zone: Asia/Seoul
+
