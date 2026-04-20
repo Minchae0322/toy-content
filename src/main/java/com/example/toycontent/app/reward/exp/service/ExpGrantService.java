@@ -1,13 +1,13 @@
-package com.example.toycontent.app.reward.service;
+package com.example.toycontent.app.reward.exp.service;
 
 import com.example.toycontent.app.common.enumuration.ExpSource;
-import com.example.toycontent.app.reward.domain.DailyExpCap;
-import com.example.toycontent.app.reward.repository.DailyExpCapRepository;
-import com.example.toycontent.app.reward.repository.ExpHistoryRepository;
-import com.example.toycontent.app.reward.service.dto.ExpGrantResult;
+import com.example.toycontent.app.common.enumuration.StreakMilestone;
+import com.example.toycontent.app.reward.exp.config.RewardProperties;
+import com.example.toycontent.app.reward.exp.domain.DailyExpCap;
+import com.example.toycontent.app.reward.exp.repository.DailyExpCapRepository;
+import com.example.toycontent.app.reward.exp.repository.ExpHistoryRepository;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,7 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>각 유저 행동(피드 작성, 리액션, 배틀 투표 등)에 대한 EXP 지급을 담당한다.
  * 일일 캡(200 EXP)과 중복 지급 방지를 내부적으로 처리한다.</p>
  *
- * <p>미션 보상(MISSION_CLAIM)과 스트릭 보너스(STREAK_BONUS)는 캡에서 제외된다.</p>
+ * <p>지급 금액은 {@link ExpSource#getDefaultAmount()}에, 캡 제외 여부는
+ * {@link ExpSource#isCapExempt()}에 정의되어 있다. 스트릭 마일스톤은
+ * {@link StreakMilestone}을 참조한다.</p>
  */
 @Slf4j
 @Service
@@ -27,37 +29,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ExpGrantService {
 
-  private static final long DAILY_CAP = 200L;
-  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
-
-  private static final int FEED_CREATE_EXP = 20;
-  private static final int FEED_REACTION_EXP = 5;
-  private static final int COMMENT_CREATE_EXP = 5;
-  private static final int BATTLE_VOTE_EXP = 5;
-  private static final int BATTLE_WEIGHTED_VOTE_EXP = 10;
-  private static final int BATTLE_PREDICTION_HIT_EXP = 30;
-  private static final int PICK_COMMENT_EXP = 10;
-  private static final int HOT_DISCOVER_EXP = 50;
-  private static final int ATTENDANCE_EXP = 5;
-
-  /** 스트릭 마일스톤별 보너스 EXP */
-  private static final Map<Integer, Integer> STREAK_MILESTONES = Map.of(
-      3, 20,
-      7, 50,
-      14, 100,
-      30, 200,
-      100, 500
-  );
-
   private final UserRewardService userRewardService;
   private final ExpHistoryRepository expHistoryRepository;
   private final DailyExpCapRepository dailyExpCapRepository;
+  private final RewardProperties rewardProperties;
 
   // ── 피드 ──
 
   @Transactional
   public ExpGrantResult grantFeedCreate(Long userId, Long feedId) {
-    return grantWithCap(userId, FEED_CREATE_EXP, ExpSource.FEED_CREATE, feedId);
+    return grant(userId, ExpSource.FEED_CREATE, feedId);
   }
 
   /**
@@ -69,69 +50,67 @@ public class ExpGrantService {
     if (qualityScore < 3) {
       return ExpGrantResult.cappedOut(0);
     }
-    int bonusExp = (qualityScore - 2) * 10;
+    long bonusExp = (qualityScore - 2) * 10L;
     return grantWithCap(userId, bonusExp, ExpSource.FEED_CREATE, feedId);
   }
 
   @Transactional
   public ExpGrantResult grantFeedReaction(Long feedOwnerId, Long feedId) {
-    return grantWithCap(feedOwnerId, FEED_REACTION_EXP, ExpSource.FEED_REACTION, feedId);
+    return grant(feedOwnerId, ExpSource.FEED_REACTION, feedId);
   }
 
   // ── 댓글 ──
 
   @Transactional
   public ExpGrantResult grantCommentCreate(Long userId, Long commentId) {
-    return grantWithCap(userId, COMMENT_CREATE_EXP, ExpSource.COMMENT_CREATE, commentId);
+    return grant(userId, ExpSource.COMMENT_CREATE, commentId);
   }
 
   // ── 배틀 ──
 
   @Transactional
   public ExpGrantResult grantBattleVote(Long userId, Long battleId) {
-    return grantWithCap(userId, BATTLE_VOTE_EXP, ExpSource.BATTLE_VOTE, battleId);
+    return grant(userId, ExpSource.BATTLE_VOTE, battleId);
   }
 
   @Transactional
   public ExpGrantResult grantBattleWeightedVote(Long userId, Long battleId) {
-    return grantWithCap(userId, BATTLE_WEIGHTED_VOTE_EXP, ExpSource.BATTLE_WEIGHTED_VOTE, battleId);
+    return grant(userId, ExpSource.BATTLE_WEIGHTED_VOTE, battleId);
   }
 
   @Transactional
   public ExpGrantResult grantBattlePredictionHit(Long userId, Long predictionId) {
-    return grantWithCap(userId, BATTLE_PREDICTION_HIT_EXP, ExpSource.BATTLE_PREDICTION_HIT, predictionId);
+    return grant(userId, ExpSource.BATTLE_PREDICTION_HIT, predictionId);
   }
 
   // ── PICK ──
 
   @Transactional
   public ExpGrantResult grantPickComment(Long userId, Long pickCommentId) {
-    return grantWithCap(userId, PICK_COMMENT_EXP, ExpSource.PICK_COMMENT, pickCommentId);
+    return grant(userId, ExpSource.PICK_COMMENT, pickCommentId);
   }
 
   // ── 발굴 ──
 
   @Transactional
   public ExpGrantResult grantHotDiscover(Long userId, Long feedId) {
-    return grantWithCap(userId, HOT_DISCOVER_EXP, ExpSource.HOT_DISCOVER, feedId);
+    return grant(userId, ExpSource.HOT_DISCOVER, feedId);
   }
 
   // ── 출석 ──
 
   @Transactional
   public ExpGrantResult grantAttendance(Long userId) {
-    return grantWithCap(userId, ATTENDANCE_EXP, ExpSource.ATTENDANCE, null);
+    return grant(userId, ExpSource.ATTENDANCE, null);
   }
 
   // ── 스트릭 보너스 (캡 제외) ──
 
   @Transactional
-  public ExpGrantResult grantStreakBonus(Long userId, int milestone) {
-    Integer bonusExp = STREAK_MILESTONES.get(milestone);
-    if (bonusExp == null) {
-      return ExpGrantResult.cappedOut(0);
-    }
-    return grantWithoutCap(userId, bonusExp, ExpSource.STREAK_BONUS, (long) milestone);
+  public ExpGrantResult grantStreakBonus(Long userId, int days) {
+    return StreakMilestone.from(days)
+        .map(m -> grantWithoutCap(userId, m.getBonusExp(), ExpSource.STREAK_BONUS, (long) days))
+        .orElseGet(() -> ExpGrantResult.cappedOut(0));
   }
 
   // ── 미션 보상 (캡 제외) ──
@@ -144,20 +123,30 @@ public class ExpGrantService {
   // ── 내부 메서드 ──
 
   /**
-   * 일일 캡을 적용하여 EXP를 지급한다.
-   * 중복 지급 방지: 같은 (userId, source, sourceId) 조합이면 건너뛴다.
+   * ExpSource의 정책(defaultAmount, capExempt)을 따라 지급한다.
+   */
+  private ExpGrantResult grant(Long userId, ExpSource source, Long sourceId) {
+    long amount = source.getDefaultAmount();
+
+    return source.isCapExempt()
+        ? grantWithoutCap(userId, amount, source, sourceId)
+        : grantWithCap(userId, amount, source, sourceId);
+  }
+
+  /**
+   * 일일 캡을 적용하여 EXP를 지급한다. 중복/캡소진이면 실제 지급은 건너뛴다.
    */
   private ExpGrantResult grantWithCap(Long userId, long amount, ExpSource source, Long sourceId) {
+    // 같은 게시물로 이미 지급됐으면 스킵
     if (sourceId != null && isDuplicate(userId, source, sourceId)) {
-      log.debug("EXP 중복 지급 방지 - userId: {}, source: {}, sourceId: {}", userId, source, sourceId);
       return ExpGrantResult.duplicated(amount);
     }
 
+    // 오늘 남은 캡만큼만 차감 (요청량보다 적으면 부분 지급)
     DailyExpCap cap = getOrCreateDailyExpCap(userId);
-    long actualAmount = cap.consume(amount, DAILY_CAP);
+    long actualAmount = cap.consume(amount, rewardProperties.dailyExpCap());
 
     if (actualAmount <= 0) {
-      log.debug("일일 EXP 캡 초과 - userId: {}, source: {}", userId, source);
       return ExpGrantResult.cappedOut(amount);
     }
 
@@ -191,7 +180,7 @@ public class ExpGrantService {
   }
 
   private DailyExpCap getOrCreateDailyExpCap(Long userId) {
-    LocalDate today = LocalDate.now(KST);
+    LocalDate today = LocalDate.now(rewardProperties.timeZone());
     return dailyExpCapRepository.findByUserIdAndCapDate(userId, today)
         .orElseGet(() -> dailyExpCapRepository.save(
             DailyExpCap.builder()

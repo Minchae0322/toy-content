@@ -1,4 +1,4 @@
-package com.example.toycontent.app.reward.service;
+package com.example.toycontent.app.reward.exp.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
@@ -10,19 +10,20 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.example.toycontent.app.common.enumuration.ExpSource;
-import com.example.toycontent.app.reward.domain.DailyExpCap;
-import com.example.toycontent.app.reward.domain.UserReward;
-import com.example.toycontent.app.reward.repository.DailyExpCapRepository;
-import com.example.toycontent.app.reward.repository.ExpHistoryRepository;
-import com.example.toycontent.app.reward.service.dto.ExpGrantResult;
+import com.example.toycontent.app.reward.exp.config.RewardProperties;
+import com.example.toycontent.app.reward.exp.domain.DailyExpCap;
+import com.example.toycontent.app.reward.exp.domain.UserReward;
+import com.example.toycontent.app.reward.exp.repository.DailyExpCapRepository;
+import com.example.toycontent.app.reward.exp.repository.ExpHistoryRepository;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -37,7 +38,14 @@ class ExpGrantServiceTest {
   @Mock private UserRewardService userRewardService;
   @Mock private ExpHistoryRepository expHistoryRepository;
   @Mock private DailyExpCapRepository dailyExpCapRepository;
-  @InjectMocks private ExpGrantService expGrantService;
+  private ExpGrantService expGrantService;
+
+  @BeforeEach
+  void setUp() {
+    RewardProperties rewardProperties = new RewardProperties(200L, ZoneId.of("Asia/Seoul"));
+    expGrantService = new ExpGrantService(
+        userRewardService, expHistoryRepository, dailyExpCapRepository, rewardProperties);
+  }
 
   private DailyExpCap freshCap() {
     return DailyExpCap.builder()

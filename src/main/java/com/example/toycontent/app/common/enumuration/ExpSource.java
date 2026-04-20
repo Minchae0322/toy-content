@@ -7,21 +7,23 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ExpSource {
 
-  FEED_CREATE("피드 작성"),
-  COMMENT_CREATE("댓글 작성"),
-  BATTLE_VOTE("배틀 투표"),
-  BATTLE_PREDICTION_HIT("배틀 예측 적중"),
-  MISSION_CLAIM("일일 미션 보상 수령"),
-  STREAK_BONUS("연속 출석 보너스"),
-  ADMIN_GRANT("관리자 지급"),
-  FEED_REACTION("피드 리액션 수신"),
-  BATTLE_WEIGHTED_VOTE("가중 투표"),
-  PICK_COMMENT("PICK 한마디"),
-  HOT_DISCOVER("HOT 발굴자"),
-  WEEKLY_RANKING("주간 랭킹"),
-  BATTLE_RESULT("배틀 결과"),
-  ATTENDANCE("출석"),
+  FEED_CREATE("피드 작성", 20L, false),
+  COMMENT_CREATE("댓글 작성", 5L, false),
+  BATTLE_VOTE("배틀 투표", 5L, false),
+  BATTLE_PREDICTION_HIT("배틀 예측 적중", 30L, false),
+  MISSION_CLAIM("일일 미션 보상 수령", 0L, true),
+  STREAK_BONUS("연속 출석 보너스", 0L, true),
+  ADMIN_GRANT("관리자 지급", 0L, true),
+  FEED_REACTION("피드 리액션 수신", 5L, false),
+  BATTLE_WEIGHTED_VOTE("가중 투표", 10L, false),
+  PICK_COMMENT("PICK 한마디", 10L, false),
+  HOT_DISCOVER("HOT 발굴자", 50L, false),
+  WEEKLY_RANKING("주간 랭킹", 0L, true),
+  BATTLE_RESULT("배틀 결과", 0L, true),
+  ATTENDANCE("출석", 5L, false),
   ;
 
   private final String description;
+  private final long defaultAmount;
+  private final boolean capExempt;
 }
