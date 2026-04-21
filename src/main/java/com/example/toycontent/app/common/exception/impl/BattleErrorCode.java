@@ -21,9 +21,13 @@ public enum BattleErrorCode implements ErrorCode {
 
   // 배틀 생성 검증
   INVALID_BATTLE_PERIOD(HttpStatus.BAD_REQUEST, "배틀 기간이 유효하지 않습니다."),
+  INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "시작일과 종료일은 함께 입력해야 합니다."),
   INSUFFICIENT_BATTLE_ITEMS(HttpStatus.BAD_REQUEST, "아이템이 부족합니다."),
   TOO_MANY_BATTLE_ITEMS(HttpStatus.BAD_REQUEST, "아이템이 너무 많습니다."),
   INVALID_BATTLE_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 배틀 타입입니다."),
+
+  // 배틀 수정 검증
+  ALREADY_START_BATTLE(HttpStatus.BAD_REQUEST, "이미 시작된 배틀은 수정할 수 없습니다."),
 
   // 배틀 아이템
   BATTLE_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "배틀 아이템을 찾을 수 없습니다."),

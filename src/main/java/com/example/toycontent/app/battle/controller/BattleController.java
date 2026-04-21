@@ -14,7 +14,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -24,6 +23,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -54,6 +54,19 @@ public class BattleController {
       @Valid @RequestBody BattleRequest.CreateBattle request) {
     BattleResponse.BattleCreateResponse response = battleService.createBattle(userId, request);
     return ResponseEntity.ok(ApiResponse.success(response, "배틀이 생성되었습니다."));
+  }
+
+  @Operation(summary = "배틀 수정",
+      description = "부분 수정(PATCH). null 필드는 변경되지 않습니다. "
+          + "title/description/thumbnail은 언제나 수정 가능하고, "
+          + "카테고리·권한·기간·투표타입은 참여자가 0명일 때만 수정 가능합니다.")
+  @PatchMapping("/{battleId}")
+  public ResponseEntity<ApiResponse<Void>> updateBattle(
+      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
+      @CurrentUserId Long userId,
+      @Valid @RequestBody BattleRequest.UpdateBattle request) {
+    battleService.updateBattle(userId, battleId, request);
+    return ResponseEntity.ok(ApiResponse.success(null, "배틀이 수정되었습니다."));
   }
 
   @Operation(summary = "배틀 목록 조회")

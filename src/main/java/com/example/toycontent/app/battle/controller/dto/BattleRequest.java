@@ -1,5 +1,6 @@
 package com.example.toycontent.app.battle.controller.dto;
 
+import com.example.toycontent.app.battle.service.dto.PreVoteUpdateCommand;
 import com.example.toycontent.app.common.enumuration.BattleItemType;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.VoteType;
@@ -101,6 +102,49 @@ public abstract class BattleRequest {
         example = "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
     @Size(max = 500, message = "콘텐츠 URL은 500자 이내여야 합니다")
     private String contentUrl;
+  }
+
+  @Schema(description = "배틀 수정 요청 (부분 수정, null 필드는 변경하지 않음)")
+  @Getter
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class UpdateBattle {
+
+    @Schema(description = "배틀 제목", example = "2025년 최고의 스니커즈를 찾아라")
+    @Size(min = 1, max = 50, message = "배틀 제목은 1~50자 사이여야 합니다")
+    private String title;
+
+    @Schema(description = "배틀 설명")
+    @Size(max = 500, message = "배틀 설명은 500자 이내여야 합니다")
+    private String description;
+
+    @Schema(description = "카테고리 ID (투표 시작 전에만 수정 가능)", example = "1")
+    private Long subCategoryId;
+
+    @Schema(description = "아이템 추가 권한 타입 (투표 시작 전에만 수정 가능)", example = "CREATOR_ONLY")
+    private ItemAddPermissionType itemAddPermissionType;
+
+    @Schema(description = "시작일 (투표 시작 전에만 수정 가능)", example = "2025-02-01T00:00:00")
+    private LocalDateTime startDate;
+
+    @Schema(description = "종료일 (투표 시작 전에만 수정 가능)", example = "2025-02-28T23:59:59")
+    private LocalDateTime endDate;
+
+    @Schema(description = "참여 시작일 (투표 시작 전에만 수정 가능)", example = "2025-02-01T00:00:00")
+    private LocalDateTime participationStartDate;
+
+    @Schema(description = "투표 타입 (투표 시작 전에만 수정 가능)", example = "SINGLE")
+    private VoteType voteType;
+
+    public PreVoteUpdateCommand toPreVoteCommand() {
+      return new PreVoteUpdateCommand(
+          itemAddPermissionType,
+          startDate,
+          endDate,
+          participationStartDate,
+          voteType);
+    }
   }
 
   @Schema(description = "배틀 아이템 추가 요청")
