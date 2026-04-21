@@ -106,6 +106,61 @@ public class BattleService {
 
 
   /**
+   * 배틀 수정
+   * - title/description: 언제나 수정 가능
+   * - category/itemAddPermissionType/dates/voteType: 참여자 0명일 때만 수정 가능
+   */
+  @Transactional
+  public void updateBattle(Long userId, Long battleId, BattleRequest.UpdateBattle request) {
+    Battle battle = getBattleByIdOrElseThrow(battleId);
+    battle.validateCreator(userId);
+
+    battle.updateBasicInfo(request.getTitle(), request.getDescription());
+
+    if (!hasPreVoteFields(request)) {
+      return;
+    }
+
+    updatePreVoteFields(battle, request);
+  }
+
+  private void updatePreVoteFields(Battle battle, BattleRequest.UpdateBattle request) {
+    battle.validateUpdatablePreVote();
+    validateDateRange(request.getStartDate(), request.getEndDate());
+
+    Category category = getCategoryOrNull(request.getSubCategoryId());
+    battle.updatePreVoteInfo(category, request.toPreVoteCommand());
+  }
+
+  private void validateDateRange(LocalDateTime start, LocalDateTime end) {
+    if (start == null && end == null) {
+      return;
+    }
+    if (start == null || end == null) {
+      throw new RestApiException(BattleErrorCode.INVALID_DATE_RANGE);
+    }
+    validateBattlePeriod(start, end);
+  }
+
+  private Category getCategoryOrNull(Long subCategoryId) {
+    if (subCategoryId == null) {
+      return null;
+    }
+    return categoryRepository.findById(subCategoryId)
+        .orElseThrow(() -> new RestApiException(CategoryErrorCode.CATEGORY_NOT_FOUND));
+  }
+
+  private boolean hasPreVoteFields(BattleRequest.UpdateBattle request) {
+    return request.getSubCategoryId() != null
+        || request.getItemAddPermissionType() != null
+        || request.getStartDate() != null
+        || request.getEndDate() != null
+        || request.getParticipationStartDate() != null
+        || request.getVoteType() != null;
+  }
+
+
+  /**
    * 배틀 목록 조회
    */
   public Page<BattleResponse.BattleList> getBattles(BattleSearchCondition condition, Pageable pageable) {

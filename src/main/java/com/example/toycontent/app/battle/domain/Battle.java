@@ -1,11 +1,14 @@
 package com.example.toycontent.app.battle.domain;
 
+import com.example.toycontent.app.battle.service.dto.PreVoteUpdateCommand;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.ResultVisibility;
 import com.example.toycontent.app.common.enumuration.VoteType;
+import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -151,6 +154,53 @@ public class Battle extends BaseTimeEntity {
 
   public void incrementTotalVotes(int delta) {
     this.totalVotes += delta;
+  }
+
+  public boolean hasParticipants() {
+    return this.totalParticipants != null && this.totalParticipants > 0;
+  }
+
+  public void validateCreator(Long userId) {
+    if (!this.creatorId.equals(userId)) {
+      throw new RestApiException(BattleErrorCode.NOT_BATTLE_CREATOR);
+    }
+  }
+
+  public void validateUpdatablePreVote() {
+    if (hasParticipants()) {
+      throw new RestApiException(BattleErrorCode.ALREADY_START_BATTLE);
+    }
+  }
+
+  public void updateBasicInfo(String title, String description) {
+    if (title != null) {
+      this.title = title;
+    }
+
+    if (description != null) {
+      this.description = description;
+    }
+  }
+
+  public void updatePreVoteInfo(Category category, PreVoteUpdateCommand command) {
+    if (category != null) {
+      this.category = category;
+    }
+    if (command.itemAddPermissionType() != null) {
+      this.itemAddPermissionType = command.itemAddPermissionType();
+    }
+    if (command.startDate() != null) {
+      this.startDate = command.startDate();
+    }
+    if (command.endDate() != null) {
+      this.endDate = command.endDate();
+    }
+    if (command.participationStartDate() != null) {
+      this.participationStartDate = command.participationStartDate();
+    }
+    if (command.voteType() != null) {
+      this.voteType = command.voteType();
+    }
   }
 
   public void incrementTotalParticipants(int delta) {

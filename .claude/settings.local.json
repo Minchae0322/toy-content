@@ -29,7 +29,9 @@
       "Bash(./gradlew compileJava compileTestJava)",
       "Bash(git reset *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Notion__notion-update-page"
     ]
   }
 }
