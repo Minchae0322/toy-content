@@ -39,8 +39,8 @@ public class BattleItemRepositoryCustomImpl implements BattleItemRepositoryCusto
         .from(battleItem)
         .leftJoin(battleItem.product, product).fetchJoin()
         .where(
-            battleItem.battle.id.eq(battleId)
-                .and(whereCondition)
+            battleItem.battle.id.eq(battleId),
+            whereCondition
         )
         .orderBy(
             battleItem.voteCount.desc(),

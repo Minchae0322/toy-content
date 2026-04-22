@@ -1,11 +1,16 @@
 package com.example.toycontent.app.battle.service;
 
+import static com.example.toycontent.app.common.utils.BattleItemRankingCalculator.setRanking;
+
+import com.example.toycontent.app.battle.controller.dto.BattleItemCommentResponse.BattleItemCommentSummary;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest.ItemRequest;
+import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleItemInfo;
 import com.example.toycontent.app.battle.controller.dto.BattleVoteRequest;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.domain.BattleVote;
+import com.example.toycontent.app.battle.repository.BattleItemCommentRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.battle.repository.BattleRepository;
 import com.example.toycontent.app.battle.repository.BattleVoteRepository;
@@ -21,8 +26,10 @@ import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.app.reward.exp.service.ExpGrantService;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,12 +44,69 @@ public class BattleItemService {
   private final BattleRepository battleRepository;
   private final BattleItemRepository battleItemRepository;
   private final BattleVoteRepository battleVoteRepository;
+  private final BattleItemCommentRepository battleItemCommentRepository;
   private final ProductRepository productRepository;
   private final ExpGrantService expGrantService;
 
   private static final int MAX_ITEMS = 20;
   private static final int MAX_ADDITIONAL_ITEMS = 3;
   private static final int AUTO_REVIEW_REPORT_COUNT = 3;
+
+  /**
+   * 배틀 아이템 목록 조회
+   * - 일반 사용자: ACTIVE 상태 아이템만 노출
+   * - 배틀 생성자 / 어드민: condition.status 로 자유롭게 필터링 (null이면 전체)
+   * - 각 아이템에 BEST 코멘트 요약과 조회자의 투표 정보를 함께 구성
+   */
+  public List<BattleItemInfo> getBattleItems(Long battleId, Long userId, boolean isAdmin,
+      BattleRequest.BattleItemsSearchCondition condition) {
+
+    Battle battle = getBattleById(battleId);
+    BattleItemStatus statusFilter = resolveStatusFilter(battle, userId, isAdmin, condition);
+
+    List<BattleItem> battleItems = battleItemRepository.findByBattleId(battleId, userId, statusFilter);
+
+    List<Long> itemIds = battleItems.stream()
+        .map(BattleItem::getId)
+        .toList();
+
+    // 현재 사용자의 투표 정보만 별도 조회
+    Map<Long, BattleVote> userVoteMap = battleVoteRepository
+        .findUserVotesByBattleItemIds(itemIds, userId);
+
+    // 아이템별 BEST 코멘트 + 코멘트 수 일괄 조회
+    Map<Long, BattleItemCommentSummary> commentSummaryMap = itemIds.isEmpty()
+        ? Collections.emptyMap()
+        : battleItemCommentRepository.findBestCommentsAndCountByItemIds(itemIds)
+            .stream()
+            .map(BattleItemCommentSummary::from)
+            .collect(Collectors.toMap(
+                BattleItemCommentSummary::getBattleItemId,
+                summary -> summary
+            ));
+
+    return setRanking(
+        battleItems.stream()
+            .map(item -> BattleItemInfo.from(item,
+                commentSummaryMap.get(item.getId()),
+                userVoteMap.get(item.getId())))
+            .collect(Collectors.toList())
+    );
+  }
+
+  /**
+   * 일반 사용자는 ACTIVE만, 생성자 또는 어드민은 요청한 상태(null이면 전체)로 필터링.
+   */
+  private BattleItemStatus resolveStatusFilter(Battle battle, Long userId, boolean isAdmin,
+      BattleRequest.BattleItemsSearchCondition condition) {
+    boolean isBattleCreator = userId != null && userId.equals(battle.getCreatorId());
+
+    if (!isBattleCreator && !isAdmin) {
+      return BattleItemStatus.ACTIVE;
+    }
+
+    return condition != null ? condition.getStatus() : null;
+  }
 
   /**
    * 배틀 아이템 추가

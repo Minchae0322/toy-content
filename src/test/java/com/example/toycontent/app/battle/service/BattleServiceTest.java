@@ -3,10 +3,12 @@ package com.example.toycontent.app.battle.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import com.example.toycontent.app.battle.controller.dto.BattleRequest.BattleItemsSearchCondition;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.repository.BattleAttachmentFileRepository;
 import com.example.toycontent.app.battle.repository.BattleItemCommentRepository;
@@ -21,9 +23,6 @@ import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import com.example.toycontent.support.fixture.BattleFixture;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -109,13 +108,9 @@ class BattleServiceTest {
       given(battleRepository.findById(BATTLE_ID)).willReturn(Optional.of(battle));
       given(externalUserInfoService.getUserInfo(battle.getCreatorId()))
           .willReturn(ExternalUserInfo.builder().userId(battle.getCreatorId()).nickname("작성자").build());
-      given(battleItemRepository.findByBattleId(eq(BATTLE_ID), any(), any()))
-          .willReturn(List.of());
-      given(battleVoteRepository.findUserVotesByBattleItemIds(any(), any()))
-          .willReturn(Map.of());
 
       // when
-      battleService.getBattleDetail(BATTLE_ID, OTHER_USER_ID);
+      battleService.getBattleDetail(BATTLE_ID, OTHER_USER_ID, false);
 
       // then
       assertThat(battle.getTotalViews())
@@ -130,50 +125,29 @@ class BattleServiceTest {
       given(battleRepository.findById(BATTLE_ID)).willReturn(Optional.empty());
 
       // when & then
-      assertThatThrownBy(() -> battleService.getBattleDetail(BATTLE_ID, OTHER_USER_ID))
+      assertThatThrownBy(() -> battleService.getBattleDetail(BATTLE_ID, OTHER_USER_ID, false))
           .isInstanceOf(RestApiException.class);
     }
 
     @Test
-    @DisplayName("생성자가 조회하면 모든 상태의 아이템을, 일반 유저는 ACTIVE만 조회한다")
-    void 생성자_vs_일반유저_아이템_필터링() {
-      // given - 생성자 시나리오
-      Battle battle = BattleFixture.active();
-      given(battleRepository.findById(BATTLE_ID)).willReturn(Optional.of(battle));
-      given(externalUserInfoService.getUserInfo(battle.getCreatorId()))
-          .willReturn(ExternalUserInfo.builder().userId(battle.getCreatorId()).nickname("작성자").build());
-      given(battleItemRepository.findByBattleId(any(), any(), any()))
-          .willReturn(List.of());
-      given(battleVoteRepository.findUserVotesByBattleItemIds(any(), any()))
-          .willReturn(Collections.emptyMap());
-
-      // when - 생성자가 조회
-      battleService.getBattleDetail(BATTLE_ID, BattleFixture.DEFAULT_CREATOR_ID);
-
-      // then - status 필터가 null(전체)
-      then(battleItemRepository).should().findByBattleId(
-          eq(BATTLE_ID), eq(BattleFixture.DEFAULT_CREATOR_ID), eq((BattleItemStatus) null));
-    }
-
-    @Test
-    @DisplayName("일반 유저가 조회하면 ACTIVE 상태의 아이템만 조회된다")
-    void 일반_유저_ACTIVE만() {
+    @DisplayName("아이템 조회는 BattleItemService 에 ACTIVE 필터와 isAdmin 값을 그대로 전달한다")
+    void 아이템_조회_위임() {
       // given
       Battle battle = BattleFixture.active();
       given(battleRepository.findById(BATTLE_ID)).willReturn(Optional.of(battle));
       given(externalUserInfoService.getUserInfo(battle.getCreatorId()))
           .willReturn(ExternalUserInfo.builder().userId(battle.getCreatorId()).nickname("작성자").build());
-      given(battleItemRepository.findByBattleId(any(), any(), any()))
-          .willReturn(List.of());
-      given(battleVoteRepository.findUserVotesByBattleItemIds(any(), any()))
-          .willReturn(Collections.emptyMap());
 
-      // when - 일반 유저가 조회
-      battleService.getBattleDetail(BATTLE_ID, OTHER_USER_ID);
+      // when - 어드민이 조회
+      battleService.getBattleDetail(BATTLE_ID, OTHER_USER_ID, true);
 
-      // then
-      then(battleItemRepository).should().findByBattleId(
-          eq(BATTLE_ID), eq(OTHER_USER_ID), eq(BattleItemStatus.ACTIVE));
+      // then - BattleItemService 로 위임하며 status=ACTIVE, isAdmin=true 전달
+      then(battleItemService).should().getBattleItems(
+          eq(BATTLE_ID),
+          eq(OTHER_USER_ID),
+          eq(true),
+          argThat((BattleItemsSearchCondition cond) ->
+              cond != null && cond.getStatus() == BattleItemStatus.ACTIVE));
     }
   }
 }
