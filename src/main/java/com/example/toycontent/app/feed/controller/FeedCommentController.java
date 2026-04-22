@@ -42,7 +42,8 @@ public class FeedCommentController {
     return ResponseEntity.ok(ApiResponse.success(commentList));
   }
 
-  @Operation(summary = "댓글 생성", description = "피드에 댓글을 생성합니다.")
+  @Operation(summary = "댓글/답글 생성",
+      description = "피드에 댓글을 생성합니다. 요청 바디에 parentCommentId를 지정하면 해당 댓글의 답글로 생성됩니다 (1뎁스까지만 허용).")
   @PostMapping
   public ResponseEntity<ApiResponse<FeedCommentResponse.Created>> createComment(
       @PathVariable Long feedId,
