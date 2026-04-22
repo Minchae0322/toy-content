@@ -4,6 +4,7 @@ import static com.example.toycontent.app.common.utils.BattleItemRankingCalculato
 
 import com.example.toycontent.app.battle.controller.dto.BattleItemCommentResponse.BattleItemCommentSummary;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
+import com.example.toycontent.app.battle.controller.dto.BattleRequest.BattleItemsSearchCondition;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotItem;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
@@ -59,8 +60,6 @@ public class BattleService {
   private final CategoryRepository categoryRepository;
   private final ExternalUserInfoService externalUserInfoService;
   private final BattleAttachmentFileRepository battleAttachmentFileRepository;
-  private final BattleVoteRepository battleVoteRepository;
-  private final BattleItemCommentRepository battleItemCommentRepository;
 
 
   private static final int MAX_ACTIVE_BATTLES = 10;
@@ -212,7 +211,7 @@ public class BattleService {
 
 
   @Transactional
-  public BattleResponse.BattleDetail getBattleDetail(Long battleId, Long currentUserId) {
+  public BattleResponse.BattleDetail getBattleDetail(Long battleId, Long currentUserId, boolean isAdmin) {
     // 배틀 조회 및 생성자 정보 가져오기
     Battle battle = getBattleByIdOrElseThrow(battleId);
     ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(battle.getCreatorId());
@@ -220,42 +219,11 @@ public class BattleService {
     // 조회수 증가
     battle.incrementTotalViews();
 
-    // 생성자는 모든 상태의 아이템 조회, 일반 사용자는 활성화된 아이템만 조회
-    BattleItemStatus status = isCreator(battle, currentUserId)
-        ? null
-        : BattleItemStatus.ACTIVE;
-
-    // 배틀 아이템 목록 조회 (조회 사용자 투표 정보 포함)
-    List<BattleItem> battleItems = battleItemRepository.findByBattleId(
-        battleId, currentUserId, status);
-
-    // 아이템별 BEST 코멘트 + 코멘트 수 일괄 조회 (아이템 없으면 빈 맵)
-    List<Long> itemIds = battleItems.stream()
-        .map(BattleItem::getId)
-        .toList();
-
-    // 현재 사용자의 투표 정보만 별도 조회
-    Map<Long, BattleVote> userVoteMap = battleVoteRepository
-        .findUserVotesByBattleItemIds(itemIds, currentUserId);
-
-    // 아이템별 BEST 코멘트 + 코멘트 수 일괄 조회
-    Map<Long, BattleItemCommentSummary> commentSummaryMap = itemIds.isEmpty()
-        ? Collections.emptyMap()
-        : battleItemCommentRepository.findBestCommentsAndCountByItemIds(itemIds)
-            .stream()
-            .map(BattleItemCommentSummary::from)
-            .collect(Collectors.toMap(
-                BattleItemCommentSummary::getBattleItemId,
-                summary -> summary
-            ));
-
     // DTO 변환: 아이템 정보 + 사용자 투표 + 코멘트 요약 조합 후 랭킹 부여
-    List<BattleItemInfo> items = setRanking(
-        battleItems.stream()
-            .map(item -> BattleItemInfo.from(item, commentSummaryMap.get(item.getId()),
-                userVoteMap.get(item.getId())))
-            .collect(Collectors.toList())
-    );
+    List<BattleItemInfo> items = battleItemService.getBattleItems(battleId, currentUserId, isAdmin,
+        BattleItemsSearchCondition.builder()
+            .status(BattleItemStatus.ACTIVE)
+            .build());
 
     return BattleResponse.BattleDetail.from(battle, userInfo, items);
   }

@@ -1,10 +1,12 @@
 package com.example.toycontent.app.battle.controller.dto;
 
 import com.example.toycontent.app.battle.service.dto.PreVoteUpdateCommand;
+import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.enumuration.BattleItemType;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -16,6 +18,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 public abstract class BattleRequest {
 
@@ -160,6 +163,21 @@ public abstract class BattleRequest {
     @Size(min = 1, max = 3, message = "한 번에 1~3개까지 추가 가능합니다")
     private List<ItemRequest> items;
   }
+
+
+  @Schema(description = "배틀 아이템 조회 조건")
+  @Getter
+  @Setter
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class BattleItemsSearchCondition {
+
+    @Parameter(description = "아이템 상태 필터 (생성자만 적용, 미지정 시 전체). "
+        + "일반 사용자는 항상 ACTIVE만 조회됨")
+    private BattleItemStatus status;
+  }
+
 
 
   @Schema(description = "신고 요청")

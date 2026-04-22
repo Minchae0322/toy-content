@@ -4,17 +4,22 @@ package com.example.toycontent.app.battle.controller;
 import com.example.toycontent.app.battle.controller.dto.BattleItemCommentResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleItemCommentResponse.Detail;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
+import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleItemInfo;
 import com.example.toycontent.app.battle.controller.dto.BattleVoteRequest;
 import com.example.toycontent.app.battle.service.BattleItemCommentService;
+import com.example.toycontent.app.common.annotation.CheckAdmin;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.battle.service.BattleItemService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
+import com.example.toycontent.app.common.annotation.CurrentUserIsAdmin;
 import com.example.toycontent.app.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
@@ -29,6 +34,18 @@ import org.springframework.web.bind.annotation.*;
 public class BattleItemController {
 
   private final BattleItemService battleItemService;
+
+
+  @Operation(summary = "배틀 아이템 조회")
+  @GetMapping
+  public ResponseEntity<ApiResponse<List<BattleItemInfo>>> getBattleItems(
+      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
+      @CurrentUserId(required = false) Long userId,
+      @CurrentUserIsAdmin boolean isAdmin,
+      @ParameterObject BattleRequest.BattleItemsSearchCondition condition) {
+    List<BattleItemInfo> items = battleItemService.getBattleItems(battleId, userId, isAdmin, condition);
+    return ResponseEntity.ok(ApiResponse.success(items));
+  }
 
   @Operation(summary = "배틀 아이템 추가")
   @PostMapping

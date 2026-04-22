@@ -1,6 +1,7 @@
 package com.example.toycontent.app.config;
 
 import com.example.toycontent.app.common.resolver.CurrentUserIdArgumentResolver;
+import com.example.toycontent.app.common.resolver.CurrentUserIsAdminArgumentResolver;
 import com.example.toycontent.app.common.resolver.CurrentUserNameArgumentResolver;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -14,11 +15,12 @@ public class WebConfig implements WebMvcConfigurer {
 
   private final CurrentUserIdArgumentResolver currentUserIdArgumentResolver;
   private final CurrentUserNameArgumentResolver currentUserNameArgumentResolver;
+  private final CurrentUserIsAdminArgumentResolver currentUserIsAdminArgumentResolver;
 
   @Override
   public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
     resolvers.add(currentUserIdArgumentResolver);
     resolvers.add(currentUserNameArgumentResolver);
-
+    resolvers.add(currentUserIsAdminArgumentResolver);
   }
 }

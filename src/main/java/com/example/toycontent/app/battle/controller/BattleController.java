@@ -9,6 +9,7 @@ import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.service.BattleItemCommentService;
 import com.example.toycontent.app.battle.service.BattleService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
+import com.example.toycontent.app.common.annotation.CurrentUserIsAdmin;
 import com.example.toycontent.app.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -90,8 +91,10 @@ public class BattleController {
   @GetMapping("/{battleId}")
   public ResponseEntity<ApiResponse<BattleResponse.BattleDetail>> getBattleDetail(
       @Parameter(description = "배틀 ID") @PathVariable Long battleId,
-      @CurrentUserId(required = false) Long userId) {
-    BattleResponse.BattleDetail response = battleService.getBattleDetail(battleId, userId);
+      @CurrentUserId(required = false) Long userId,
+      @CurrentUserIsAdmin boolean isAdmin) {
+
+    BattleResponse.BattleDetail response = battleService.getBattleDetail(battleId, userId, isAdmin);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
