@@ -65,7 +65,7 @@ class FeedCommentServiceTest {
           .willReturn(externalUser(COMMENTER_NICKNAME));
 
       // when
-      feedCommentService.createComment(FEED_ID, new CommentCreate("좋은 글!"), COMMENTER_ID);
+      feedCommentService.createComment(FEED_ID, new CommentCreate("좋은 글!", null), COMMENTER_ID);
 
       // then
       assertThat(feed.getCommentCount())
@@ -83,7 +83,7 @@ class FeedCommentServiceTest {
           .willReturn(externalUser(COMMENTER_NICKNAME));
 
       // when
-      feedCommentService.createComment(FEED_ID, new CommentCreate("좋은 글!"), COMMENTER_ID);
+      feedCommentService.createComment(FEED_ID, new CommentCreate("좋은 글!", null), COMMENTER_ID);
 
       // then
       then(notificationService).should().notifyFeedComment(
@@ -101,7 +101,7 @@ class FeedCommentServiceTest {
           .willReturn(externalUser(COMMENTER_NICKNAME));
 
       // when
-      feedCommentService.createComment(FEED_ID, new CommentCreate("테스트 댓글"), COMMENTER_ID);
+      feedCommentService.createComment(FEED_ID, new CommentCreate("테스트 댓글", null), COMMENTER_ID);
 
       // then
       ArgumentCaptor<FeedComment> captor = ArgumentCaptor.forClass(FeedComment.class);
@@ -123,7 +123,7 @@ class FeedCommentServiceTest {
 
       // when & then
       assertThatThrownBy(() ->
-          feedCommentService.createComment(FEED_ID, new CommentCreate("..."), COMMENTER_ID))
+          feedCommentService.createComment(FEED_ID, new CommentCreate("...", null), COMMENTER_ID))
           .isInstanceOf(RestApiException.class);
 
       then(feedCommentRepository).shouldHaveNoInteractions();
