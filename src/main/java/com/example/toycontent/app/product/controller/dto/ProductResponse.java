@@ -104,7 +104,11 @@ public abstract class ProductResponse {
         @Schema(description = "브랜드명", example = "반다이")
         private String brand;
 
+        @Schema(description = "상품 정가", example = "25000")
         private String price;
+
+        @Schema(description = "상품 상태", example = "APPROVED")
+        private ProductStatus productStatus;
 
         @Schema(description = "대표 이미지")
         private AttachmentFileResponse thumbnailDto;
@@ -117,6 +121,7 @@ public abstract class ProductResponse {
                 .price(product.getPrice())
                 .thumbnailDto(
                     AttachmentFileResponse.of(product.getProductAttachmentFiles().get(0)))
+                .productStatus(product.getStatus())
                 .build();
         }
 
@@ -137,7 +142,11 @@ public abstract class ProductResponse {
         @Schema(description = "브랜드명", example = "반다이")
         private String brand;
 
+        @Schema(description = "상품 정가", example = "25000")
         private String price;
+
+        @Schema(description = "상품 상태", example = "APPROVED")
+        private ProductStatus productStatus;
 
         @Schema(description = "대표 이미지")
         private AttachmentFileResponse thumbnailDto;
@@ -148,6 +157,7 @@ public abstract class ProductResponse {
                 .name(product.getName())
                 .brand(product.getBrand())
                 .price(product.getPrice())
+                .productStatus(product.getStatus())
                 .thumbnailDto(
                     AttachmentFileResponse.of(product.getProductAttachmentFiles().get(0)))
                 .build();
