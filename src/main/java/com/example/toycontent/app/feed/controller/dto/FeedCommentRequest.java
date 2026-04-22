@@ -18,6 +18,9 @@ public abstract class FeedCommentRequest {
     @Schema(description = "댓글 내용", example = "좋은 글 감사합니다!", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "댓글 내용은 필수입니다.")
     private String content;
+
+    @Schema(description = "부모 댓글 ID. 지정 시 해당 댓글에 대한 답글로 생성됨 (1뎁스까지만 허용)", example = "150")
+    private Long parentCommentId;
   }
 
   @Data

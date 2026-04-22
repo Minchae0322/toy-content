@@ -5,5 +5,5 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface FeedCommentRepositoryCustom {
-  Page<CommentItem> findByFeedIdAndDeletedFalse(Long feedId, Pageable pageable);
+  Page<CommentItem> findVisibleCommentsWithReplies(Long feedId, Pageable pageable);
 }
