@@ -24,6 +24,7 @@ import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest;
 import com.example.toycontent.app.hashtag.domain.Hashtag;
 import com.example.toycontent.app.hashtag.repository.HashtagRepository;
 import com.example.toycontent.app.product.repository.ProductRepository;
+import com.example.toycontent.app.reward.exp.service.UserRewardService;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserFollowingService;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
@@ -58,6 +59,7 @@ class FeedServiceTest {
   @Mock private FeedReactionRepository feedReactionRepository;
   @Mock private FeedHashtagRepository feedHashtagRepository;
   @Mock private ExpGrantService expGrantService;
+  @Mock private UserRewardService userRewardService;
 
   @InjectMocks private FeedService feedService;
 
