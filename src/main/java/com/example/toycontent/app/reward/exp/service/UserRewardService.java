@@ -34,6 +34,13 @@ public class UserRewardService {
     return UserRewardInfo.of(reward, levelExpService.computeLevelInfo(reward.getTotalExp()));
   }
 
+  public UserRewardInfo getUserRewardInfo(Long userId) {
+    UserReward reward = userRewardRepository.findByUserId(userId)
+        .orElseGet(() -> createUserReward(userId));
+
+    return UserRewardInfo.of(reward, levelExpService.computeLevelInfo(reward.getTotalExp()));
+  }
+
   @Transactional
   public UserReward addExp(Long userId, long amount, ExpSource source, Long sourceId) {
     if (amount <= 0) {
