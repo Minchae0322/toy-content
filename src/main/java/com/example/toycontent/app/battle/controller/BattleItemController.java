@@ -49,12 +49,12 @@ public class BattleItemController {
 
   @Operation(summary = "배틀 아이템 추가")
   @PostMapping
-  public ResponseEntity<ApiResponse<Void>> addBattleItems(
+  public ResponseEntity<ApiResponse<ExpGrantInfo>> addBattleItems(
       @Parameter(description = "배틀 ID") @PathVariable Long battleId,
       @CurrentUserId Long userId,
       @Valid @RequestBody BattleRequest.AddBattleItems request) {
-    battleItemService.addBattleItems(battleId, userId, request);
-    return ResponseEntity.ok(ApiResponse.success(null, "아이템이 추가되었습니다."));
+    ExpGrantInfo expGrant = battleItemService.addBattleItems(battleId, userId, request);
+    return ResponseEntity.ok(ApiResponse.success(expGrant, "아이템이 추가되었습니다."));
   }
 
   @Operation(summary = "배틀 아이템 승인 (검토 중 → 활성)")

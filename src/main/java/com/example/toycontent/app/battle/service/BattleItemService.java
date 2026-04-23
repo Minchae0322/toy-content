@@ -112,13 +112,15 @@ public class BattleItemService {
    * 배틀 아이템 추가
    */
   @Transactional
-  public void addBattleItems(Long battleId, Long userId, BattleRequest.AddBattleItems request) {
+  public ExpGrantInfo addBattleItems(Long battleId, Long userId, BattleRequest.AddBattleItems request) {
     Battle battle = getBattleById(battleId);
     List<ItemRequest> items = request.getItems();
 
     validateItemAddition(battle, userId, items);
     addItemsByPermission(battle, userId, items);
 
+    ExpGrantResult grant = expGrantService.grantBattleItemAdd(userId, battleId);
+    return ExpGrantInfo.aggregate(grant);
   }
 
   private void validateItemAddition(Battle battle, Long userId, List<ItemRequest> items) {

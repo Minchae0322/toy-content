@@ -34,6 +34,8 @@ public class ExpGrantService {
   private final DailyExpCapRepository dailyExpCapRepository;
   private final RewardProperties rewardProperties;
 
+  private static final long BATTLE_ITEM_ADD_MAX_PER_BATTLE = 5L;
+
   // ── 피드 ──
 
   @Transactional
@@ -71,6 +73,11 @@ public class ExpGrantService {
   @Transactional
   public ExpGrantResult grantBattleVote(Long userId, Long battleId) {
     return grant(userId, ExpSource.BATTLE_VOTE, battleId);
+  }
+
+  @Transactional
+  public ExpGrantResult grantBattleItemAdd(Long userId, Long battleId) {
+    return grantWithCountCap(userId, ExpSource.BATTLE_ITEM_ADD, battleId, BATTLE_ITEM_ADD_MAX_PER_BATTLE);
   }
 
   @Transactional
@@ -155,6 +162,34 @@ public class ExpGrantService {
 
     log.info("EXP 지급 - userId: {}, source: {}, requested: {}, actual: {}, capped: {}",
         userId, source, amount, actualAmount, capped);
+
+    return ExpGrantResult.granted(amount, actualAmount, capped);
+  }
+
+  /**
+   * sourceId별 최대 지급 횟수를 카운트 기반으로 제한하며 지급한다.
+   * 일일 캡은 그대로 적용된다.
+   */
+  private ExpGrantResult grantWithCountCap(Long userId, ExpSource source, Long sourceId, long maxCount) {
+    long amount = source.getDefaultAmount();
+
+    if (sourceId != null
+        && expHistoryRepository.countByUserIdAndSourceAndSourceId(userId, source, sourceId) >= maxCount) {
+      return ExpGrantResult.duplicated(amount);
+    }
+
+    DailyExpCap cap = getOrCreateDailyExpCap(userId);
+    long actualAmount = cap.consume(amount, rewardProperties.dailyExpCap());
+
+    if (actualAmount <= 0) {
+      return ExpGrantResult.cappedOut(amount);
+    }
+
+    userRewardService.addExp(userId, actualAmount, source, sourceId);
+    boolean capped = actualAmount < amount;
+
+    log.info("EXP 지급 (횟수 제한) - userId: {}, source: {}, sourceId: {}, requested: {}, actual: {}, capped: {}",
+        userId, source, sourceId, amount, actualAmount, capped);
 
     return ExpGrantResult.granted(amount, actualAmount, capped);
   }

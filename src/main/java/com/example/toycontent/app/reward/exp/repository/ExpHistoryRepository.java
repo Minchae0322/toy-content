@@ -11,4 +11,6 @@ public interface ExpHistoryRepository extends JpaRepository<ExpHistory, Long> {
   Page<ExpHistory> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
   boolean existsByUserIdAndSourceAndSourceId(Long userId, ExpSource source, Long sourceId);
+
+  long countByUserIdAndSourceAndSourceId(Long userId, ExpSource source, Long sourceId);
 }
