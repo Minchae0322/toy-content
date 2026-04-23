@@ -59,6 +59,14 @@ public class RewardController {
         ApiResponse.success(userRewardService.getOrCreateUserRewardInfo(userId)));
   }
 
+  @Operation(summary = "특정 유저 EXP/레벨 조회")
+  @GetMapping("/users/{targetUserId}")
+  public ResponseEntity<ApiResponse<UserRewardInfo>> getUserReward(
+      @Parameter(description = "조회 대상 유저 ID") @PathVariable Long targetUserId) {
+    return ResponseEntity.ok(
+        ApiResponse.success(userRewardService.getUserRewardInfo(targetUserId)));
+  }
+
   @Operation(summary = "내 뱃지 목록 조회")
   @GetMapping("/me/badges")
   public ResponseEntity<ApiResponse<List<UserBadgeInfo>>> getMyBadges(
