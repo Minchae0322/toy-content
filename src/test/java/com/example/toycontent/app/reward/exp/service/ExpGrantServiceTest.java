@@ -75,18 +75,18 @@ class ExpGrantServiceTest {
   class GrantFeedCreate {
 
     @Test
-    @DisplayName("정상 지급 시 20 EXP가 부여된다")
+    @DisplayName("정상 지급 시 30 EXP가 부여된다")
     void 정상_지급() {
       givenNoDuplicate();
       givenFreshCap();
-      given(userRewardService.addExp(eq(USER_ID), eq(20L), eq(ExpSource.FEED_CREATE), eq(FEED_ID)))
-          .willReturn(UserReward.builder().userId(USER_ID).totalExp(20L).build());
+      given(userRewardService.addExp(eq(USER_ID), eq(30L), eq(ExpSource.FEED_CREATE), eq(FEED_ID)))
+          .willReturn(UserReward.builder().userId(USER_ID).totalExp(30L).build());
 
       ExpGrantResult result = expGrantService.grantFeedCreate(USER_ID, FEED_ID);
 
       assertSoftly(softly -> {
         softly.assertThat(result.granted()).as("지급 여부").isTrue();
-        softly.assertThat(result.actualAmount()).as("실제 지급 EXP").isEqualTo(20);
+        softly.assertThat(result.actualAmount()).as("실제 지급 EXP").isEqualTo(30);
         softly.assertThat(result.capped()).as("캡 여부").isFalse();
         softly.assertThat(result.duplicate()).as("중복 여부").isFalse();
       });
@@ -125,7 +125,7 @@ class ExpGrantServiceTest {
 
       assertSoftly(softly -> {
         softly.assertThat(result.granted()).as("지급 여부").isTrue();
-        softly.assertThat(result.requestedAmount()).as("요청 EXP").isEqualTo(20);
+        softly.assertThat(result.requestedAmount()).as("요청 EXP").isEqualTo(30);
         softly.assertThat(result.actualAmount()).as("실제 지급 EXP").isEqualTo(10);
         softly.assertThat(result.capped()).as("캡 여부").isTrue();
       });
