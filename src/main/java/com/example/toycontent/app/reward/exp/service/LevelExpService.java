@@ -17,8 +17,10 @@ public class LevelExpService {
   private final LevelExpRepository levelExpRepository;
 
   public LevelInfo computeLevelInfo(long totalExp) {
-    List<LevelExp> levelTable = levelExpRepository.findAllByOrderByLevelAsc();
+    return computeLevelInfo(totalExp, getLevelTable());
+  }
 
+  public LevelInfo computeLevelInfo(long totalExp, List<LevelExp> levelTable) {
     if (levelTable.isEmpty()) {
       return new LevelInfo(1, UserTier.PLAIN, totalExp, 0, false);
     }
@@ -36,6 +38,10 @@ public class LevelExpService {
         currentLevelExp,
         nextLevelExp,
         isMaxLevel);
+  }
+
+  public List<LevelExp> getLevelTable() {
+    return levelExpRepository.findAllByOrderByLevelAsc();
   }
 
   /**

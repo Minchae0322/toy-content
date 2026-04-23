@@ -215,13 +215,17 @@ public abstract class FeedResponse {
     @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
     private FeedEvaluation feedEvaluation;
 
+    @Schema(description = "사용자 티어 정보")
+    private UserRewardInfo userRewardInfo;
+
     @Schema(description = "생성일시")
     private LocalDateTime createdAt;
 
     @Schema(description = "수정일시")
     private LocalDateTime updatedAt;
 
-    public static Detail from(Feed feed, ExternalUserInfo userInfo, List<FeedReaction> currentUserReactions) {
+    public static Detail from(Feed feed, ExternalUserInfo userInfo,
+        List<FeedReaction> currentUserReactions, UserRewardInfo userRewardInfo) {
       return Detail.builder()
           .feedId(feed.getId())
           .userInfo(userInfo)
@@ -244,6 +248,7 @@ public abstract class FeedResponse {
           .hashtags(HashtagInfo.fromList(feed.getHashtags()))
           .userReactions(UserReactions.from(currentUserReactions))
           .feedEvaluation(feed.getEvaluation())
+          .userRewardInfo(userRewardInfo)
           .createdAt(feed.getCreatedAt())
           .updatedAt(feed.getUpdatedAt())
           .build();

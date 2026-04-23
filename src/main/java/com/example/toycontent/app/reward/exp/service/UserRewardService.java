@@ -6,11 +6,13 @@ import com.example.toycontent.app.common.exception.impl.RewardErrorCode;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserRewardInfo;
 import com.example.toycontent.app.reward.exp.service.dto.LevelInfo;
 import com.example.toycontent.app.reward.exp.domain.ExpHistory;
+import com.example.toycontent.app.reward.exp.domain.LevelExp;
 import com.example.toycontent.app.reward.exp.domain.UserReward;
 import com.example.toycontent.app.reward.exp.repository.ExpHistoryRepository;
 import com.example.toycontent.app.reward.exp.repository.UserRewardRepository;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -55,6 +57,8 @@ public class UserRewardService {
         .stream()
         .collect(Collectors.toMap(UserReward::getUserId, Function.identity()));
 
+    List<LevelExp> levelTable = levelExpService.getLevelTable();
+
     return userIds.stream()
         .distinct()
         .collect(Collectors.toMap(
@@ -62,7 +66,7 @@ public class UserRewardService {
             userId -> {
               UserReward reward = existing.getOrDefault(userId, createUserReward(userId));
 
-              return UserRewardInfo.of(reward, levelExpService.computeLevelInfo(reward.getTotalExp()));
+              return UserRewardInfo.of(reward, levelExpService.computeLevelInfo(reward.getTotalExp(), levelTable));
             }));
   }
 
