@@ -24,7 +24,9 @@ import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
 import com.example.toycontent.app.hashtag.domain.Hashtag;
 import com.example.toycontent.app.hashtag.repository.HashtagRepository;
+import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserRewardInfo;
 import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.UserRewardService;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
@@ -59,6 +61,7 @@ public class FeedService {
   private final FeedReactionRepository feedReactionRepository;
   private final FeedHashtagRepository feedHashtagRepository;
   private final ExpGrantService expGrantService;
+  private final UserRewardService userRewardService;
 
   private static final int HOT_FEED_RECENT_DAYS = 30;
   
@@ -126,9 +129,11 @@ public class FeedService {
     Map<Long, ExternalUserInfo> externalUserInfoMap = externalUserInfoService.getUserInfos(
         creatorIds);
 
+    Map<Long, UserRewardInfo> userRewardInfoMap = userRewardService.getUserRewardInfoMap(creatorIds);
+
     return feeds.stream()
         .map(feed -> FeedResponse.ListView.from(feed, externalUserInfoMap.get(feed.getUserId()),
-            userReactionsMap.get(feed.getId())))
+            userReactionsMap.get(feed.getId()), userRewardInfoMap.get(feed.getUserId())))
         .toList();
   }
 

@@ -9,6 +9,7 @@ import com.example.toycontent.app.product.controller.dto.ProductResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.FeedProduct;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedHashtag;
+import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserRewardInfo;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
@@ -90,44 +91,49 @@ public abstract class FeedResponse {
     @Schema(description = "제품 평가 (BEST/GOOD/OKAY/BAD)", example = "BEST")
     private FeedEvaluation feedEvaluation;
 
+    @Schema(description = "사용자 티어 정보", example = "")
+    private UserRewardInfo userRewardInfo;
+
     @Schema(description = "생성일시")
     private LocalDateTime createdAt;
 
     @Schema(description = "수정일시")
     private LocalDateTime updatedAt;
 
-    public static ListView from(Feed feed, ExternalUserInfo userInfo, List<FeedReaction> userReactions) {
+    public static ListView from(Feed feed, ExternalUserInfo userInfo,
+        List<FeedReaction> userReactions, UserRewardInfo userRewardInfo) {
+
       List<FeedAttachmentFile> feedAttachmentFiles = feed.getAttachmentFiles();
 
-
       return ListView.builder()
-              .feedId(feed.getId())
-              .userInfo(userInfo)
-              .isTrending(feed.getIsTrending())
-              .productId(feed.getProduct() != null ? feed.getProduct().getId() : null)
-              .productName(
-                      feed.getProduct() != null ? feed.getProduct().getName() : feed.getProductNameCustom())
-              .subCategoryDetail(SubCategoryDetail.from(feed.getCategory()))
-              .reviewSummary(truncateReview(feed.getReview(), 100))
-              .buyPrice(feed.getBuyPrice())
-              .price(feed.getPrice())
-              .viewCount(feed.getViewCount())
-              .commentCount(feed.getCommentCount())
-              .thumbnailUrl(feedAttachmentFiles
-                              .stream()
-                              .findFirst()
-                              .map(AttachmentFileResponse::of)
-                              .orElse(null)
-              )
-              .imageCount(feedAttachmentFiles.size())
-              .hashtags(extractHashtags(feed.getHashtags()))
-              .buyPlace(feed.getBuyPlace())
-              .likeCount(feed.getLikeCount())
-              .userReactions(UserReactions.from(userReactions))
-              .feedEvaluation(feed.getEvaluation())
-              .createdAt(feed.getCreatedAt())
-              .updatedAt(feed.getUpdatedAt())
-              .build();
+          .feedId(feed.getId())
+          .userInfo(userInfo)
+          .isTrending(feed.getIsTrending())
+          .productId(feed.getProduct() != null ? feed.getProduct().getId() : null)
+          .productName(
+              feed.getProduct() != null ? feed.getProduct().getName() : feed.getProductNameCustom())
+          .subCategoryDetail(SubCategoryDetail.from(feed.getCategory()))
+          .reviewSummary(truncateReview(feed.getReview(), 100))
+          .buyPrice(feed.getBuyPrice())
+          .price(feed.getPrice())
+          .viewCount(feed.getViewCount())
+          .commentCount(feed.getCommentCount())
+          .thumbnailUrl(feedAttachmentFiles
+              .stream()
+              .findFirst()
+              .map(AttachmentFileResponse::of)
+              .orElse(null)
+          )
+          .imageCount(feedAttachmentFiles.size())
+          .hashtags(extractHashtags(feed.getHashtags()))
+          .buyPlace(feed.getBuyPlace())
+          .likeCount(feed.getLikeCount())
+          .userReactions(UserReactions.from(userReactions))
+          .feedEvaluation(feed.getEvaluation())
+          .userRewardInfo(userRewardInfo)
+          .createdAt(feed.getCreatedAt())
+          .updatedAt(feed.getUpdatedAt())
+          .build();
     }
 
     private static String truncateReview(String review, int maxLength) {
