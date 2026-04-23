@@ -66,6 +66,7 @@ public class CategoryResponse {
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
                 .children(category.getChildren().stream()
+                    .filter(subCategory -> subCategory.getIsActive() == category.getIsActive())
                     .map(ListView::from)
                     .toList())
                 .build();
