@@ -160,10 +160,12 @@ public class FeedService {
 
     ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
 
+    UserRewardInfo userRewardInfo = userRewardService.getUserRewardInfo(feed.getUserId());
+
     // 조회수 증가
     feed.incrementViewCount();
 
-    return FeedResponse.Detail.from(feed, userInfo, usersReactions);
+    return FeedResponse.Detail.from(feed, userInfo, usersReactions, userRewardInfo);
   }
 
   /**
