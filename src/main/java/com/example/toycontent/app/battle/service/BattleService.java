@@ -66,14 +66,16 @@ public class BattleService {
   private static final int MAX_DAILY_CREATIONS = 3;
 
   public void validateCreation(Long userId) {
-    // 동시 진행 배틀 수 체크
-    long activeCount = battleRepository.countByCreatorIdAndStatus(userId, BattleStatus.NORMAL);
+    LocalDateTime now = LocalDateTime.now();
+
+    // 동시 진행 배틀 수 체크 (종료일이 지나지 않은 배틀)
+    long activeCount = battleRepository.countOngoingByCreatorId(userId, now);
     if (activeCount >= MAX_ACTIVE_BATTLES) {
       throw new RestApiException(BattleErrorCode.MAX_ACTIVE_BATTLES);
     }
 
     // 24시간 내 생성 횟수 체크
-    LocalDateTime dayAgo = LocalDateTime.now().minusHours(24);
+    LocalDateTime dayAgo = now.minusHours(24);
     long dailyCount = battleRepository.countByCreatorIdAndCreatedAtAfter(userId, dayAgo);
     if (dailyCount >= MAX_DAILY_CREATIONS) {
       throw new RestApiException(BattleErrorCode.DAILY_LIMIT_EXCEEDED);

@@ -15,6 +15,9 @@ public interface BattleRepository extends JpaRepository<Battle, Long>, BattleRep
 
   long countByCreatorIdAndCreatedAtAfter(Long userId, LocalDateTime dayAgo);
 
+  @Query("SELECT COUNT(b) FROM Battle b WHERE b.creatorId = :userId AND b.isDeleted = false AND b.endDate > :now")
+  long countOngoingByCreatorId(@Param("userId") Long userId, @Param("now") LocalDateTime now);
+
 
   @Query("""
     SELECT b FROM Battle b
