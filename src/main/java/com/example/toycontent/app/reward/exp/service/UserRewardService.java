@@ -9,6 +9,11 @@ import com.example.toycontent.app.reward.exp.domain.ExpHistory;
 import com.example.toycontent.app.reward.exp.domain.UserReward;
 import com.example.toycontent.app.reward.exp.repository.ExpHistoryRepository;
 import com.example.toycontent.app.reward.exp.repository.UserRewardRepository;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,6 +44,26 @@ public class UserRewardService {
         .orElseGet(() -> createUserReward(userId));
 
     return UserRewardInfo.of(reward, levelExpService.computeLevelInfo(reward.getTotalExp()));
+  }
+
+  public Map<Long, UserRewardInfo> getUserRewardInfoMap(Collection<Long> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    Map<Long, UserReward> existing = userRewardRepository.findAllByUserIdIn(userIds)
+        .stream()
+        .collect(Collectors.toMap(UserReward::getUserId, Function.identity()));
+
+    return userIds.stream()
+        .distinct()
+        .collect(Collectors.toMap(
+            Function.identity(),
+            userId -> {
+              UserReward reward = existing.getOrDefault(userId, createUserReward(userId));
+
+              return UserRewardInfo.of(reward, levelExpService.computeLevelInfo(reward.getTotalExp()));
+            }));
   }
 
   @Transactional
