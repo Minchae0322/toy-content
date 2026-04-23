@@ -17,7 +17,6 @@ import com.example.toycontent.app.battle.repository.BattleRepository;
 import com.example.toycontent.app.battle.repository.BattleVoteRepository;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
-import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
@@ -56,10 +55,10 @@ class BattleServiceTest {
   class ValidateCreation {
 
     @Test
-    @DisplayName("현재 활성 배틀이 10개 미만이고 24시간 내 생성이 3개 미만이면 검증을 통과한다")
+    @DisplayName("현재 진행중 배틀이 10개 미만이고 24시간 내 생성이 3개 미만이면 검증을 통과한다")
     void 정상_생성_가능() {
       // given
-      given(battleRepository.countByCreatorIdAndStatus(CREATOR_ID, BattleStatus.NORMAL))
+      given(battleRepository.countOngoingByCreatorId(eq(CREATOR_ID), any()))
           .willReturn(5L);
       given(battleRepository.countByCreatorIdAndCreatedAtAfter(eq(CREATOR_ID), any()))
           .willReturn(1L);
@@ -69,10 +68,10 @@ class BattleServiceTest {
     }
 
     @Test
-    @DisplayName("현재 활성 배틀이 10개 이상이면 MAX_ACTIVE_BATTLES 예외를 던진다")
+    @DisplayName("현재 진행중 배틀이 10개 이상이면 MAX_ACTIVE_BATTLES 예외를 던진다")
     void 활성_배틀_초과_예외() {
       // given
-      given(battleRepository.countByCreatorIdAndStatus(CREATOR_ID, BattleStatus.NORMAL))
+      given(battleRepository.countOngoingByCreatorId(eq(CREATOR_ID), any()))
           .willReturn(10L);
 
       // when & then
@@ -84,7 +83,7 @@ class BattleServiceTest {
     @DisplayName("24시간 내 생성이 3개 이상이면 DAILY_LIMIT 예외를 던진다")
     void 일일_생성_초과_예외() {
       // given
-      given(battleRepository.countByCreatorIdAndStatus(CREATOR_ID, BattleStatus.NORMAL))
+      given(battleRepository.countOngoingByCreatorId(eq(CREATOR_ID), any()))
           .willReturn(2L);
       given(battleRepository.countByCreatorIdAndCreatedAtAfter(eq(CREATOR_ID), any()))
           .willReturn(3L);
