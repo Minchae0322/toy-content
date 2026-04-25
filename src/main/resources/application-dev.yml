@@ -62,7 +62,7 @@ management:
     web:
       base-path: /actuator
       exposure:
-        include: health, info
+        include: health, info, prometheus
   endpoint:
     health:
       show-details: never  # 상세정보 숨김 (보안)

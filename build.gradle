@@ -41,8 +41,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
-    // Actuator (Health Check)
+    // Actuator (Health Check) + Prometheus 메트릭
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
