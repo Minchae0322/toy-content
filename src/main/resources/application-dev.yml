@@ -75,7 +75,7 @@ management:
       enabled: true
   metrics:
     tags:
-      application: ${spring.application.name}
+      application: ${spring.application.name:content-service}
 
 external:
   user-service:
