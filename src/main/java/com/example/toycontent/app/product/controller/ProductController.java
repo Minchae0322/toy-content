@@ -139,10 +139,10 @@ public class ProductController {
 
     @Operation(summary = "상품 수정", description = "상품 ID에 해당하는 상품 정보를 수정합니다.")
     @PutMapping("/{id}")
-    public ResponseEntity<ProductResponse> updateProduct(
+    public ResponseEntity<ProductResponse.ProductUpdate> updateProduct(
             @PathVariable @Parameter(description = "상품 ID") Long id,
-            @RequestBody @Parameter(description = "수정할 상품 정보") ProductResponse productDto) {
-        ProductResponse updated = productService.updateProduct(id, productDto);
+            @RequestBody @Valid @Parameter(description = "수정할 상품 정보") ProductRequest.ProductUpdate request) {
+        ProductResponse.ProductUpdate updated = productService.updateProduct(id, request);
         return ResponseEntity.ok(updated);
     }
 
