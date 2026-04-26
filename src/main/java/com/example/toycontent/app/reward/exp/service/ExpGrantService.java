@@ -90,6 +90,17 @@ public class ExpGrantService {
     return grant(userId, ExpSource.BATTLE_PREDICTION_HIT, predictionId);
   }
 
+  /**
+   * 배틀 생성 EXP 지급.
+   * BATTLE_CREATE 기본량 + (BATTLE_ITEM_ADD 기본량 × 아이템 수).
+   */
+  @Transactional
+  public ExpGrantResult grantBattleCreate(Long userId, Long battleId, int itemCount) {
+    long amount = ExpSource.BATTLE_CREATE.getDefaultAmount()
+        + ExpSource.BATTLE_ITEM_ADD.getDefaultAmount() * itemCount;
+    return grantWithCap(userId, amount, ExpSource.BATTLE_CREATE, battleId);
+  }
+
   // ── PICK ──
 
   @Transactional

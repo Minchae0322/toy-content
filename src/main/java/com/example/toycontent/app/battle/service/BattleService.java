@@ -28,6 +28,9 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import java.time.LocalDateTime;
@@ -60,6 +63,7 @@ public class BattleService {
   private final CategoryRepository categoryRepository;
   private final ExternalUserInfoService externalUserInfoService;
   private final BattleAttachmentFileRepository battleAttachmentFileRepository;
+  private final ExpGrantService expGrantService;
 
 
   private static final int MAX_ACTIVE_BATTLES = 10;
@@ -102,7 +106,10 @@ public class BattleService {
 
     battleItemService.createBattleItems(userId, battle, request.getItems());
 
-    return BattleResponse.BattleCreateResponse.from(battle);
+    // EXP 지급: 배틀 생성 20 + 아이템당 15
+    ExpGrantResult grant = expGrantService.grantBattleCreate(userId, battle.getId(), request.getItems().size());
+
+    return BattleResponse.BattleCreateResponse.from(battle, ExpGrantInfo.aggregate(grant));
   }
 
 
