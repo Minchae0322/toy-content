@@ -225,8 +225,8 @@ public abstract class ProductResponse {
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime updatedAt;
 
-        @Schema(description = "카테고리 정보")
-        private CategoryResponse.Detail category;
+        @Schema(description = "서브 카테고리 상세 dto")
+        private CategoryResponse.SubCategoryDetail subCategoryDetail;
 
         @Schema(description = "상품 유형", example = "SALE")
         private String productType;
@@ -257,7 +257,7 @@ public abstract class ProductResponse {
                 .releaseDate(product.getReleaseDate())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
-                .category(CategoryResponse.Detail.from(product.getCategory()))
+                .subCategoryDetail(CategoryResponse.SubCategoryDetail.from(product.getCategory()))
                 .attachmentFiles(product.getProductAttachmentFiles()
                     .stream()
                     .map(AttachmentFileResponse::of)
