@@ -10,6 +10,7 @@ import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.enumuration.BattleItemType;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.BattleItemProduct;
@@ -255,10 +256,18 @@ public abstract class BattleResponse {
     @Schema(description = "배틀 ID", example = "1")
     private Long id;
 
-    public static BattleCreateResponse from(Battle battle) {
+    @Schema(description = "지급된 EXP 정보 (없으면 null)")
+    private ExpGrantInfo expGrant;
+
+    public static BattleCreateResponse from(Battle battle, ExpGrantInfo expGrant) {
       return BattleCreateResponse.builder()
           .id(battle.getId())
+          .expGrant(expGrant)
           .build();
+    }
+
+    public static BattleCreateResponse from(Battle battle) {
+      return from(battle, null);
     }
   }
 
