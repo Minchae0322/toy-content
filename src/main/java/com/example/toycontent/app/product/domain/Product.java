@@ -6,6 +6,7 @@ import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.oneMouth.domain.SalePost;
+import com.example.toycontent.app.product.controller.dto.ProductRequest;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -160,6 +161,47 @@ public class Product extends BaseTimeEntity {
         if (ProductStatus.REJECTED.equals(newStatus) && StringUtils.hasText(rejectReason)) {
             this.rejectReason = rejectReason;
         }
+    }
+
+    /**
+     * 제품 삭제 — 참조 무결성을 위해 물리 삭제 대신 status를 REJECTED로 전환한다.
+     * 일반 유저는 APPROVED 상품만 조회하므로 노출에서 제외된다.
+     */
+    public void delete() {
+        this.status = ProductStatus.REJECTED;
+    }
+
+    /**
+     * 제품 정보 업데이트 (첨부파일 제외).
+     * - request의 non-null 필드만 갱신 (partial update)
+     * - category는 서비스에서 조회/유지 결정 후 전달
+     */
+    public void update(ProductRequest.ProductUpdate request, Category category) {
+      if (request.getName() != null) {
+        this.name = request.getName();
+      }
+      if (request.getBrand() != null) {
+        this.brand = request.getBrand();
+      }
+      if (request.getDescription() != null) {
+        this.description = request.getDescription();
+      }
+      if (request.getDistributor() != null) {
+        this.distributor = request.getDistributor();
+      }
+      if (request.getPrice() != null) {
+        this.price = request.getPrice();
+      }
+      if (request.getFeature() != null) {
+        this.feature = request.getFeature();
+      }
+      if (request.getTags() != null) {
+        this.tags = request.getTags();
+      }
+      if (request.getReleaseDate() != null) {
+        this.releaseDate = request.getReleaseDate();
+      }
+      this.category = category;
     }
 
 }

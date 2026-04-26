@@ -319,18 +319,31 @@ public class ProductService {
     }
 
     /**
-     * TODO: 제품 수정
-     * - 제품명, 브랜드, 카테고리, 이미지 변경 로직 구현 예정
+     * 제품 정보 수정 (partial update).
      */
-    public ProductResponse updateProduct(Long id, ProductResponse productDto) {
-        return null;
+    @Transactional
+    public ProductResponse.ProductUpdate updateProduct(Long id, ProductRequest.ProductUpdate request) {
+        Product product = getProductById(id);
+
+        // 카테고리 조회 (categoryId 없으면 기존 유지)
+        Category category = Optional.ofNullable(request.getCategoryId())
+            .map(categoryId -> categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new RestApiException(CategoryErrorCode.CATEGORY_NOT_FOUND)))
+            .orElse(product.getCategory());
+
+        product.update(request, category);
+
+        return ProductResponse.ProductUpdate.of(product);
     }
 
     /**
-     * TODO: 제품 삭제
-     * - 상태 변경 (soft delete) 또는 물리 삭제 정책에 따라 구현 예정
+     * 제품 삭제 (soft delete).
+     * 참조하는 피드/배틀 아이템이 있어 물리 삭제하지 않고 isDeleted 플래그만 세움.
      */
+    @Transactional
     public void deleteProduct(Long id) {
+        Product product = getProductById(id);
+        product.delete();
     }
 
 

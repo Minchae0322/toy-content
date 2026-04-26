@@ -149,9 +149,6 @@ public abstract class ProductRequest {
         @Positive(message = "올바른 카테고리를 선택해주세요.")
         @Schema(description = "제품 카테고리 ID")
         private Long categoryId;
-
-        @Schema(description = "삭제할 기존 파일 ID 목록")
-        private List<Long> deleteFileIds;
     }
 
 
