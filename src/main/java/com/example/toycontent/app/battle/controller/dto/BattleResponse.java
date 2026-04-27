@@ -10,6 +10,7 @@ import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.enumuration.BattleItemType;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
+import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserRewardInfo;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
@@ -153,6 +154,9 @@ public abstract class BattleResponse {
     @Schema(description = "대표 이미지")
     private AttachmentFileResponse thumbnailDto;
 
+    @Schema(description = "사용자 티어 정보", example = "")
+    private UserRewardInfo userRewardInfo;
+
     @Schema(description = "상위 아이템 이미지 목록 ((최대 4개) 대표이미지가 없으면)")
     private List<String> topItemImages;
 
@@ -216,13 +220,18 @@ public abstract class BattleResponse {
     @Schema(description = "총 댓글 수", example = "5")
     private Integer totalCommentCount;
 
+    @Schema(description = "사용자 티어 정보", example = "")
+    private UserRewardInfo userRewardInfo;
+
     @Schema(description = "생성일", example = "2025-01-25T14:30:00")
     private LocalDateTime createdAt;
 
     @Schema(description = "배틀 아이템 목록")
     private List<BattleItemInfo> items;
 
-    public static BattleDetail from(Battle battle, ExternalUserInfo userInfo, List<BattleItemInfo> items) {
+    public static BattleDetail from(Battle battle, ExternalUserInfo userInfo,
+        List<BattleItemInfo> items, UserRewardInfo userRewardInfo) {
+
       return BattleDetail.builder()
           .id(battle.getId())
           .title(battle.getTitle())
@@ -238,6 +247,7 @@ public abstract class BattleResponse {
           .totalVotes(battle.getTotalVotes())
           .totalViews(battle.getTotalViews())
           .totalCommentCount(battle.getTotalCommentCount())
+          .userRewardInfo(userRewardInfo)
           .createdAt(battle.getCreatedAt())
           .items(items)
           .build();
