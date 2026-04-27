@@ -3,6 +3,7 @@ package com.example.toycontent.app.reward.exp.service;
 import com.example.toycontent.app.common.enumuration.ExpSource;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.RewardErrorCode;
+import com.example.toycontent.app.reward.controller.dto.RewardResponse.ExpHistoryInfo;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserRewardInfo;
 import com.example.toycontent.app.reward.exp.service.dto.LevelInfo;
 import com.example.toycontent.app.reward.exp.domain.ExpHistory;
@@ -88,8 +89,8 @@ public class UserRewardService {
         .orElseGet(() -> userRewardRepository.save(createUserReward(userId)));
   }
 
-  public Page<ExpHistory> getExpHistory(Long userId, Pageable pageable) {
-    return expHistoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+  public Page<ExpHistoryInfo> getExpHistory(Long userId, Pageable pageable) {
+    return expHistoryRepository.findExpHistoryByUserId(userId, pageable);
   }
 
   @Transactional

@@ -133,6 +133,6 @@ public class RewardAdminController {
       @Parameter(description = "유저 ID") @PathVariable Long userId,
       @PageableDefault(size = 20) Pageable pageable) {
     return ResponseEntity.ok(
-        ApiResponse.success(userRewardService.getExpHistory(userId, pageable).map(ExpHistoryInfo::from)));
+        ApiResponse.success(userRewardService.getExpHistory(userId, pageable)));
   }
 }
