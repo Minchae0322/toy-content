@@ -4,6 +4,7 @@ import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.response.ApiResponse;
 import com.example.toycontent.app.reward.controller.dto.RewardRequest;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.CategoryMasteryInfo;
+import com.example.toycontent.app.reward.controller.dto.RewardResponse.ExpHistoryInfo;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.MissionAssignmentInfo;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.PredictionInfo;
 import com.example.toycontent.app.reward.controller.dto.RewardResponse.PredictionStats;
@@ -24,6 +25,7 @@ import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -65,6 +67,15 @@ public class RewardController {
       @Parameter(description = "조회 대상 유저 ID") @PathVariable Long targetUserId) {
     return ResponseEntity.ok(
         ApiResponse.success(userRewardService.getUserRewardInfo(targetUserId)));
+  }
+
+  @Operation(summary = "내 EXP 획득 이력 조회")
+  @GetMapping("/me/exp-history")
+  public ResponseEntity<ApiResponse<Page<ExpHistoryInfo>>> getMyExpHistory(
+      @CurrentUserId Long userId,
+      @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+    return ResponseEntity.ok(
+        ApiResponse.success(userRewardService.getExpHistory(userId, pageable)));
   }
 
   @Operation(summary = "내 뱃지 목록 조회")
