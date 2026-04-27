@@ -221,7 +221,7 @@ class FeedServiceTest {
       given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
 
       // when
-      feedService.deleteFeed(FEED_ID, FEED_OWNER_ID);
+      feedService.deleteFeed(FEED_ID, FEED_OWNER_ID, false);
 
       // then
       assertSoftly(softly -> {
@@ -233,14 +233,35 @@ class FeedServiceTest {
     }
 
     @Test
-    @DisplayName("작성자가 아닌 사용자가 삭제를 시도하면 RestApiException을 던진다")
+    @DisplayName("관리자는 작성자가 아니어도 피드를 삭제할 수 있다")
+    void 관리자_삭제_허용() {
+      // given
+      Feed feed = FeedFixture.withUserId(FEED_OWNER_ID);
+      Hashtag hashtag = Hashtag.builder().name("커피").usageCount(10L).build();
+      FeedHashtag.create(feed, hashtag);
+      given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
+
+      // when
+      feedService.deleteFeed(FEED_ID, OTHER_USER_ID, true);
+
+      // then
+      assertSoftly(softly -> {
+        softly.assertThat(feed.getIsDeleted())
+            .as("관리자 삭제 시에도 삭제 플래그는 true").isTrue();
+        softly.assertThat(hashtag.getUsageCount())
+            .as("해시태그 사용 횟수는 1 감소").isEqualTo(9L);
+      });
+    }
+
+    @Test
+    @DisplayName("작성자가 아니고 관리자도 아닌 사용자가 삭제를 시도하면 RestApiException을 던진다")
     void 권한_없는_삭제_예외() {
       // given
       Feed feed = FeedFixture.withUserId(FEED_OWNER_ID);
       given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
 
       // when & then
-      assertThatThrownBy(() -> feedService.deleteFeed(FEED_ID, OTHER_USER_ID))
+      assertThatThrownBy(() -> feedService.deleteFeed(FEED_ID, OTHER_USER_ID, false))
           .isInstanceOf(RestApiException.class);
 
       assertThat(feed.getIsDeleted())
@@ -254,7 +275,7 @@ class FeedServiceTest {
       given(feedRepository.findById(FEED_ID)).willReturn(Optional.empty());
 
       // when & then
-      assertThatThrownBy(() -> feedService.deleteFeed(FEED_ID, FEED_OWNER_ID))
+      assertThatThrownBy(() -> feedService.deleteFeed(FEED_ID, FEED_OWNER_ID, false))
           .isInstanceOf(RestApiException.class);
     }
   }

@@ -313,10 +313,10 @@ public class FeedService {
    * 피드 삭제
    */
   @Transactional
-  public void deleteFeed(Long feedId, Long userId) {
+  public void deleteFeed(Long feedId, Long userId, boolean isAdmin) {
     Feed feed = findFeedById(feedId);
 
-    if(!feed.getUserId().equals(userId)) {
+    if(!feed.getUserId().equals(userId) && !isAdmin) {
       throw new RestApiException(FeedErrorCode.CREATOR_NOT_MATCH);
     }
 
