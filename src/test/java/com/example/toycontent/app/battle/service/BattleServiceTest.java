@@ -18,6 +18,8 @@ import com.example.toycontent.app.battle.repository.BattleVoteRepository;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.UserRewardService;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import com.example.toycontent.support.fixture.BattleFixture;
@@ -47,6 +49,8 @@ class BattleServiceTest {
   @Mock private BattleAttachmentFileRepository battleAttachmentFileRepository;
   @Mock private BattleVoteRepository battleVoteRepository;
   @Mock private BattleItemCommentRepository battleItemCommentRepository;
+  @Mock private ExpGrantService expGrantService;
+  @Mock private UserRewardService userRewardService;
 
   @InjectMocks private BattleService battleService;
 

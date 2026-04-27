@@ -28,7 +28,9 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.file.domain.dto.AttachmentFileRequest.AttachmentInfo;
+import com.example.toycontent.app.reward.controller.dto.RewardResponse.UserRewardInfo;
 import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.UserRewardService;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
@@ -64,6 +66,7 @@ public class BattleService {
   private final ExternalUserInfoService externalUserInfoService;
   private final BattleAttachmentFileRepository battleAttachmentFileRepository;
   private final ExpGrantService expGrantService;
+  private final UserRewardService userRewardService;
 
 
   private static final int MAX_ACTIVE_BATTLES = 10;
@@ -181,8 +184,13 @@ public class BattleService {
     Map<Long, ExternalUserInfo> battleCreatorsMap = externalUserInfoService.getUserInfos(
         creatorIds);
 
+    Map<Long, UserRewardInfo> userRewardInfoMap = userRewardService.getUserRewardInfoMap(creatorIds);
+
     battleLists.forEach(
-        battle -> battle.setCreatorUserInfo(battleCreatorsMap.get(battle.getCreatorId())));
+        battle -> {
+          battle.setCreatorUserInfo(battleCreatorsMap.get(battle.getCreatorId()));
+          battle.setUserRewardInfo(userRewardInfoMap.get(battle.getCreatorId()));
+        });
 
     Long totalCount = battleRepository.countBattlesWithSearchCondition(condition);
 
@@ -234,7 +242,9 @@ public class BattleService {
             .status(BattleItemStatus.ACTIVE)
             .build());
 
-    return BattleResponse.BattleDetail.from(battle, userInfo, items);
+    UserRewardInfo userRewardInfo = userRewardService.getUserRewardInfo(battle.getCreatorId());
+
+    return BattleResponse.BattleDetail.from(battle, userInfo, items, userRewardInfo);
   }
 
   private boolean isCreator(Battle battle, Long userId) {
