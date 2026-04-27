@@ -1,6 +1,8 @@
 package com.example.toycontent.app.feed.controller;
 
+import com.example.toycontent.app.common.annotation.CheckAdmin;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
+import com.example.toycontent.app.common.annotation.CurrentUserIsAdmin;
 import com.example.toycontent.app.common.dto.CursorResponse;
 import com.example.toycontent.app.common.enumuration.FeedReactionType;
 import com.example.toycontent.app.common.response.ApiResponse;
@@ -21,6 +23,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.annotations.Check;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -127,9 +130,10 @@ public class FeedController {
   @DeleteMapping("/{feedId}")
   public ResponseEntity<ApiResponse<Void>> deleteFeed(
       @Parameter(description = "피드 ID") @PathVariable Long feedId,
-      @CurrentUserId Long userId) {
+      @CurrentUserId Long userId,
+      @CurrentUserIsAdmin boolean isAdmin) {
 
-    feedService.deleteFeed(feedId, userId);
+    feedService.deleteFeed(feedId, userId, isAdmin);
     return ResponseEntity.ok(ApiResponse.success(null, "피드가 삭제되었습니다."));
   }
 
