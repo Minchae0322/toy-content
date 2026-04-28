@@ -74,7 +74,7 @@ public class BattleController {
   @GetMapping
   public ResponseEntity<ApiResponse<Page<BattleResponse.BattleList>>> getBattles(
       @ParameterObject BattleSearchCondition condition,
-      @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+      @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
     Page<BattleResponse.BattleList> response = battleService.getBattles(condition, pageable);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
