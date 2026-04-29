@@ -27,7 +27,8 @@ public enum CarrierErrorCode implements ErrorCode {
     // 캐리어 스티커
     STICKER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 스티커입니다."),
     MAX_STICKER_EXCEEDED(HttpStatus.BAD_REQUEST, "캐리어 최대 스티커 수를 초과했습니다."),
-    STICKER_NOT_IN_CARRIER(HttpStatus.BAD_REQUEST, "존재하지 않는 스티커가 포함되어 있습니다."),
+    STICKER_OUT_OF_SYNC(HttpStatus.CONFLICT, "다른 곳에서 변경된 스티커가 포함되어 있습니다. 새로고침 후 다시 시도해주세요."),
+    MAX_PHOTO_TAG_EXCEEDED(HttpStatus.BAD_REQUEST, "사진 태그는 캐리어당 1개만 가능합니다."),
     ;
 
     private final HttpStatus httpStatus;

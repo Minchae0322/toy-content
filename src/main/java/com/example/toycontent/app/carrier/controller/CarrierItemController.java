@@ -81,7 +81,8 @@ public class CarrierItemController {
 
     // ===== 스티커 =====
 
-    @Operation(summary = "스티커 일괄 저장", description = "캐리어의 스티커를 일괄 upsert합니다. (신규 생성 + 기존 수정)")
+    @Operation(summary = "스티커 일괄 저장",
+            description = "캐리어의 스티커 최종 상태를 한 번에 저장합니다. (신규/수정/삭제 reconcile)")
     @PutMapping("/stickers")
     public ResponseEntity<ApiResponse<List<CarrierStickerResponse.Detail>>> saveStickers(
             @PathVariable Long carrierId,
@@ -90,27 +91,5 @@ public class CarrierItemController {
 
         List<CarrierStickerResponse.Detail> result = carrierItemService.bulkSaveStickers(carrierId, request, userId);
         return ResponseEntity.ok(ApiResponse.success(result, "스티커가 저장되었습니다."));
-    }
-
-    @Operation(summary = "스티커 제거", description = "캐리어에서 스티커를 제거합니다.")
-    @DeleteMapping("/stickers/{stickerId}")
-    public ResponseEntity<ApiResponse<Void>> removeSticker(
-            @Parameter(description = "캐리어 ID") @PathVariable Long carrierId,
-            @Parameter(description = "스티커 ID") @PathVariable Long stickerId,
-            @CurrentUserId Long userId) {
-
-        carrierItemService.removeSticker(carrierId, stickerId, userId);
-        return ResponseEntity.ok(ApiResponse.success(null, "스티커를 제거했습니다."));
-    }
-
-    @Operation(summary = "스티커 일괄 삭제", description = "여러 스티커를 한번에 삭제합니다.")
-    @PostMapping("/stickers/delete")
-    public ResponseEntity<ApiResponse<Void>> removeStickers(
-        @Parameter(description = "캐리어 ID") @PathVariable Long carrierId,
-        @Valid @RequestBody CarrierStickerRequest.RemoveBulk request,
-        @CurrentUserId Long userId) {
-
-        carrierItemService.removeStickers(carrierId, request.getStickerIds(), userId);
-        return ResponseEntity.ok(ApiResponse.success(null, "스티커를 일괄 삭제했습니다."));
     }
 }
