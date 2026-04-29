@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -17,13 +16,13 @@ public abstract class CarrierStickerRequest {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "스티커 일괄 저장 요청 (신규 생성 + 기존 수정을 한 번에 처리)")
+    @Schema(description = "스티커 일괄 저장 요청 (캐리어의 최종 상태를 전달, 누락된 기존 스티커는 삭제됨)")
     public static class BulkSave {
 
         @Valid
-        @NotEmpty(message = "스티커 목록은 비어있을 수 없습니다.")
+        @NotNull(message = "스티커 목록은 필수입니다.")
         @Size(max = 20, message = "한 번에 최대 20개까지 저장할 수 있습니다.")
-        @Schema(description = "upsert 대상 스티커 목록")
+        @Schema(description = "캐리어에 남길 스티커 최종 상태 (빈 배열이면 전체 삭제)")
         private List<StickerUpsert> stickers;
 
         @Getter
@@ -69,17 +68,5 @@ public abstract class CarrierStickerRequest {
             @Schema(description = "확대/축소 비율 (기본값 1.0)", example = "1.2", nullable = true)
             private Double scaleRatio;
         }
-    }
-
-    @Getter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Schema(description = "스티커 일괄 삭제 요청")
-    public static class RemoveBulk {
-
-        @NotEmpty(message = "삭제할 스티커 ID를 입력해주세요.")
-        @Size(max = 50, message = "한 번에 최대 50개까지 삭제할 수 있습니다.")
-        @Schema(description = "삭제할 스티커 ID 목록", example = "[1, 2, 3]")
-        private List<Long> stickerIds;
     }
 }

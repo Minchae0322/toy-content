@@ -29,7 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class CarrierItemService {
 
     private static final int MAX_ITEM_COUNT = 30;
-    private static final int MAX_STICKER_COUNT = 20;
 
     private final CarrierService carrierService;
     private final CarrierItemRepository carrierItemRepository;
@@ -123,9 +122,10 @@ public class CarrierItemService {
     }
 
     /**
-     * 스티커 일괄 저장 (bulk upsert)
-     * - stickerId가 null이면 신규 생성, 있으면 기존 수정
-     * - PHOTO_TAG 타입은 캐리어당 1개만 유지 (자동 upsert)
+     * 스티커 일괄 저장 (reconcile)
+     * - 요청의 stickers 목록이 캐리어의 최종 상태가 됨
+     * - stickerId 있음 → 수정, 없음 → 신규 생성
+     * - 기존에 있는데 요청에 없는 스티커는 삭제
      */
     @Transactional
     public List<CarrierStickerResponse.Detail> bulkSaveStickers(
@@ -134,99 +134,70 @@ public class CarrierItemService {
         Carrier carrier = carrierService.getCarrierByOwner(carrierId, userId);
         List<CarrierStickerRequest.BulkSave.StickerUpsert> items = request.getStickers();
 
-        // 수정 대상 조회 및 검증
-        Map<Long, CarrierSticker> existingMap = findExistingStickers(items, carrierId);
+        validatePhotoTagCount(items);
 
-        // 검증
-        validateUpdateIds(items, existingMap);
-        validateNewStickerCount(items, carrierId);
+        Map<Long, CarrierSticker> existingMap = loadStickersByCarrier(carrierId);
+        List<Long> updateIds = validateAndExtractUpdateIds(items, existingMap);
 
-        // upsert 처리
-        List<CarrierSticker> result = items.stream()
-                .map(item -> upsertSticker(item, existingMap, carrier, carrierId))
-                .toList();
+        deleteOrphans(existingMap, updateIds);
 
-        return result.stream()
+        return items.stream()
+                .map(item -> upsertSticker(item, existingMap, carrier))
                 .map(CarrierStickerResponse.Detail::from)
                 .toList();
     }
 
-    /**
-     * 수정 대상 스티커 일괄 조회
-     */
-    private Map<Long, CarrierSticker> findExistingStickers(
-            List<CarrierStickerRequest.BulkSave.StickerUpsert> items, Long carrierId) {
+    private void validatePhotoTagCount(List<CarrierStickerRequest.BulkSave.StickerUpsert> items) {
+        long photoTagCount = items.stream()
+                .filter(i -> i.getStickerType() == StickerType.PHOTO_TAG)
+                .count();
 
-        List<Long> updateIds = items.stream()
-                .map(CarrierStickerRequest.BulkSave.StickerUpsert::getStickerId)
-                .filter(Objects::nonNull)
-                .toList();
-
-        if (updateIds.isEmpty()) {
-            return Map.of();
+        if (photoTagCount > 1) {
+            throw new RestApiException(CarrierErrorCode.MAX_PHOTO_TAG_EXCEEDED);
         }
+    }
 
-        return carrierStickerRepository.findAllByIdInAndCarrierId(updateIds, carrierId)
-                .stream()
+    private Map<Long, CarrierSticker> loadStickersByCarrier(Long carrierId) {
+        return carrierStickerRepository.findAllByCarrierId(carrierId).stream()
                 .collect(Collectors.toMap(CarrierSticker::getId, s -> s));
     }
 
-    /**
-     * 수정 요청한 stickerId가 실제 캐리어에 존재하는지 검증
-     */
-    private void validateUpdateIds(
+    private List<Long> validateAndExtractUpdateIds(
             List<CarrierStickerRequest.BulkSave.StickerUpsert> items,
             Map<Long, CarrierSticker> existingMap) {
 
         List<Long> updateIds = items.stream()
                 .map(CarrierStickerRequest.BulkSave.StickerUpsert::getStickerId)
                 .filter(Objects::nonNull)
+                .distinct()
                 .toList();
 
-        if (updateIds.size() != existingMap.size()) {
-            throw new RestApiException(CarrierErrorCode.STICKER_NOT_IN_CARRIER);
+        if (!existingMap.keySet().containsAll(updateIds)) {
+            throw new RestApiException(CarrierErrorCode.STICKER_OUT_OF_SYNC);
+        }
+
+        return updateIds;
+    }
+
+    private void deleteOrphans(Map<Long, CarrierSticker> existingMap, List<Long> keepIds) {
+        List<CarrierSticker> toDelete = existingMap.values().stream()
+                .filter(s -> !keepIds.contains(s.getId()))
+                .toList();
+
+        if (!toDelete.isEmpty()) {
+            carrierStickerRepository.deleteAllInBatch(toDelete);
         }
     }
 
-    /**
-     * 신규 스티커 개수 제한 검증
-     * - 기존 스티커 + 신규 요청이 MAX_STICKER_COUNT 초과하면 예외
-     */
-    private void validateNewStickerCount(
-            List<CarrierStickerRequest.BulkSave.StickerUpsert> items, Long carrierId) {
+    private CarrierSticker upsertSticker(CarrierStickerRequest.BulkSave.StickerUpsert item,
+        Map<Long, CarrierSticker> existingMap, Carrier carrier) {
 
-        long newCount = items.stream()
-                .filter(i -> i.getStickerId() == null)
-                .count();
-
-        if (newCount == 0) return;
-
-        long currentCount = carrierStickerRepository.countByCarrierId(carrierId);
-        if (currentCount + newCount > MAX_STICKER_COUNT) {
-            throw new RestApiException(CarrierErrorCode.MAX_STICKER_EXCEEDED);
-        }
-    }
-
-    private CarrierSticker upsertSticker(
-            CarrierStickerRequest.BulkSave.StickerUpsert item,
-            Map<Long, CarrierSticker> existingMap,
-            Carrier carrier, Long carrierId) {
-
-        // 기존 수정 (PHOTO_TAG 포함 - 사진 추가/삭제/위치 변경)
         if (item.getStickerId() != null) {
             CarrierSticker sticker = existingMap.get(item.getStickerId());
             sticker.updateFromBulkSave(item);
             return sticker;
         }
 
-        // PHOTO_TAG 신규 생성 (캐리어당 1개 보장 - 이미 있으면 무시)
-        if (item.getStickerType() == StickerType.PHOTO_TAG) {
-            return carrierStickerRepository
-                    .findByCarrierIdAndStickerType(carrierId, StickerType.PHOTO_TAG)
-                    .orElseGet(() -> carrierStickerRepository.save(createStickerFromBulk(carrier, item)));
-        }
-
-        // 일반 신규 생성
         return carrierStickerRepository.save(createStickerFromBulk(carrier, item));
     }
 
@@ -242,29 +213,5 @@ public class CarrierItemService {
                 .rotation(item.getRotation() != null ? item.getRotation() : 0.0)
                 .scaleRatio(item.getScaleRatio() != null ? item.getScaleRatio() : 1.0)
                 .build();
-    }
-
-
-    @Transactional
-    public void removeSticker(Long carrierId, Long stickerId, Long userId) {
-        carrierService.getCarrierByOwner(carrierId, userId);
-
-        CarrierSticker sticker = carrierStickerRepository.findById(stickerId)
-            .orElseThrow(() -> new RestApiException(CarrierErrorCode.STICKER_NOT_FOUND));
-
-        carrierStickerRepository.delete(sticker);
-    }
-
-    @Transactional
-    public void removeStickers(Long carrierId, List<Long> stickerIds, Long userId) {
-        carrierService.getCarrierByOwner(carrierId, userId);
-
-        List<CarrierSticker> stickers = carrierStickerRepository.findAllById(stickerIds);
-
-        if (stickers.size() != stickerIds.size()) {
-            throw new RestApiException(CarrierErrorCode.STICKER_NOT_FOUND);
-        }
-
-        carrierStickerRepository.deleteAllInBatch(stickers);
     }
 }
