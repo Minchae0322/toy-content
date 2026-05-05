@@ -244,6 +244,9 @@ public class CategoryCustomRepositoryImpl implements CategoryCustomRepository {
         Optional.ofNullable(condition.getIsActive())
             .ifPresent(status -> builder.and(category.isActive.eq(status)));
 
+        Optional.ofNullable(condition.getCategoryType())
+            .ifPresent(type -> builder.and(category.type.eq(type)));
+
         return builder;
     }
 
