@@ -16,7 +16,7 @@ public abstract class CategorySearchCondition {
     private String keyword;
     private Boolean isActive;
 
-    @Schema(description = "카테고리 타입 필터 (PRODUCT/FEED/BATTLE)", example = "FEED")
+    @Schema(description = "카테고리 타입 필터 (PRODUCT: 상품/배틀, FEED: 피드)", example = "FEED")
     private CategoryType categoryType;
 
     @Getter
