@@ -4,11 +4,13 @@ package com.example.toycontent.app.category.domain;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.category.contoller.dto.CategoryRequest;
 import com.example.toycontent.app.common.BaseTimeEntity;
+import com.example.toycontent.app.common.enumuration.CategoryType;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
@@ -66,6 +68,13 @@ public class Category extends BaseTimeEntity {
     @Comment("카테고리 depth (0: 최상위)")
     @Builder.Default
     private Integer depth = 0;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 20)
+    @ColumnDefault("'BATTLE'")
+    @Comment("카테고리 타입 (PRODUCT/FEED/BATTLE)")
+    @Builder.Default
+    private CategoryType type = CategoryType.BATTLE;
 
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
     private List<Product> products;
