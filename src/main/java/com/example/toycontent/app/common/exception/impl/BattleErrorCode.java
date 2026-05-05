@@ -66,6 +66,8 @@ public enum BattleErrorCode implements ErrorCode {
   ALREADY_REPORTED(HttpStatus.BAD_REQUEST, "이미 신고한 아이템입니다."),
   REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "신고 내역을 찾을 수 없습니다."),
   CANNOT_REPORT_OWN_ITEM(HttpStatus.BAD_REQUEST, "본인이 등록한 아이템은 신고할 수 없습니다."),
+  BATTLE_REPORT_DUPLICATED(HttpStatus.CONFLICT, "이미 신고한 배틀입니다."),
+  BATTLE_REPORT_SELF(HttpStatus.BAD_REQUEST, "본인의 배틀은 신고할 수 없습니다."),
 
   // 배틀 참여
   PARTICIPATION_NOT_ALLOWED(HttpStatus.FORBIDDEN, "참여할 수 없습니다."),
