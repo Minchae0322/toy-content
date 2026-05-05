@@ -48,7 +48,7 @@ public class CategoryRequest {
         @Schema(title = "부모 카테고리 ID", example = "1", description = "null인 경우 최상위 카테고리로 생성됩니다.")
         private Long parentId;
 
-        @Schema(title = "카테고리 타입", example = "PRODUCT", description = "PRODUCT/FEED/BATTLE. 미지정 시 PRODUCT")
+        @Schema(title = "카테고리 타입", example = "PRODUCT", description = "PRODUCT(상품/배틀 공용) 또는 FEED. 미지정 시 PRODUCT")
         private CategoryType type;
 
         public Category toEntity(Integer lastOrder) {
@@ -59,7 +59,7 @@ public class CategoryRequest {
                 .sortOrder(lastOrder)
                 .isActive(true)
                 .depth(0)
-                .type(Optional.ofNullable(this.type).orElse(CategoryType.BATTLE))
+                .type(Optional.ofNullable(this.type).orElse(CategoryType.PRODUCT))
                 .children(new ArrayList<>())
                 .build();
         }

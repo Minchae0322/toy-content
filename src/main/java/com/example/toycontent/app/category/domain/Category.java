@@ -71,10 +71,10 @@ public class Category extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 20)
-    @ColumnDefault("'BATTLE'")
-    @Comment("카테고리 타입 (PRODUCT/FEED/BATTLE)")
+    @ColumnDefault("'PRODUCT'")
+    @Comment("카테고리 타입 (PRODUCT: 상품/배틀 공용, FEED: 피드 전용)")
     @Builder.Default
-    private CategoryType type = CategoryType.BATTLE;
+    private CategoryType type = CategoryType.PRODUCT;
 
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
     private List<Product> products;

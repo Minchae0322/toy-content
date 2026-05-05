@@ -12,9 +12,8 @@ import lombok.NoArgsConstructor;
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum CategoryType {
 
-    PRODUCT("PRODUCT", "상품"),
+    PRODUCT("PRODUCT", "상품/배틀"),
     FEED("FEED", "피드"),
-    BATTLE("BATTLE", "배틀"),
     ;
 
     private String title;
