@@ -2,11 +2,13 @@ package com.example.toycontent.app.battle.controller;
 
 
 import com.example.toycontent.app.battle.controller.dto.BattleItemCommentResponse.Detail;
+import com.example.toycontent.app.battle.controller.dto.BattleReportRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
 import com.example.toycontent.app.battle.controller.dto.BattleSearchCondition;
 import com.example.toycontent.app.battle.service.BattleItemCommentService;
+import com.example.toycontent.app.battle.service.BattleReportService;
 import com.example.toycontent.app.battle.service.BattleService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.annotation.CurrentUserIsAdmin;
@@ -39,6 +41,7 @@ public class BattleController {
 
   private final BattleService battleService;
   private final BattleItemCommentService battleItemCommentService;
+  private final BattleReportService battleReportService;
 
   @Operation(summary = "배틀 생성 권한 체크")
   @GetMapping("/creation/validation")
@@ -106,5 +109,15 @@ public class BattleController {
       @PageableDefault(size = 10, sort = "likeCount", direction = Sort.Direction.DESC) Pageable pageable) {
     return ResponseEntity.ok(ApiResponse.success(
         battleItemCommentService.getBattleComments(battleId, userId, pageable)));
+  }
+
+  @Operation(summary = "배틀 신고", description = "부적절한 배틀을 신고합니다. 동일 배틀은 한 번만 신고할 수 있습니다.")
+  @PostMapping("/{battleId}/reports")
+  public ResponseEntity<ApiResponse<Long>> reportBattle(
+      @Parameter(description = "배틀 ID") @PathVariable Long battleId,
+      @Valid @RequestBody BattleReportRequest request,
+      @CurrentUserId Long userId) {
+    Long reportId = battleReportService.report(battleId, userId, request);
+    return ResponseEntity.ok(ApiResponse.success(reportId, "신고가 접수되었습니다."));
   }
 }

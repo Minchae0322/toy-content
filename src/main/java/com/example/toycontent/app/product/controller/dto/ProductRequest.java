@@ -82,7 +82,7 @@ public abstract class ProductRequest {
                 .distributor(distributor)
                 .price(price)
                 .feature(feature)
-                .status(ProductStatus.PENDING)
+                .status(ProductStatus.APPROVED)
                 .tags(TagParsingUtil.listToString(tags))
                 .releaseDate(releaseDate)
                 .category(category)
