@@ -4,11 +4,10 @@ server:
     context-path: /api
   tomcat:
     threads:
-      max: 50
-      min-spare: 50
-    max-connections: 2000
-    accept-count: 50
-
+      max: 40              # Hikari 20 × 2
+      min-spare: 5         # 50 → 5 (idle 절약)
+    max-connections: 400   # threads.max × 10
+    accept-count: 100      # 큐 크기
 
 spring:
   datasource:
@@ -17,9 +16,11 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
-      maximum-pool-size: 50
-      minimum-idle: 20
-      connection-timeout: 30000
+      maximum-pool-size: 20
+      minimum-idle: 3        # 20 → 3 (idle 절약)
+      connection-timeout: 3000  # 30000 → 3000 (Fail Fast)
+      idle-timeout: 300000
+      max-lifetime: 1200000
 
   data:
     redis:
