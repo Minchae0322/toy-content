@@ -1,6 +1,7 @@
 package com.example.toycontent.app.category.contoller.dto;
 
 import com.example.toycontent.app.category.domain.Category;
+import com.example.toycontent.app.common.enumuration.CategoryType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
@@ -41,6 +42,9 @@ public class CategoryResponse {
         @Schema(title = "키워드")
         private String keywords;
 
+        @Schema(title = "카테고리 타입", example = "PRODUCT")
+        private CategoryType type;
+
         @Schema(title = "해당 카테고리로 작성된 글 개수")
         private Long contentCount;
 
@@ -63,6 +67,7 @@ public class CategoryResponse {
                 .sortOrder(category.getSortOrder())
                 .isActive(category.getIsActive())
                 .keywords(category.getKeywords())
+                .type(category.getType())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
                 .children(category.getChildren().stream()
@@ -99,6 +104,9 @@ public class CategoryResponse {
         @Schema(title = "활성화 여부")
         private Boolean isActive;
 
+        @Schema(title = "카테고리 타입", example = "PRODUCT")
+        private CategoryType type;
+
         @Schema(title = "생성일시")
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime createdAt;
@@ -117,6 +125,7 @@ public class CategoryResponse {
                 .description(category.getDescription())
                 .sortOrder(category.getSortOrder())
                 .isActive(category.getIsActive())
+                .type(category.getType())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
                 .children(category.getChildren().stream()

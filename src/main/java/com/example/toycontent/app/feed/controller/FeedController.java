@@ -1,29 +1,28 @@
 package com.example.toycontent.app.feed.controller;
 
-import com.example.toycontent.app.common.annotation.CheckAdmin;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.annotation.CurrentUserIsAdmin;
 import com.example.toycontent.app.common.dto.CursorResponse;
 import com.example.toycontent.app.common.enumuration.FeedReactionType;
 import com.example.toycontent.app.common.response.ApiResponse;
+import com.example.toycontent.app.feed.controller.dto.FeedCondition;
+import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.controller.dto.FeedReactionResponse;
+import com.example.toycontent.app.feed.controller.dto.FeedReportRequest;
 import com.example.toycontent.app.feed.controller.dto.FeedRequest;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.FeedCursorResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.HotFeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.ListView;
-import com.example.toycontent.app.feed.controller.dto.FeedCondition;
-import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.service.FeedReactionService;
+import com.example.toycontent.app.feed.service.FeedReportService;
 import com.example.toycontent.app.feed.service.FeedService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.annotations.Check;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class FeedController {
   private final FeedService feedService;
   private final FeedReactionService feedReactionService;
+  private final FeedReportService feedReportService;
 
   @Operation(summary = "피드 목록 조회 (커서 페이징)", description = "인피니티 스크롤용 커서 기반 API")
   @GetMapping("/scroll")
@@ -78,7 +78,7 @@ public class FeedController {
                     **핫 스코어 계산 공식:**
           ```
                     hotScore = (좋아요 * 2 + 핫 * 3 + 조회수 * 0.1) / 시간 감쇠 계수
-                    시간 감쇠 계수 = (경과 시간(시) + 2)^1.5
+                    시간 감쇠 계수 = (경과 시간(시) + 12)^1.2
           ```
           
                     **특징:**
@@ -158,6 +158,17 @@ public class FeedController {
 
     feedReactionService.removeReaction(feedId, userId, reactionType);
     return ResponseEntity.ok(ApiResponse.success(null, "리액션이 제거되었습니다."));
+  }
+
+  @Operation(summary = "피드 신고", description = "부적절한 피드를 신고합니다. 동일 피드는 한 번만 신고할 수 있습니다.")
+  @PostMapping("/{feedId}/reports")
+  public ResponseEntity<ApiResponse<Long>> reportFeed(
+      @Parameter(description = "피드 ID") @PathVariable Long feedId,
+      @Valid @RequestBody FeedReportRequest request,
+      @CurrentUserId Long userId) {
+
+    Long reportId = feedReportService.report(feedId, userId, request);
+    return ResponseEntity.ok(ApiResponse.success(reportId, "신고가 접수되었습니다."));
   }
 
 }

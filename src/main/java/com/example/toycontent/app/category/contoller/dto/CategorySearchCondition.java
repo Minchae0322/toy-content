@@ -1,5 +1,6 @@
 package com.example.toycontent.app.category.contoller.dto;
 
+import com.example.toycontent.app.common.enumuration.CategoryType;
 import com.example.toycontent.app.common.enumuration.ContentType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -14,6 +15,9 @@ public abstract class CategorySearchCondition {
 
     private String keyword;
     private Boolean isActive;
+
+    @Schema(description = "카테고리 타입 필터 (PRODUCT: 상품/배틀, FEED: 피드)", example = "FEED")
+    private CategoryType categoryType;
 
     @Getter
     @Setter

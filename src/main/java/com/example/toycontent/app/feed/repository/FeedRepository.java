@@ -105,15 +105,15 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
    *   hotScore = engagementScore / decayFactor
    *
    *   engagementScore = (like_count × 2) + (view_count × 0.1)
-   *   decayFactor     = POWER(GREATEST(경과시간(h) + 2, 1), 1.5)
+   *   decayFactor     = POWER(GREATEST(경과시간(h) + 12, 1), 1.2)
    * </pre>
    *
    * <p>계산 근거:</p>
    * <ul>
    *   <li>좋아요(×2): 적극적인 참여 행동으로 가중치를 높게 부여</li>
    *   <li>조회수(×0.1): 수동적 행동이므로 낮은 가중치 부여</li>
-   *   <li>시간 감쇠(1.5승): 시간이 지날수록 스코어가 급격히 하락하여 최신 콘텐츠 우선 노출</li>
-   *   <li>+2 보정: 생성 직후(0시간)에도 0으로 나누는 것을 방지</li>
+   *   <li>시간 감쇠(1.2승): 완만한 감쇠로, 인기 있던 피드는 1주일이 지나도 노출 가능</li>
+   *   <li>+12 보정: 초기 12시간은 감쇠를 평탄화하여 인기 피드가 반나절 이상 노출되도록 함</li>
    * </ul>
    *
    * @param since 이 시각 이후 updated_at이 갱신된 피드만 대상
@@ -123,7 +123,7 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
   @Query(value = """
     UPDATE tb_feed
     SET hot_score = (like_count * 2 + view_count * 0.1)
-                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 2, 1), 1.5)
+                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 12, 1), 1.2)
     WHERE deleted = false
       AND updated_at >= :since
     """, nativeQuery = true)
@@ -143,7 +143,7 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
   @Query(value = """
     UPDATE tb_feed
     SET hot_score = (like_count * 2 + view_count * 0.1)
-                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 2, 1), 1.5)
+                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 12, 1), 1.2)
     WHERE deleted = false
       AND created_at >= DATE_SUB(NOW(), INTERVAL :recentDays DAY)
     """, nativeQuery = true)

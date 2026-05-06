@@ -1,12 +1,14 @@
 package com.example.toycontent.app.category.contoller.dto;
 
 import com.example.toycontent.app.category.domain.Category;
+import com.example.toycontent.app.common.enumuration.CategoryType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.ArrayList;
+import java.util.Optional;
 import lombok.*;
 
 import java.util.List;
@@ -46,6 +48,9 @@ public class CategoryRequest {
         @Schema(title = "부모 카테고리 ID", example = "1", description = "null인 경우 최상위 카테고리로 생성됩니다.")
         private Long parentId;
 
+        @Schema(title = "카테고리 타입", example = "PRODUCT", description = "PRODUCT(상품/배틀 공용) 또는 FEED. 미지정 시 PRODUCT")
+        private CategoryType type;
+
         public Category toEntity(Integer lastOrder) {
             return Category.builder()
                 .name(this.categoryName)
@@ -54,6 +59,7 @@ public class CategoryRequest {
                 .sortOrder(lastOrder)
                 .isActive(true)
                 .depth(0)
+                .type(Optional.ofNullable(this.type).orElse(CategoryType.PRODUCT))
                 .children(new ArrayList<>())
                 .build();
         }
