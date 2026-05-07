@@ -296,8 +296,10 @@ public class BattleItemService {
   }
 
   /**
-   * 복수 투표 시, 기존 투표가 있으면 통계를 되돌리고 삭제한다.
-   * 단일 투표는 재투표 자체가 불가능하므로 이 메서드를 호출하지 않는다.
+   * 재투표 시 기존 투표를 통계에서 되돌리고 삭제한다.
+   * Hibernate 기본 action queue가 insert를 delete보다 먼저 처리해
+   * unique 제약(uk_battle_user_rank / uk_battle_guest_rank) 충돌이 발생하므로
+   * 명시적으로 flush 하여 새 표 insert 전에 DELETE를 선행시킨다.
    */
   private void removeExistingVotesIfPresent(Battle battle, List<BattleVote> existingVotes) {
     if (existingVotes.isEmpty()) {
@@ -307,6 +309,7 @@ public class BattleItemService {
     rollbackVoteStatistics(battle, existingVotes);
     battle.getVotes().removeAll(existingVotes);
     battleVoteRepository.deleteAll(existingVotes);
+    battleVoteRepository.flush();
   }
 
   /**
