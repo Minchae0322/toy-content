@@ -3,10 +3,8 @@ package com.example.toycontent.app.battle.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.never;
 
 import com.example.toycontent.app.battle.controller.dto.BattleVoteRequest;
 import com.example.toycontent.app.battle.domain.Battle;
@@ -90,21 +88,49 @@ class BattleItemServiceTest {
     }
 
     @Test
-    @DisplayName("SINGLE 투표에서 이미 투표한 경우 ALREADY_VOTED 예외를 던진다")
-    void single_재투표_예외() {
+    @DisplayName("SINGLE 투표 재투표 시 기존 통계가 롤백되고 새 통계가 반영된다")
+    void single_재투표_롤백_후_재반영() {
       // given
       Battle battle = singleBattle();
-      BattleVote existingVote = BattleVote.builder().battle(battle).userId(VOTER_ID).voteRank(1).score(1).build();
+      BattleItem oldItem = BattleItemFixture.custom(battle, "기존 아이템");
+      BattleItem newItem = BattleItemFixture.custom(battle, "신규 아이템");
+
+      // 기존에 oldItem에 투표해둔 상태 시뮬레이션 (SINGLE은 1점)
+      oldItem.incrementVoteCount();
+      oldItem.addScore(1);
+      battle.incrementTotalParticipants();
+      battle.addTotalVotes(1);
+      battle.addTotalScore(1);
+
+      BattleVote existingVote = BattleVote.builder()
+          .battle(battle).battleItem(oldItem).userId(VOTER_ID).voteRank(1).score(1).build();
+
       given(battleRepository.findById(BATTLE_ID)).willReturn(Optional.of(battle));
       given(battleVoteRepository.findByBattle_IdAndUserId(BATTLE_ID, VOTER_ID))
           .willReturn(List.of(existingVote));
+      given(battleItemRepository.findById(ITEM_ID_2)).willReturn(Optional.of(newItem));
 
-      // when & then
-      assertThatThrownBy(() -> battleItemService.vote(BATTLE_ID, VOTER,
-          voteRequest(List.of(new int[]{Math.toIntExact(ITEM_ID_1), 1}))))
-          .isInstanceOf(RestApiException.class);
+      // when - newItem으로 변경
+      battleItemService.vote(BATTLE_ID, VOTER,
+          voteRequest(List.of(new int[]{Math.toIntExact(ITEM_ID_2), 1})));
 
-      then(battleVoteRepository).should(never()).saveAll(any());
+      // then
+      assertSoftly(softly -> {
+        softly.assertThat(oldItem.getVoteCount())
+            .as("기존 아이템 득표 수 롤백").isZero();
+        softly.assertThat(oldItem.getTotalScore())
+            .as("기존 아이템 점수 롤백").isZero();
+        softly.assertThat(newItem.getVoteCount())
+            .as("신규 아이템 득표 수").isEqualTo(1);
+        softly.assertThat(newItem.getTotalScore())
+            .as("신규 아이템 점수 1점").isEqualTo(1);
+        softly.assertThat(battle.getTotalParticipants())
+            .as("참여자 수는 1 유지").isEqualTo(1);
+        softly.assertThat(battle.getTotalVotes())
+            .as("총 투표 수는 1 유지").isEqualTo(1);
+        softly.assertThat(battle.getTotalScore())
+            .as("배틀 총 점수 1점").isEqualTo(1);
+      });
     }
 
     @Test

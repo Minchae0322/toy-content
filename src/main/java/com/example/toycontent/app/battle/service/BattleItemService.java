@@ -260,8 +260,8 @@ public class BattleItemService {
 
   /**
    * 배틀 아이템에 투표한다.
-   * - 단일 투표(SINGLE): 하나의 아이템에만 투표 가능, 재투표 불가
-   * - 복수 투표(MULTIPLE): 여러 아이템에 투표 가능, 재투표 시 기존 투표를 삭제하고 새로 반영
+   * - 단일 투표(SINGLE): 하나의 아이템에만 투표 가능, 재투표 시 기존 표를 갈아엎는다
+   * - 복수 투표(MULTIPLE): 여러 아이템에 투표 가능, 재투표 시 기존 표를 갈아엎는다
    * - 게스트(VoterId.guest)도 투표 가능. EXP 적립은 로그인 사용자만 받는다.
    */
   @Transactional
@@ -271,11 +271,11 @@ public class BattleItemService {
     List<BattleVote> existingVotes = findVotesByVoter(battleId, voter);
 
     if (battle.isSingleVote()) {
-      validateSingleVote(voteItems, existingVotes.size());
+      validateSingleVote(voteItems);
     } else {
       validateMultipleVote(voteItems);
-      removeExistingVotesIfPresent(battle, existingVotes);
     }
+    removeExistingVotesIfPresent(battle, existingVotes);
 
     List<BattleVote> newVotes = createVotes(battle, voter, voteItems);
     battleVoteRepository.saveAll(newVotes);
@@ -356,11 +356,7 @@ public class BattleItemService {
   /**
    * 1인 1표 검증
    */
-  private void validateSingleVote(List<BattleVoteRequest.VoteItem> voteItems, int existingVoteCount) {
-    if (existingVoteCount > 0) {
-      throw new RestApiException(BattleErrorCode.ALREADY_VOTED);
-    }
-
+  private void validateSingleVote(List<BattleVoteRequest.VoteItem> voteItems) {
     if (voteItems.size() != 1 || voteItems.get(0).getRank() != 1) {
       throw new RestApiException(BattleErrorCode.INVALID_VOTE_COUNT);
     }
