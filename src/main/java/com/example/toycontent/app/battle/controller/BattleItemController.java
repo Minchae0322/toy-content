@@ -12,7 +12,9 @@ import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.battle.service.BattleItemService;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
 import com.example.toycontent.app.common.annotation.CurrentUserIsAdmin;
+import com.example.toycontent.app.common.annotation.CurrentVoterId;
 import com.example.toycontent.app.common.response.ApiResponse;
+import com.example.toycontent.app.common.voter.VoterId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -77,13 +79,14 @@ public class BattleItemController {
     return ResponseEntity.ok(ApiResponse.success(null, "아이템이 제외되었습니다."));
   }
 
-  @Operation(summary = "배틀 아이템 투표")
+  @Operation(summary = "배틀 아이템 투표",
+      description = "비로그인 사용자도 투표 가능합니다(쿠키 기반 게스트 식별). EXP 적립은 로그인 사용자만 받습니다.")
   @PostMapping("/vote")
   public ResponseEntity<ApiResponse<ExpGrantInfo>> vote(
       @Parameter(description = "배틀 아이템 ID") @PathVariable Long battleId,
-      @CurrentUserId Long userId,
+      @CurrentVoterId VoterId voter,
       @Valid @RequestBody BattleVoteRequest.Vote request) {
-    ExpGrantInfo expGrant = battleItemService.vote(battleId, userId, request);
+    ExpGrantInfo expGrant = battleItemService.vote(battleId, voter, request);
     return ResponseEntity.ok(ApiResponse.success(expGrant, "투표가 완료되었습니다."));
   }
 
@@ -92,8 +95,8 @@ public class BattleItemController {
   @Deprecated
   public ResponseEntity<ApiResponse<Void>> cancelVote(
       @Parameter(description = "배틀 아이템 ID") @PathVariable Long battleItemId,
-      @CurrentUserId Long userId) {
-    battleItemService.cancelVote(battleItemId, userId);
+      @CurrentVoterId VoterId voter) {
+    battleItemService.cancelVote(battleItemId, voter);
     return ResponseEntity.ok(ApiResponse.success(null, "투표가 취소되었습니다."));
   }
 

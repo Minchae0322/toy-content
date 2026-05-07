@@ -19,4 +19,8 @@ public interface BattleVoteRepository extends JpaRepository<BattleVote, Long>,
   int countByBattleAndUserId(Battle battle, Long userId);
 
   List<BattleVote> findByBattle_IdAndUserId(Long battleId, Long userId);
+
+  List<BattleVote> findByBattleAndGuestId(Battle battle, String guestId);
+
+  List<BattleVote> findByBattle_IdAndGuestId(Long battleId, String guestId);
 }

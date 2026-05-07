@@ -31,10 +31,16 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Entity
 @Table(
     name = "TB_BATTLE_VOTE",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uk_battle_user_rank",
-        columnNames = {"battle_id", "user_id", "rank"}
-    )
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uk_battle_user_rank",
+            columnNames = {"battle_id", "user_id", "vote_rank"}
+        ),
+        @UniqueConstraint(
+            name = "uk_battle_guest_rank",
+            columnNames = {"battle_id", "guest_id", "vote_rank"}
+        )
+    }
 )
 public class BattleVote extends BaseTimeEntity {
 
@@ -49,9 +55,13 @@ public class BattleVote extends BaseTimeEntity {
   @Comment("배틀")
   private Battle battle;
 
-  @Column(name = "user_id", nullable = false)
-  @Comment("투표 사용자")
+  @Column(name = "user_id")
+  @Comment("투표 사용자 (로그인 시)")
   private Long userId;
+
+  @Column(name = "guest_id", length = 36)
+  @Comment("게스트 식별자 (비로그인 시 쿠키 기반 UUID)")
+  private String guestId;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "battle_item_id", nullable = false)

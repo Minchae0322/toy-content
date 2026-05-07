@@ -20,6 +20,7 @@ import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.common.voter.VoterId;
 import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.app.reward.exp.service.ExpGrantService;
 import com.example.toycontent.support.fixture.BattleFixture;
@@ -44,6 +45,7 @@ class BattleItemServiceTest {
   private static final long ITEM_ID_2 = 20L;
   private static final long ITEM_ID_3 = 30L;
   private static final long VOTER_ID = 500L;
+  private static final VoterId VOTER = VoterId.user(VOTER_ID);
 
   @Mock private BattleRepository battleRepository;
   @Mock private BattleItemRepository battleItemRepository;
@@ -69,7 +71,7 @@ class BattleItemServiceTest {
       given(battleItemRepository.findById(ITEM_ID_1)).willReturn(Optional.of(item));
 
       // when
-      battleItemService.vote(BATTLE_ID, VOTER_ID,
+      battleItemService.vote(BATTLE_ID, VOTER,
           voteRequest(List.of(new int[]{Math.toIntExact(ITEM_ID_1), 1})));
 
       // then
@@ -98,7 +100,7 @@ class BattleItemServiceTest {
           .willReturn(List.of(existingVote));
 
       // when & then
-      assertThatThrownBy(() -> battleItemService.vote(BATTLE_ID, VOTER_ID,
+      assertThatThrownBy(() -> battleItemService.vote(BATTLE_ID, VOTER,
           voteRequest(List.of(new int[]{Math.toIntExact(ITEM_ID_1), 1}))))
           .isInstanceOf(RestApiException.class);
 
@@ -121,7 +123,7 @@ class BattleItemServiceTest {
       given(battleItemRepository.findById(ITEM_ID_3)).willReturn(Optional.of(item3));
 
       // when - 1/2/3위로 각각 투표
-      battleItemService.vote(BATTLE_ID, VOTER_ID, voteRequest(List.of(
+      battleItemService.vote(BATTLE_ID, VOTER, voteRequest(List.of(
           new int[]{Math.toIntExact(ITEM_ID_1), 1},
           new int[]{Math.toIntExact(ITEM_ID_2), 2},
           new int[]{Math.toIntExact(ITEM_ID_3), 3}
@@ -149,7 +151,7 @@ class BattleItemServiceTest {
           .willReturn(List.of());
 
       // when & then - 1위, 3위만 (2위 누락)
-      assertThatThrownBy(() -> battleItemService.vote(BATTLE_ID, VOTER_ID, voteRequest(List.of(
+      assertThatThrownBy(() -> battleItemService.vote(BATTLE_ID, VOTER, voteRequest(List.of(
           new int[]{Math.toIntExact(ITEM_ID_1), 1},
           new int[]{Math.toIntExact(ITEM_ID_3), 3}
       ))))
@@ -180,7 +182,7 @@ class BattleItemServiceTest {
       given(battleItemRepository.findById(ITEM_ID_2)).willReturn(Optional.of(newItem));
 
       // when - newItem을 1위로 재투표
-      battleItemService.vote(BATTLE_ID, VOTER_ID, voteRequest(List.of(
+      battleItemService.vote(BATTLE_ID, VOTER, voteRequest(List.of(
           new int[]{Math.toIntExact(ITEM_ID_2), 1}
       )));
 
@@ -211,7 +213,7 @@ class BattleItemServiceTest {
       given(battleItemRepository.findById(ITEM_ID_1)).willReturn(Optional.of(inactive));
 
       // when & then
-      assertThatThrownBy(() -> battleItemService.vote(BATTLE_ID, VOTER_ID,
+      assertThatThrownBy(() -> battleItemService.vote(BATTLE_ID, VOTER,
           voteRequest(List.of(new int[]{Math.toIntExact(ITEM_ID_1), 1}))))
           .isInstanceOf(RestApiException.class);
     }
@@ -241,7 +243,7 @@ class BattleItemServiceTest {
           .willReturn(List.of(vote));
 
       // when
-      battleItemService.cancelVote(BATTLE_ID, VOTER_ID);
+      battleItemService.cancelVote(BATTLE_ID, VOTER);
 
       // then
       assertSoftly(softly -> {
@@ -263,7 +265,7 @@ class BattleItemServiceTest {
           .willReturn(List.of());
 
       // when & then
-      assertThatThrownBy(() -> battleItemService.cancelVote(BATTLE_ID, VOTER_ID))
+      assertThatThrownBy(() -> battleItemService.cancelVote(BATTLE_ID, VOTER))
           .isInstanceOf(RestApiException.class);
     }
   }
