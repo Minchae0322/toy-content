@@ -14,6 +14,7 @@ import com.example.toycontent.app.battle.repository.BattleItemCommentRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.battle.repository.BattleRepository;
 import com.example.toycontent.app.battle.repository.BattleVoteRepository;
+import com.example.toycontent.app.common.voter.VoterId;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.VoteType;
@@ -261,12 +262,13 @@ public class BattleItemService {
    * 배틀 아이템에 투표한다.
    * - 단일 투표(SINGLE): 하나의 아이템에만 투표 가능, 재투표 불가
    * - 복수 투표(MULTIPLE): 여러 아이템에 투표 가능, 재투표 시 기존 투표를 삭제하고 새로 반영
+   * - 게스트(VoterId.guest)도 투표 가능. EXP 적립은 로그인 사용자만 받는다.
    */
   @Transactional
-  public ExpGrantInfo vote(Long battleId, Long currentUserId, BattleVoteRequest.Vote request) {
+  public ExpGrantInfo vote(Long battleId, VoterId voter, BattleVoteRequest.Vote request) {
     Battle battle = getBattleById(battleId);
     List<BattleVoteRequest.VoteItem> voteItems = request.getVotes();
-    List<BattleVote> existingVotes = battleVoteRepository.findByBattle_IdAndUserId(battleId, currentUserId);
+    List<BattleVote> existingVotes = findVotesByVoter(battleId, voter);
 
     if (battle.isSingleVote()) {
       validateSingleVote(voteItems, existingVotes.size());
@@ -275,12 +277,22 @@ public class BattleItemService {
       removeExistingVotesIfPresent(battle, existingVotes);
     }
 
-    List<BattleVote> newVotes = createVotes(battle, currentUserId, voteItems);
+    List<BattleVote> newVotes = createVotes(battle, voter, voteItems);
     battleVoteRepository.saveAll(newVotes);
     applyVoteStatistics(battle, newVotes);
 
-    ExpGrantResult grant = expGrantService.grantBattleVote(currentUserId, battleId);
+    if (voter.isGuest()) {
+      return ExpGrantInfo.aggregate();
+    }
+    ExpGrantResult grant = expGrantService.grantBattleVote(voter.userId(), battleId);
     return ExpGrantInfo.aggregate(grant);
+  }
+
+  private List<BattleVote> findVotesByVoter(Long battleId, VoterId voter) {
+    if (voter.isUser()) {
+      return battleVoteRepository.findByBattle_IdAndUserId(battleId, voter.userId());
+    }
+    return battleVoteRepository.findByBattle_IdAndGuestId(battleId, voter.guestId());
   }
 
   /**
@@ -394,10 +406,12 @@ public class BattleItemService {
    * 배틀 아이템 투표 취소
    */
   @Transactional
-  public void cancelVote(Long battleId, Long userId) {
+  public void cancelVote(Long battleId, VoterId voter) {
     Battle battle = getBattleById(battleId);
 
-    List<BattleVote> votes = battleVoteRepository.findByBattleAndUserId(battle, userId);
+    List<BattleVote> votes = voter.isUser()
+        ? battleVoteRepository.findByBattleAndUserId(battle, voter.userId())
+        : battleVoteRepository.findByBattleAndGuestId(battle, voter.guestId());
 
     if (votes.isEmpty()) {
       throw new RestApiException(BattleErrorCode.VOTE_NOT_FOUND);
@@ -410,7 +424,7 @@ public class BattleItemService {
   }
 
 
-  private List<BattleVote> createVotes(Battle battle, Long userId,
+  private List<BattleVote> createVotes(Battle battle, VoterId voter,
       List<BattleVoteRequest.VoteItem> voteItems) {
     return voteItems.stream()
         .map(voteItem -> {
@@ -432,7 +446,8 @@ public class BattleItemService {
           return BattleVote.builder()
               .battle(battle)
               .battleItem(item)
-              .userId(userId)
+              .userId(voter.userId())
+              .guestId(voter.guestId())
               .voteRank(voteItem.getRank())
               .score(point)
               .build();

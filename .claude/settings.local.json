@@ -33,7 +33,15 @@
       "mcp__claude_ai_Notion__notion-fetch",
       "mcp__claude_ai_Notion__notion-update-page",
       "Bash(./gradlew compileJava --rerun-tasks)",
-      "Bash(./gradlew build *)"
+      "Bash(./gradlew build *)",
+      "Bash(./gradlew compileJava --console=plain)",
+      "Bash(git fetch *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(./gradlew compileTestJava --console=plain)",
+      "Bash(./gradlew compileJava compileTestJava -x test --no-daemon)",
+      "Bash(./gradlew compileJava --no-daemon)",
+      "Bash(git check-ignore *)"
     ]
   }
 }
