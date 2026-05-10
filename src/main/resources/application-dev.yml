@@ -67,22 +67,48 @@ management:
         include: health, info, prometheus
   endpoint:
     health:
-      show-details: never  # 상세정보 숨김 (보안)
+      show-details: never
       probes:
-        enabled: true      # liveness, readiness probe 활성화
-  health:
-    livenessstate:
-      enabled: true
-    readinessstate:
-      enabled: true
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState, db, redis
   metrics:
     tags:
       application: ${spring.application.name:content-service}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+    enable:
+      # 핵심 (꼭 필요)
+      jvm.memory: true
+      jvm.gc: true
+      jvm.threads: true
+      hikaricp: true
+      http.server.requests: true
+      tomcat.threads: true
+      logback: true
+      # 비활성화 (카디널리티 폭증 위험)
+      jvm.classes: false
+      jvm.buffer: false
+      jdbc: false
+      tomcat.cache: false
+      tomcat.servlet: false
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://tempo.monitoring:9411/api/v2/spans
 
 external:
   user-service:
     protocol: http
-    host: ${USER_SERVICE_HOST:dev-user-service}
+    host: ${USER_SERVICE_HOST:auth-service}
     port: ${USER_SERVICE_PORT:8081}
     api-key: ${USER_SERVICE_API_KEY}
 
@@ -131,9 +157,12 @@ springdoc:
 logging:
   level:
     root: INFO
-    com.example.toycontent: DEBUG
+    com.example.toycontent: DEBUG       # root: INFO 는 기본값이라 제거
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    level: "%5p [traceId=%X{traceId:-NONE},spanId=%X{spanId:-NONE},userId=%X{userId:-NONE}]"
+    # console을 오버라이드할 때는 ${LOG_LEVEL_PATTERN}을 넣어 pattern.level을 끌어옴
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] ${LOG_LEVEL_PATTERN:-%5p} %logger{36} - %msg%n"
+    file:    "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] ${LOG_LEVEL_PATTERN:-%5p} %logger{36} - %msg%n"
   file:
     name: /logs/application.log
   logback:
@@ -141,4 +170,3 @@ logging:
       max-file-size: 10MB
       max-history: 30
       total-size-cap: 1GB
-
