@@ -1,5 +1,6 @@
 server:
   port: 8082
+  shutdown: graceful                            # ➕ Pod 종료 시 in-flight 요청 보호
   servlet:
     context-path: /api
   tomcat:
@@ -10,6 +11,11 @@ server:
     accept-count: 100      # 큐 크기
 
 spring:
+  application:
+    name: content-service                       # ➕ 메트릭/트레이스 라벨에 사용
+  lifecycle:
+    timeout-per-shutdown-phase: 30s             # ➕ graceful shutdown 최대 대기
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${DB_HOST:dev-mysql-server}:3306/content?sslMode=PREFERRED&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
@@ -58,11 +64,16 @@ spring:
 kafka:
   enabled: true
 
-# Actuator 설정
+# ============================================
+# Actuator — 관리 포트(8090) 분리
+# ============================================
 management:
+  server:
+    port: 8090                                  # ➕ 별도 포트로 분리
+    # address 미지정 = 0.0.0.0 (vmagent 접근 위해 필요, NetworkPolicy/SG로 차단)
   endpoints:
     web:
-      base-path: /actuator
+      base-path: /actuator                      # 8090 분리 시 context-path /api 무관
       exposure:
         include: health, info, prometheus
   endpoint:
@@ -75,14 +86,27 @@ management:
           include: livenessState
         readiness:
           include: readinessState, db, redis
+  info:                                         # ➕ 배포 버전 식별용
+    env:
+      enabled: true
+    git:
+      mode: full
+    build:
+      enabled: true
   metrics:
     tags:
-      application: ${spring.application.name:content-service}
+      application: ${spring.application.name}
     distribution:
       percentiles-histogram:
         http.server.requests: true
       percentiles:
         http.server.requests: 0.5, 0.95, 0.99
+      slo:                                      # ➕ SLO 버킷 (SLA 모니터링)
+        http.server.requests: 100ms, 200ms, 500ms, 1s, 2s
+      minimum-expected-value:
+        http.server.requests: 10ms
+      maximum-expected-value:
+        http.server.requests: 10s
     enable:
       # 핵심 (꼭 필요)
       jvm.memory: true
@@ -99,12 +123,18 @@ management:
       tomcat.cache: false
       tomcat.servlet: false
   tracing:
+    propagation:
+      type: b3                                  # ➕ MSA 간 trace 전파 명시 (Auth/Chat 동일)
     sampling:
-      probability: 1.0
+      probability: ${TRACING_SAMPLING_RATE:1.0} # ➕ 환경변수로 제어 (운영에선 0.1 등)
   zipkin:
     tracing:
-      endpoint: http://tempo.monitoring:9411/api/v2/spans
+      endpoint: ${TEMPO_ZIPKIN_ENDPOINT:http://tempo.monitoring:9411/api/v2/spans}
+      # ➕ 모니터링 EC2 IP를 환경변수로
 
+# ============================================
+# 외부 서비스
+# ============================================
 external:
   user-service:
     protocol: http
@@ -119,7 +149,9 @@ file:
 jwt:
   secret: ${JWT_SECRET}
 
-
+# ============================================
+# 스케줄러
+# ============================================
 scheduler:
   product-popularity:
     time-weight-update:
@@ -154,13 +186,15 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+# ============================================
+# 로깅 — MDC userId/traceId 패턴 유지
+# ============================================
 logging:
   level:
     root: INFO
-    com.example.toycontent: DEBUG       # root: INFO 는 기본값이라 제거
+    com.example.toycontent: DEBUG
   pattern:
     level: "%5p [traceId=%X{traceId:-NONE},spanId=%X{spanId:-NONE},userId=%X{userId:-NONE}]"
-    # console을 오버라이드할 때는 ${LOG_LEVEL_PATTERN}을 넣어 pattern.level을 끌어옴
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] ${LOG_LEVEL_PATTERN:-%5p} %logger{36} - %msg%n"
     file:    "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] ${LOG_LEVEL_PATTERN:-%5p} %logger{36} - %msg%n"
   file:
