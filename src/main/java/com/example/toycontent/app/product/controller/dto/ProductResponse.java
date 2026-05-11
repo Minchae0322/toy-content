@@ -237,7 +237,11 @@ public abstract class ProductResponse {
         @Schema(description = "사용자의 반응 목록", example = "false")
         private ProductReactionResponse.ProductUserReaction userReaction;
 
-        public static ProductDetail of(Product product, ProductUserReaction userReaction) {
+        @Schema(description = "활성 리뷰 목록")
+        private List<ProductReviewResponse.ReviewList> reviews;
+
+        public static ProductDetail of(Product product, ProductUserReaction userReaction,
+            List<ProductReviewResponse.ReviewList> reviews) {
 
             return ProductDetail.builder()
                 .id(product.getId())
@@ -263,6 +267,7 @@ public abstract class ProductResponse {
                     .map(AttachmentFileResponse::of)
                     .toList())
                 .userReaction(userReaction)
+                .reviews(reviews)
                 .build();
         }
 
