@@ -35,7 +35,7 @@ public class DashboardService {
 
     return DashboardSummaryResponse.builder()
         .activeBattleCount(battleRepository.countActiveBattles(now))
-        .totalItemCount(productRepository.countByStatus(ProductStatus.APPROVED))
+        .totalItemCount(productRepository.countByStatusAndIsDeletedFalse(ProductStatus.APPROVED))
         .popularFeedCount(feedRepository.countByHotScoreGreaterThanEqualAndIsDeletedFalse(HOT_SCORE_THRESHOLD))
         .build();
   }
