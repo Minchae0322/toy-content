@@ -39,14 +39,12 @@ public abstract class ProductReviewRequest {
     private Integer rating;
 
     @Schema(
-        description = "리뷰 내용 (10-1000자)",
+        description = "리뷰 내용 (최대 1000자, 선택)",
         example = "맛있고 가성비도 좋아요. 편의점에서 자주 구매하는 제품입니다. 강력 추천합니다!",
-        minLength = 10,
         maxLength = 1000,
-        requiredMode = Schema.RequiredMode.REQUIRED
+        requiredMode = Schema.RequiredMode.NOT_REQUIRED
     )
-    @NotBlank(message = "리뷰 내용은 필수입니다")
-    @Size(min = 10, max = 1000, message = "리뷰 내용은 10자 이상 1000자 이하여야 합니다")
+    @Size(max = 1000, message = "리뷰 내용은 1000자 이하여야 합니다")
     private String comment;
 
     @Schema(description = "리뷰 첨부파일 정보 목록")
@@ -81,14 +79,12 @@ public abstract class ProductReviewRequest {
     private Integer rating;
 
     @Schema(
-        description = "리뷰 내용 (10-1000자)",
+        description = "리뷰 내용 (최대 1000자, 선택)",
         example = "재구매 의사가 있습니다. 맛도 좋고 가격도 적당해요.",
-        minLength = 10,
         maxLength = 1000,
-        requiredMode = Schema.RequiredMode.REQUIRED
+        requiredMode = Schema.RequiredMode.NOT_REQUIRED
     )
-    @NotBlank(message = "리뷰 내용은 필수입니다")
-    @Size(min = 10, max = 1000, message = "리뷰 내용은 10자 이상 1000자 이하여야 합니다")
+    @Size(max = 1000, message = "리뷰 내용은 1000자 이하여야 합니다")
     private String comment;
 
     @Schema(

@@ -5,21 +5,14 @@ import com.example.toycontent.app.product.controller.dto.ProductRequest;
 import com.example.toycontent.app.product.controller.dto.ProductResponse;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductBattle;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductFeed;
-import com.example.toycontent.app.product.controller.dto.ProductReviewRequest;
-import com.example.toycontent.app.product.controller.dto.ProductReviewResponse;
-import com.example.toycontent.app.product.controller.dto.ProductReviewResponse.ReviewCreateResponse;
 import com.example.toycontent.app.product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.product.service.ProductService;
 import com.example.toycontent.app.common.annotation.CheckAdmin;
 import com.example.toycontent.app.common.annotation.CurrentUserId;
-import com.example.toycontent.app.common.annotation.CurrentUserName;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.Parameters;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -154,25 +147,4 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "상품 리뷰 작성", description = "상품 ID에 해당하는 상품을 리뷰합니다.")
-    @PostMapping("/{id}/reviews")
-    public ResponseEntity<ProductReviewResponse.ReviewCreateResponse> createProductReview(
-        @PathVariable @Parameter(description = "상품 ID") Long id,
-        @RequestBody @Valid ProductReviewRequest.CreateReview createReviewDto,
-        @CurrentUserId Long userId,
-        @CurrentUserName String userName) {
-        ReviewCreateResponse createdReview = productService.createReview(id, createReviewDto,
-            userId, userName);
-        return ResponseEntity.ok(createdReview);
-    }
-
-    @Operation(summary = "상품 리뷰 목록 조회", description = "상품 ID에 해당하는 리뷰 목록을 조회합니다.")
-    @GetMapping("/{id}/reviews")
-    public ResponseEntity<List<ProductReviewResponse.ReviewList>> getProductReviews(
-        @PathVariable @Parameter(description = "상품 ID") Long id,
-        @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-
-        List<ProductReviewResponse.ReviewList> reviews = productService.getReviews(id, pageable);
-        return ResponseEntity.ok(reviews);
-    }
 }
