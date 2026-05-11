@@ -165,6 +165,9 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
   private BooleanBuilder getWhereClauseWithSearchCondition(ProductSearchCondition searchCondition) {
     BooleanBuilder builder = new BooleanBuilder();
 
+    // 삭제된 제품은 모든 목록/검색에서 제외 (관리자 포함)
+    builder.and(product.isDeleted.isFalse());
+
     Optional.ofNullable(searchCondition.getKeyword())
         .ifPresent(keyword -> builder.and(product.name.contains(keyword))
             .or(product.brand.contains(keyword)));

@@ -161,9 +161,8 @@ public class ProductService {
      * @param currentUserId 현재 로그인한 사용자 ID (null 허용)
      */
     public ProductResponse.ProductDetail getProduct(Long id, Long currentUserId) {
-        // 제품 기본 정보 조회
-        Product product = productRepository.findById(id)
-            .orElseThrow(() -> new RestApiException(ProductErrorCode.PRODUCT_NOT_FOUND));
+        // 제품 기본 정보 조회 (삭제된 제품은 제외)
+        Product product = getProductByIdAndIsDeletedFalse(id);
 
         // 사용자 반응 정보 (로그인 사용자가 있을 때만 조회)
         ProductUserReaction productUserReaction = Optional.ofNullable(currentUserId)
@@ -225,7 +224,7 @@ public class ProductService {
 
     @Transactional
     public ReviewCreateResponse createReview(Long productId, ProductReviewRequest.CreateReview createReviewDto, Long userId, String userName) {
-        Product product = getProductById(productId);
+        Product product = getProductByIdAndIsDeletedFalse(productId);
 
         ProductReview productReview = createReviewDto.toEntity(product, userId, userName);
         productReviewRepository.save(productReview);
@@ -239,7 +238,7 @@ public class ProductService {
     }
 
     public List<ReviewList> getReviews(Long productId, Pageable pageable) {
-        Product product = getProductById(productId);
+        Product product = getProductByIdAndIsDeletedFalse(productId);
 
         List<ProductReview> productReviews = productReviewRepository.findProductReviews(productId,
             ReviewStatus.ACTIVE,
@@ -254,7 +253,7 @@ public class ProductService {
     public CursorResponse<ProductFeed> findProductFeeds(Long productId,  Long cursor,
         Integer requestSize) {
 
-        Product product = getProductById(productId);
+        Product product = getProductByIdAndIsDeletedFalse(productId);
 
         List<Feed> productFeeds = feedRepository.findByProductIdAndIsDeletedNot(product.getId(),
             false, cursor, requestSize + 1);
@@ -284,7 +283,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public CursorResponse<ProductBattle> findProductBattles(Long productId, Long cursor, int size) {
-        Product product = getProductById(productId);
+        Product product = getProductByIdAndIsDeletedFalse(productId);
 
         List<Battle> battlesContainingProduct = battleRepository.findBattlesContainingProduct(
             product.getId(), cursor, size + 1);
@@ -305,7 +304,7 @@ public class ProductService {
 
     @Transactional
     public ProductResponse.ProductUpdate updateProductStatus(Long productId, ProductStatusRequest request) {
-        Product product = getProductById(productId);
+        Product product = getProductByIdAndIsDeletedFalse(productId);
 
         product.updateStatus(request.getStatus(), request.getRejectReason());
 
@@ -313,8 +312,8 @@ public class ProductService {
     }
 
 
-    private Product getProductById(Long productId) {
-        return productRepository.findById(productId)
+    private Product getProductByIdAndIsDeletedFalse(Long productId) {
+        return productRepository.findByIdAndIsDeletedFalse(productId)
             .orElseThrow(() -> new RestApiException(ProductErrorCode.PRODUCT_NOT_FOUND));
     }
 
@@ -323,7 +322,7 @@ public class ProductService {
      */
     @Transactional
     public ProductResponse.ProductUpdate updateProduct(Long id, ProductRequest.ProductUpdate request) {
-        Product product = getProductById(id);
+        Product product = getProductByIdAndIsDeletedFalse(id);
 
         // 카테고리 조회 (categoryId 없으면 기존 유지)
         Category category = Optional.ofNullable(request.getCategoryId())
@@ -342,7 +341,7 @@ public class ProductService {
      */
     @Transactional
     public void deleteProduct(Long id) {
-        Product product = getProductById(id);
+        Product product = getProductByIdAndIsDeletedFalse(id);
         product.delete();
     }
 

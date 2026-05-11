@@ -44,7 +44,7 @@ public class ProductPopularityService {
 
     Slice<Product> products;
     do {
-      products = productRepository.findByStatus(
+      products = productRepository.findByStatusAndIsDeletedFalse(
               ProductStatus.APPROVED,
               PageRequest.of(page++, CHUNK_SIZE)
       );

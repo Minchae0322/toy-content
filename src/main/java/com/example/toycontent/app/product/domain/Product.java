@@ -45,7 +45,8 @@ import org.springframework.util.StringUtils;
     @Index(name = "idx_product_status", columnList = "status"),
     @Index(name = "idx_product_category", columnList = "category_id"),
     @Index(name = "idx_product_name", columnList = "name"),
-    @Index(name = "idx_product_brand", columnList = "brand")
+    @Index(name = "idx_product_brand", columnList = "brand"),
+    @Index(name = "idx_product_is_deleted", columnList = "is_deleted")
 })
 @NoArgsConstructor
 @AllArgsConstructor
@@ -122,6 +123,16 @@ public class Product extends BaseTimeEntity {
     @Comment("제품 출시일 (브랜드 공식 출시일)")
     private LocalDate releaseDate;
 
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    @ColumnDefault("0")
+    @Builder.Default
+    @Comment("삭제 여부 (soft delete)")
+    private Boolean isDeleted = false;
+
+    @Column(name = "deleted_at")
+    @Comment("삭제 일시")
+    private LocalDateTime deletedAt;
+
     @Column
     @ColumnDefault("0.0")
     @Comment("인기도 점수 (배치로 주기적 갱신)")
@@ -164,11 +175,11 @@ public class Product extends BaseTimeEntity {
     }
 
     /**
-     * 제품 삭제 — 참조 무결성을 위해 물리 삭제 대신 status를 REJECTED로 전환한다.
-     * 일반 유저는 APPROVED 상품만 조회하므로 노출에서 제외된다.
+     * 제품 삭제 — 참조 무결성을 위해 물리 삭제 대신 isDeleted 플래그를 세운다.
      */
     public void delete() {
-        this.status = ProductStatus.REJECTED;
+        this.isDeleted = true;
+        this.deletedAt = LocalDateTime.now();
     }
 
     /**
