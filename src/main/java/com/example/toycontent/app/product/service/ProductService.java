@@ -17,23 +17,15 @@ import com.example.toycontent.app.product.controller.dto.ProductResponse.Product
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductDetail;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductFeed;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductList;
-import com.example.toycontent.app.product.controller.dto.ProductReviewRequest;
-import com.example.toycontent.app.product.controller.dto.ProductReviewResponse.ReviewCreateResponse;
-import com.example.toycontent.app.product.controller.dto.ProductReviewResponse.ReviewList;
 import com.example.toycontent.app.product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.domain.ProductAttachmentFile;
-import com.example.toycontent.app.product.domain.ProductReview;
-import com.example.toycontent.app.product.domain.ProductReviewAttachmentFile;
 import com.example.toycontent.app.product.repository.ProductAttachmentFileRepository;
 import com.example.toycontent.app.product.repository.ProductReactionRepository;
 import com.example.toycontent.app.product.repository.ProductRepository;
-import com.example.toycontent.app.product.repository.ProductReviewAttachmentFileRepository;
-import com.example.toycontent.app.product.repository.ProductReviewRepository;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
-import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
@@ -60,10 +52,8 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductReactionRepository productReactionRepository;
-    private final ProductReviewRepository productReviewRepository;
     private final CategoryRepository categoryRepository;
     private final ProductAttachmentFileRepository productAttachmentFileRepository;
-    private final ProductReviewAttachmentFileRepository productReviewAttachmentFileRepository;
     private final FeedRepository feedRepository;
     private final ExternalUserInfoService externalUserInfoService;
     private final BattleRepository battleRepository;
@@ -120,34 +110,12 @@ public class ProductService {
     }
 
     /**
-     * 제품 첨부파일(대표 이미지 + 상세 이미지) 생성 - 썸네일(대표 이미지)와 상세 이미지 파일을 각각 엔티티로 변환 후 일괄 저장
-     */
-    private void createProductReviewAttachmentFiles(List<AttachmentInfo> attachmentInfos,
-        ProductReview productReview) {
-
-        // 상세 이미지 파일 생성 (순서 부여)
-        List<ProductReviewAttachmentFile> detailFiles = IntStream.range(0, attachmentInfos.size())
-            .mapToObj(
-                i -> createAttachmentFile(attachmentInfos.get(i), productReview, i + 1))
-            .toList();
-
-        // 대표 + 상세 이미지 통합 저장
-        productReviewAttachmentFileRepository.saveAll(
-           detailFiles
-        );
-    }
-
-    /**
      * 개별 첨부파일 생성 헬퍼 메서드
      * - AttachmentInfo → ProductAttachmentFile 변환
      * - 순서(order)와 대표 여부(isPrimary) 설정 포함
      */
     private ProductAttachmentFile createAttachmentFile(AttachmentInfo info, Product product, int order, boolean isPrimary) {
         return info.toEntity(product, order, isPrimary);
-    }
-
-    private ProductReviewAttachmentFile createAttachmentFile(AttachmentInfo info, ProductReview productReview, int order) {
-        return info.toEntity(productReview, order);
     }
 
     /**
@@ -220,33 +188,6 @@ public class ProductService {
         Long totalCount = productRepository.countByUserIdAndSearchCondition(userId, condition);
 
         return new PageImpl<>(productLists, pageable, totalCount);
-    }
-
-    @Transactional
-    public ReviewCreateResponse createReview(Long productId, ProductReviewRequest.CreateReview createReviewDto, Long userId, String userName) {
-        Product product = getProductByIdAndIsDeletedFalse(productId);
-
-        ProductReview productReview = createReviewDto.toEntity(product, userId, userName);
-        productReviewRepository.save(productReview);
-
-        createProductReviewAttachmentFiles(
-            createReviewDto.getAttachmentFileInfos(),
-            productReview
-        );
-
-        return ReviewCreateResponse.of(productReview);
-    }
-
-    public List<ReviewList> getReviews(Long productId, Pageable pageable) {
-        Product product = getProductByIdAndIsDeletedFalse(productId);
-
-        List<ProductReview> productReviews = productReviewRepository.findProductReviews(productId,
-            ReviewStatus.ACTIVE,
-            pageable);
-
-        return productReviews.stream()
-            .map(ReviewList::of)
-            .toList();
     }
 
     @Transactional(readOnly = true)

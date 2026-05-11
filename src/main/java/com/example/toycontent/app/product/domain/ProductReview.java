@@ -100,5 +100,22 @@ ProductReview extends BaseTimeEntity {
   @Comment("제품 첨부 파일 목록 (이미지, 문서 등)")
   private List<ProductReviewAttachmentFile> productReviewAttachmentFiles;
 
+  /**
+   * 리뷰 수정 — rating/comment 만 갱신 (partial update).
+   */
+  public void update(Integer rating, String comment) {
+    if (rating != null) {
+      this.rating = rating;
+    }
+    if (comment != null) {
+      this.comment = comment;
+    }
+  }
 
+  /**
+   * 리뷰 삭제 — status 를 DELETED 로 전환 (soft delete).
+   */
+  public void delete() {
+    this.status = ReviewStatus.DELETED;
+  }
 }
