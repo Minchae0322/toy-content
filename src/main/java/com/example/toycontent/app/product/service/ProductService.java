@@ -17,15 +17,18 @@ import com.example.toycontent.app.product.controller.dto.ProductResponse.Product
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductDetail;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductFeed;
 import com.example.toycontent.app.product.controller.dto.ProductResponse.ProductList;
+import com.example.toycontent.app.product.controller.dto.ProductReviewResponse;
 import com.example.toycontent.app.product.controller.dto.ProductSearchCondition;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.domain.ProductAttachmentFile;
 import com.example.toycontent.app.product.repository.ProductAttachmentFileRepository;
 import com.example.toycontent.app.product.repository.ProductReactionRepository;
 import com.example.toycontent.app.product.repository.ProductRepository;
+import com.example.toycontent.app.product.repository.ProductReviewRepository;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.ProductStatus;
+import com.example.toycontent.app.common.enumuration.ReviewStatus;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
 import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
@@ -52,6 +55,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductReactionRepository productReactionRepository;
+    private final ProductReviewRepository productReviewRepository;
     private final CategoryRepository categoryRepository;
     private final ProductAttachmentFileRepository productAttachmentFileRepository;
     private final FeedRepository feedRepository;
@@ -138,12 +142,12 @@ public class ProductService {
             .map(ProductUserReaction::of)
             .orElse(ProductUserReaction.createDefault());
 
-      /*  // 활성 리뷰 목록 조회
+        // 활성 리뷰 목록 조회
         List<ProductReviewResponse.ReviewList> productReviewResponses = productReviewRepository
-            .searchProductReviews(product.getId(), ReviewStatus.ACTIVE);*/
+            .searchProductReviews(product.getId(), ReviewStatus.ACTIVE);
 
         // 종합 DTO로 변환 후 반환
-        return ProductDetail.of(product, productUserReaction);
+        return ProductDetail.of(product, productUserReaction, productReviewResponses);
     }
 
     /**
