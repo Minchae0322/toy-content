@@ -13,6 +13,7 @@ import com.example.toycontent.app.product.domain.ProductReviewAttachmentFile;
 import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.app.product.repository.ProductReviewAttachmentFileRepository;
 import com.example.toycontent.app.product.repository.ProductReviewRepository;
+import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import java.util.List;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
@@ -27,13 +28,15 @@ public class ProductReviewService {
     private final ProductRepository productRepository;
     private final ProductReviewRepository productReviewRepository;
     private final ProductReviewAttachmentFileRepository productReviewAttachmentFileRepository;
+    private final ExternalUserInfoService externalUserInfoService;
 
     @Transactional
     public ReviewCreateResponse createReview(Long productId,
-        ProductReviewRequest.CreateReview createReviewDto, Long userId, String userName) {
+        ProductReviewRequest.CreateReview createReviewDto, Long userId) {
         Product product = getActiveProduct(productId);
 
-        ProductReview productReview = createReviewDto.toEntity(product, userId, userName);
+        String nickname = externalUserInfoService.getUserNickname(userId);
+        ProductReview productReview = createReviewDto.toEntity(product, userId, nickname);
         productReviewRepository.save(productReview);
 
         createProductReviewAttachmentFiles(createReviewDto.getAttachmentFileInfos(), productReview);
