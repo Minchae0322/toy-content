@@ -118,7 +118,6 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
         ))
         .from(product)
         .leftJoin(product.category, category)
-        .leftJoin(product.productReviews, productReview)
         .leftJoin(product.productAttachmentFiles, productAttachmentFile)
         .on(productAttachmentFile.product.id.eq(product.id)
             .and(productAttachmentFile.isPrimary.isTrue()));
