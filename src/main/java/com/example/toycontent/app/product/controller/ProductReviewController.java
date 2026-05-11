@@ -1,7 +1,6 @@
 package com.example.toycontent.app.product.controller;
 
 import com.example.toycontent.app.common.annotation.CurrentUserId;
-import com.example.toycontent.app.common.annotation.CurrentUserName;
 import com.example.toycontent.app.product.controller.dto.ProductReviewRequest;
 import com.example.toycontent.app.product.controller.dto.ProductReviewResponse;
 import com.example.toycontent.app.product.controller.dto.ProductReviewResponse.ReviewCreateResponse;
@@ -39,10 +38,9 @@ public class ProductReviewController {
     public ResponseEntity<ReviewCreateResponse> createProductReview(
         @PathVariable @Parameter(description = "상품 ID") Long productId,
         @RequestBody @Valid ProductReviewRequest.CreateReview createReviewDto,
-        @CurrentUserId Long userId,
-        @CurrentUserName String userName) {
+        @CurrentUserId Long userId) {
         ReviewCreateResponse createdReview = productReviewService.createReview(productId,
-            createReviewDto, userId, userName);
+            createReviewDto, userId);
         return ResponseEntity.ok(createdReview);
     }
 
