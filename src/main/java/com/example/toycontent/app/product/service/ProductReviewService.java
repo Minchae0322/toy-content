@@ -37,6 +37,7 @@ public class ProductReviewService {
         productReviewRepository.save(productReview);
 
         createProductReviewAttachmentFiles(createReviewDto.getAttachmentFileInfos(), productReview);
+        recalculateAvgRating(product);
 
         return ReviewCreateResponse.of(productReview);
     }
@@ -60,6 +61,10 @@ public class ProductReviewService {
         verifyOwner(review, userId);
 
         review.update(request.getRating(), request.getComment());
+
+        if (request.getRating() != null) {
+            recalculateAvgRating(review.getProduct());
+        }
     }
 
     @Transactional
@@ -68,6 +73,17 @@ public class ProductReviewService {
         verifyOwner(review, userId);
 
         review.delete();
+        recalculateAvgRating(review.getProduct());
+    }
+
+    /**
+     * ACTIVE 리뷰들의 AVG(rating) 으로 제품 평균 평점을 갱신한다.
+     * 같은 트랜잭션 안의 직전 변경(save/dirty/soft-delete)은 JPA AUTO flush 로
+     * AVG 쿼리 실행 전에 DB 에 반영되므로 결과는 최신 상태를 반영한다.
+     */
+    private void recalculateAvgRating(Product product) {
+        Double avg = productReviewRepository.findAverageRating(product.getId(), ReviewStatus.ACTIVE);
+        product.applyAvgRating(avg);
     }
 
     private Product getActiveProduct(Long productId) {

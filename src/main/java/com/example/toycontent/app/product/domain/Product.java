@@ -183,6 +183,14 @@ public class Product extends BaseTimeEntity {
     }
 
     /**
+     * 평균 평점 갱신. ACTIVE 리뷰의 AVG(rating) 결과를 그대로 반영하며,
+     * 리뷰가 없어 결과가 null 이면 0.0 으로 초기화한다.
+     */
+    public void applyAvgRating(Double avg) {
+        this.avgRating = avg != null ? avg : 0.0;
+    }
+
+    /**
      * 제품 정보 업데이트 (첨부파일 제외).
      * - request의 non-null 필드만 갱신 (partial update)
      * - category는 서비스에서 조회/유지 결정 후 전달
