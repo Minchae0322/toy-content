@@ -256,7 +256,7 @@ public abstract class ProductResponse {
                 .viewCount(product.getViewCount())
                 .likeCount(product.getLikeCount())
                 .averageRating(product.getAvgRating())
-                .reviewCount(product.getProductReviews().size())
+                .reviewCount(reviews.size())
                 .creatorId(product.getCreatorId())
                 .releaseDate(product.getReleaseDate())
                 .createdAt(product.getCreatedAt())
