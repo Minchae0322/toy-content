@@ -2,6 +2,12 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}  # 환경변수로 제어
 
+  application:
+    name: content-service                    # 메트릭/트레이스 라벨에 사용
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s          # graceful shutdown 최대 대기
+
   jpa:
     show-sql: false
     hibernate:
@@ -23,6 +29,77 @@ spring:
       max-file-size: 1GB
       max-request-size: 1GB
       file-size-threshold: 2KB
+
+server:
+  shutdown: graceful                         # Pod 종료 시 in-flight 요청 보호
+
+# ============================================
+# Actuator — 관리 포트(8090) 분리
+# ============================================
+management:
+  server:
+    port: 8090
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState, db, redis
+  info:
+    env:
+      enabled: true
+    git:
+      mode: full
+    build:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 100ms, 200ms, 500ms, 1s, 2s
+      minimum-expected-value:
+        http.server.requests: 10ms
+      maximum-expected-value:
+        http.server.requests: 10s
+    enable:
+      jvm.memory: true
+      jvm.gc: true
+      jvm.threads: true
+      hikaricp: true
+      http.server.requests: true
+      tomcat.threads: true
+      logback: true
+      jvm.classes: false       # 카디널리티 폭증 방어
+      jvm.buffer: false
+      jdbc: false
+      tomcat.cache: false
+      tomcat.servlet: false
+  tracing:
+    propagation:
+      type: b3
+    sampling:
+      probability: ${TRACING_SAMPLING_RATE:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${TEMPO_ZIPKIN_ENDPOINT:http://tempo.monitoring:9411/api/v2/spans}
+
+logging:
+  pattern:
+    level: "%5p [traceId=%X{traceId:-NONE},spanId=%X{spanId:-NONE},userId=%X{userId:-NONE}]"
 
 springdoc:
   api-docs:
