@@ -24,6 +24,11 @@ bootJar {
     archiveFileName = 'app.jar'
 }
 
+// /actuator/info에 빌드 시간/버전 노출 — 배포 식별용
+springBoot {
+    buildInfo()
+}
+
 repositories {
     mavenCentral()
 }

@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +24,8 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
+
+    private static final String MDC_USER_ID = "userId";
 
     private final JwtParser tokenProvider;
 
@@ -52,21 +55,29 @@ public class JwtFilter extends OncePerRequestFilter {
                 new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            if (userId != null) {
+                MDC.put(MDC_USER_ID, String.valueOf(userId));
+            }
         }
 
-        // Optional 인증 경로는 토큰 없어도 통과
-        if (isOptionalAuthPath(request)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        try {
+            // Optional 인증 경로는 토큰 없어도 통과
+            if (isOptionalAuthPath(request)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-        // 필수 인증 경로는 인증 정보 필요
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+            // 필수 인증 경로는 인증 정보 필요
+            if (SecurityContextHolder.getContext().getAuthentication() != null) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+        } finally {
+            MDC.remove(MDC_USER_ID);
+        }
     }
 
     private boolean isOptionalAuthPath(HttpServletRequest request) {
