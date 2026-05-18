@@ -39,6 +39,15 @@ public class MetricsConfig {
         METRIC_HTTP_SERVER_REQUESTS, TAG_URI, MAX_URI_TAG_VALUES, MeterFilter.deny());
   }
 
+  /**
+   * Spring Boot 3 Observation API가 추가한 `error` 태그는 기존 `exception` 태그와 값이 동일.
+   * 양쪽 다 유지하면 시리즈 차원이 한 단계 더 곱해져 Grafana Cloud Free 10k 한도를 압박한다.
+   */
+  @Bean
+  public MeterFilter dropRedundantErrorTag() {
+    return MeterFilter.ignoreTags("error");
+  }
+
   /** Alloy/Prometheus scrape가 자기 자신을 측정하는 루프를 만들지 않도록 제외. */
   @Bean
   public MeterFilter denyActuatorUri() {
