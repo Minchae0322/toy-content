@@ -115,3 +115,11 @@ app:
     daily-exp-cap: 1000
     time-zone: Asia/Seoul
 
+feed:
+  hot:
+    min-views: ${FEED_HOT_MIN_VIEWS:5}    # 핫 목록 노출 자격 최소 조회수 (0이면 비활성)
+
+product:
+  popularity:
+    decay-half-life-days: ${PRODUCT_POPULARITY_HALF_LIFE_DAYS:10}   # 지수 감쇠 반감기 (피드보다 길게 — 인기가 오래 가도록)
+
