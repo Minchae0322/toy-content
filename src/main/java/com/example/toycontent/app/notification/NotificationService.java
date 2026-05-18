@@ -63,7 +63,7 @@ public class NotificationService {
         .actorId(actorId)
         .actorNickname(actorNickname)
         .actorProfileImageUrl(actorProfileImageUrl)
-        .channels(List.of(NotificationChannel.IN_APP))
+        .channels(List.of(NotificationChannel.IN_APP, NotificationChannel.PUSH))
         .build()
     );
   }
@@ -118,7 +118,7 @@ public class NotificationService {
         .actorId(actorId)
         .actorNickname(actorNickname)
         .actorProfileImageUrl(actorProfileImageUrl)
-        .channels(List.of(NotificationChannel.IN_APP))
+        .channels(List.of(NotificationChannel.IN_APP, NotificationChannel.PUSH))
         .build()
     );
   }
@@ -180,7 +180,7 @@ public class NotificationService {
         .actorId(actorId)
         .actorNickname(actorNickname)
         .actorProfileImageUrl(actorProfileImageUrl)
-        .channels(List.of(NotificationChannel.IN_APP))
+        .channels(List.of(NotificationChannel.IN_APP, NotificationChannel.PUSH))
         .build()
     );
   }
@@ -198,7 +198,7 @@ public class NotificationService {
         .content(NotificationType.SYSTEM.formatContent(content))
         .referenceType(NotificationReferenceType.SYSTEM)
         .actionUrl(actionUrl)
-        .channels(List.of(NotificationChannel.IN_APP))
+        .channels(List.of(NotificationChannel.IN_APP, NotificationChannel.PUSH))
         .build()
     );
   }
