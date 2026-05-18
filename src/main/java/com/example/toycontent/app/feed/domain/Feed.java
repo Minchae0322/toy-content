@@ -269,6 +269,26 @@ public class Feed extends BaseTimeEntity {
   }
 
   /**
+   * 리액션 비활성화 — 컬렉션은 유지하고 카운트만 감소 (soft delete).
+   */
+  public void deactivateReaction(FeedReaction reaction) {
+    reaction.deactivate();
+    if (reaction.getReactionType() == FeedReactionType.LIKE) {
+      decrementLikeCount();
+    }
+  }
+
+  /**
+   * 비활성 리액션 재활성화 — 카운트만 증가 (이미 컬렉션엔 존재).
+   */
+  public void reactivateReaction(FeedReaction reaction) {
+    reaction.reactivate();
+    if (reaction.getReactionType() == FeedReactionType.LIKE) {
+      incrementLikeCount();
+    }
+  }
+
+  /**
    * 완성도 보너스 지급 완료 처리
    */
   public void markQualityBonusGranted() {

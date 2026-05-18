@@ -104,16 +104,16 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
    * <pre>
    *   hotScore = engagementScore / decayFactor
    *
-   *   engagementScore = (like_count × 2) + (view_count × 0.1)
-   *   decayFactor     = POWER(GREATEST(경과시간(h) + 12, 1), 1.2)
+   *   engagementScore = (like_count × 5) + (comment_count × 3) + (view_count × 0.5)
+   *   decayFactor     = POWER(GREATEST(경과시간(h) + 24, 1), 0.9)
    * </pre>
    *
-   * <p>계산 근거:</p>
+   * <p>계산 근거 (저트래픽 단계 기준):</p>
    * <ul>
-   *   <li>좋아요(×2): 적극적인 참여 행동으로 가중치를 높게 부여</li>
-   *   <li>조회수(×0.1): 수동적 행동이므로 낮은 가중치 부여</li>
-   *   <li>시간 감쇠(1.2승): 완만한 감쇠로, 인기 있던 피드는 1주일이 지나도 노출 가능</li>
-   *   <li>+12 보정: 초기 12시간은 감쇠를 평탄화하여 인기 피드가 반나절 이상 노출되도록 함</li>
+   *   <li>좋아요(×5) > 댓글(×3) > 조회(×0.5): 참여 강도 순. 1 like = 10 view,
+   *       1 comment = 6 view 가중치. 누적 조회량이 많아질수록 view도 의미 있는 시그널이 됨.</li>
+   *   <li>시간 감쇠(0.9승, +24 평탄): 3일 정도 누적 호응을 받은 피드는 7일차에서도
+   *       경쟁력을 갖되, 그 이상은 새 시그널 없이 무한 노출되지 않도록 균형점 잡음.</li>
    * </ul>
    *
    * @param since 이 시각 이후 updated_at이 갱신된 피드만 대상
@@ -122,8 +122,8 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
   @Modifying(clearAutomatically = true)
   @Query(value = """
     UPDATE tb_feed
-    SET hot_score = (like_count * 2 + view_count * 0.1)
-                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 12, 1), 1.2)
+    SET hot_score = (like_count * 5 + comment_count * 3 + view_count * 0.5)
+                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 24, 1), 0.9)
     WHERE deleted = false
       AND updated_at >= :since
     """, nativeQuery = true)
@@ -142,8 +142,8 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
   @Modifying(clearAutomatically = true)
   @Query(value = """
     UPDATE tb_feed
-    SET hot_score = (like_count * 2 + view_count * 0.1)
-                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 12, 1), 1.2)
+    SET hot_score = (like_count * 5 + comment_count * 3 + view_count * 0.5)
+                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 24, 1), 0.9)
     WHERE deleted = false
       AND created_at >= DATE_SUB(NOW(), INTERVAL :recentDays DAY)
     """, nativeQuery = true)

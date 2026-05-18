@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -64,6 +65,9 @@ public class FeedService {
   private final UserRewardService userRewardService;
 
   private static final int HOT_FEED_RECENT_DAYS = 30;
+
+  @Value("${feed.hot.min-views:5}")
+  private int hotFeedMinViews;
   
   /**
    * 피드 목록 조회 (커서 페이징) - 탐색/검색용
@@ -144,7 +148,7 @@ public class FeedService {
    */
   public Page<FeedResponse.HotFeedResponse> getHotFeeds(Pageable pageable) {
     // 실시간 핫 스코어 계산하여 조회
-    return feedRepository.findAllByHotScore(HOT_FEED_RECENT_DAYS, pageable);
+    return feedRepository.findAllByHotScore(HOT_FEED_RECENT_DAYS, hotFeedMinViews, pageable);
   }
 
 
@@ -155,7 +159,7 @@ public class FeedService {
     Feed feed = findFeedById(feedId);
 
     List<FeedReaction> usersReactions = Optional.ofNullable(userId)
-        .map(currentUserId -> feedReactionRepository.findByFeedIdAndUserId(feedId, currentUserId))
+        .map(currentUserId -> feedReactionRepository.findByFeedIdAndUserIdAndIsActiveTrue(feedId, currentUserId))
         .orElse(Collections.emptyList());
 
     ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
