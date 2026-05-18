@@ -90,7 +90,7 @@ management:
       tomcat.servlet: false
   tracing:
     propagation:
-      type: b3
+      type: w3c
     sampling:
       probability: ${TRACING_SAMPLING_RATE:1.0}
   zipkin:

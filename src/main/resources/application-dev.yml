@@ -124,7 +124,7 @@ management:
       tomcat.servlet: false
   tracing:
     propagation:
-      type: b3                                  # ➕ MSA 간 trace 전파 명시 (Auth/Chat 동일)
+      type: w3c                                 # ➕ MSA 간 trace 전파 — W3C 표준 (Auth/Chat 동일)
     sampling:
       probability: ${TRACING_SAMPLING_RATE:1.0} # ➕ 환경변수로 제어 (운영에선 0.1 등)
   zipkin:
