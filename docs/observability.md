@@ -6,6 +6,54 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-05-19 — Tempo 연결 완성 (Alloy zipkin receiver 도입)
+
+### 왜 했나
+
+content-service Pod 로그에 다음 에러가 반복:
+
+```
+WebClientRequestException: Failed to resolve 'tempo.monitoring' [A(1)]
+Spans were dropped due to exceptions.
+```
+
+원인: yml의 `TEMPO_ZIPKIN_ENDPOINT` 기본값(`http://tempo.monitoring:9411/...`)은 **자체 호스팅 Tempo** 가정의 placeholder였는데, 실제 운영은 **Grafana Cloud Free + Alloy** 구조라 해당 호스트가 클러스터 DNS에 존재하지 않아 NXDOMAIN. 트레이스가 생성되어도 전송 단계에서 전부 drop.
+
+MDC 패턴(`[traceId=...,spanId=...,userId=11]`)과 Brave instrumentation은 모두 정상 작동 중. 즉 **앱 코드는 트레이스를 만들고 있는데, 받아주는 쪽이 없어서 버려지는 상태**였다.
+
+### 무엇을 했나
+
+| 단계 | 변경 |
+|---|---|
+| **k8s-monitoring chart values.yaml** | `alloy-receiver: { enabled: true, extraPorts: [9411 zipkin] }` 활성화. nodeSelector를 다른 컴포넌트와 동일하게 worker1(`ip-172-31-45-39`)로 핀. |
+| **destinations 배열** | `grafana-cloud-traces` (type=otlp, protocol=grpc) 추가. URL은 chart validation이 알려준 `tempo-prod-20-prod-ap-northeast-0.grafana.net:443`. Tempo는 traces 전용이라 `metrics.enabled: false, logs.enabled: false, traces.enabled: true` 명시. |
+| **helm upgrade** | `--version 3.8.7` 로 pin (latest 4.0.3은 destinations 스키마가 array→map으로 breaking change). revision 6으로 적용. |
+| **content-service Deployment** | env 추가: `TEMPO_ZIPKIN_ENDPOINT=http://grafana-k8s-monitoring-alloy-receiver.monitoring.svc.cluster.local:9411/api/v2/spans` — base yml 기본값을 override해 클러스터 내부 svc로 직행. |
+
+### 핵심 의사결정
+
+- **Brave/Zipkin 포맷 유지** — 앱 의존성(`micrometer-tracing-bridge-brave` + `zipkin-reporter-brave`) 그대로. OTLP로 전환하려면 의존성 + yml 모두 바꿔야 하는데, k8s-monitoring chart가 zipkin receiver를 기본 노출해주므로 굳이 옮길 이유 없음. 추후 DB/Redis 자동 계측이 필요해질 때 OpenTelemetry agent와 함께 재검토.
+- **앱은 클러스터 내부 Alloy로만 전송** — 앱이 Grafana Cloud Tempo로 직접 가지 않음. Alloy가 인증/배치/재시도/포맷 변환(zipkin → OTLP)을 담당. 앱 코드는 모니터링 백엔드(Grafana Cloud)에 무관 — 자체 호스팅으로 전환 시에도 Alloy 설정만 바꾸면 됨.
+- **chart는 3.8.7 고정** — 4.x로 점프하면 destinations 스키마 마이그레이션이 필요해서 이번 작업 scope 밖. 별도 정리 작업으로 분리.
+- **GitHub egress 차단 잠시 해제** — EC2 SG가 outbound 제한 중이라 helm chart 다운로드가 timeout. 임시로 풀고 `helm upgrade` 후 다시 닫는 운영 패턴. 장기적으로는 NAT GW 또는 사설 helm repo 미러 고려.
+
+### 검증 결과
+
+- `alloy-receiver` Pod `Running 2/2`, Service에 `9411/TCP` 노출 확인
+- Alloy 로그: `otelcol.receiver.zipkin.receiver` 컴포넌트 정상 기동, 에러 없음
+- content-service 로그에서 `WebClientRequestException` / `Spans were dropped` 사라짐
+- Grafana Explore → Tempo → Search by TraceID로 trace 트리 확인 가능
+
+### 다음 단계
+
+- [ ] Grafana 데이터소스 설정: Loki `derivedFields`에 `traceId=(\w+)` 정규식 + Tempo internal link → 로그에서 클릭 한 번으로 trace 점프
+- [ ] Tempo 데이터소스의 `tracesToLogsV2` 설정 → trace에서 "Logs for this span" 으로 역방향 점프
+- [ ] 24h 정도 데이터 쌓고 Service Graph 확인 (auth-service ↔ content-service 호출 관계)
+- [ ] DB/Redis span 자동 계측은 보류 — 필요해지면 datasource-proxy 또는 OTel agent 도입 별도 판단
+- [ ] EC2 outbound 영구 정책: GitHub IP 범위만 화이트리스트 또는 NAT GW 도입 (보안 vs 운영 편의 트레이드오프)
+
+---
+
 ## 2026-05-18 — Loki / Tempo 검증 계획
 
 메트릭(`/actuator/prometheus`)은 Grafana Cloud에서 확인됨. 다음은 같은 traceId로 **로그(Loki)** 와 **트레이스(Tempo)** 도 묶이는지 확인하는 단계.
