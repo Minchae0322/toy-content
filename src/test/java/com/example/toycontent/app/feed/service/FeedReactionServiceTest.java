@@ -99,8 +99,8 @@ class FeedReactionServiceTest {
     }
 
     @Test
-    @DisplayName("기존 리액션이 있으면 제거하고 알림은 발송하지 않는다")
-    void 기존_리액션_제거() {
+    @DisplayName("활성 리액션이 있으면 비활성화하고 알림은 발송하지 않는다")
+    void 기존_리액션_비활성화() {
       // given
       Feed feed = FeedFixture.withLikeCount(5);
       FeedReaction existing = FeedReactionFixture.like(feed);
@@ -123,10 +123,44 @@ class FeedReactionServiceTest {
         softly.assertThat(result.getReactionType())
             .as("리액션 타입")
             .isEqualTo(FeedReactionType.LIKE);
+        softly.assertThat(existing.isActive())
+            .as("리액션은 hard delete가 아닌 soft delete로 비활성화")
+            .isFalse();
       });
 
-      then(feedReactionRepository).should().delete(existing);
+      then(feedReactionRepository).should(never()).delete(any());
       then(feedRepository).should().save(feed);
+      then(notificationService).should(never())
+          .notifyFeedLike(anyLong(), anyLong(), anyString(), any(), anyLong(), anyString());
+    }
+
+    @Test
+    @DisplayName("비활성 리액션이 있으면 재활성화하되 알림은 보내지 않는다 (이미 과거에 발송)")
+    void 비활성_리액션_재활성화() {
+      // given
+      Feed feed = FeedFixture.withLikeCount(4);
+      FeedReaction inactive = FeedReactionFixture.like(feed);
+      inactive.deactivate();
+      given(feedRepository.findByIdWithPessimisticLock(FEED_ID))
+          .willReturn(Optional.of(feed));
+      given(feedReactionRepository.findByFeedIdAndUserIdAndReactionType(
+          FEED_ID, ACTOR_USER_ID, FeedReactionType.LIKE))
+          .willReturn(Optional.of(inactive));
+
+      // when
+      ReactionResult result = feedReactionService
+          .toggleReaction(FEED_ID, ACTOR_USER_ID, FeedReactionType.LIKE);
+
+      // then
+      assertSoftly(softly -> {
+        softly.assertThat(result.getAction())
+            .as("수행된 액션")
+            .isEqualTo("added");
+        softly.assertThat(inactive.isActive())
+            .as("비활성 리액션이 다시 활성화")
+            .isTrue();
+      });
+
       then(notificationService).should(never())
           .notifyFeedLike(anyLong(), anyLong(), anyString(), any(), anyLong(), anyString());
     }
@@ -153,8 +187,8 @@ class FeedReactionServiceTest {
   class RemoveReaction {
 
     @Test
-    @DisplayName("대상 리액션이 존재하면 제거된다")
-    void 정상_제거() {
+    @DisplayName("활성 리액션이 존재하면 비활성화된다")
+    void 정상_비활성화() {
       // given
       Feed feed = FeedFixture.withLikeCount(3);
       FeedReaction existing = FeedReactionFixture.like(feed);
@@ -169,12 +203,13 @@ class FeedReactionServiceTest {
       feedReactionService.removeReaction(FEED_ID, ACTOR_USER_ID, FeedReactionType.LIKE);
 
       // then
-      then(feedReactionRepository).should().delete(existing);
+      assertThat(existing.isActive()).isFalse();
+      then(feedReactionRepository).should(never()).delete(any());
       then(feedRepository).should().save(feed);
     }
 
     @Test
-    @DisplayName("대상 리액션이 없으면 RestApiException을 던진다")
+    @DisplayName("대상 리액션이 없거나 이미 비활성이면 RestApiException을 던진다")
     void 리액션_없음_예외() {
       // given
       Feed feed = FeedFixture.withLikeCount(3);
@@ -202,7 +237,7 @@ class FeedReactionServiceTest {
     void 둘_다_있음() {
       // given
       Feed feed = FeedFixture.basic();
-      given(feedReactionRepository.findByFeedIdAndUserId(FEED_ID, ACTOR_USER_ID))
+      given(feedReactionRepository.findByFeedIdAndUserIdAndIsActiveTrue(FEED_ID, ACTOR_USER_ID))
           .willReturn(List.of(
               FeedReactionFixture.like(feed),
               FeedReactionFixture.hot(feed)
@@ -223,7 +258,7 @@ class FeedReactionServiceTest {
     void LIKE만_있음() {
       // given
       Feed feed = FeedFixture.basic();
-      given(feedReactionRepository.findByFeedIdAndUserId(FEED_ID, ACTOR_USER_ID))
+      given(feedReactionRepository.findByFeedIdAndUserIdAndIsActiveTrue(FEED_ID, ACTOR_USER_ID))
           .willReturn(List.of(FeedReactionFixture.like(feed)));
 
       // when
@@ -240,7 +275,7 @@ class FeedReactionServiceTest {
     @DisplayName("리액션이 하나도 없으면 둘 다 false를 반환한다")
     void 리액션_없음() {
       // given
-      given(feedReactionRepository.findByFeedIdAndUserId(FEED_ID, ACTOR_USER_ID))
+      given(feedReactionRepository.findByFeedIdAndUserIdAndIsActiveTrue(FEED_ID, ACTOR_USER_ID))
           .willReturn(List.of());
 
       // when

@@ -74,7 +74,7 @@ class FeedServiceTest {
       Feed feed = FeedFixture.withId(FEED_ID);
       int previousViewCount = feed.getViewCount();
       given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
-      given(feedReactionRepository.findByFeedIdAndUserId(FEED_ID, FEED_OWNER_ID))
+      given(feedReactionRepository.findByFeedIdAndUserIdAndIsActiveTrue(FEED_ID, FEED_OWNER_ID))
           .willReturn(List.of());
       given(externalUserInfoService.getUserInfo(feed.getUserId()))
           .willReturn(ExternalUserInfo.builder().userId(feed.getUserId()).nickname("작성자").build());

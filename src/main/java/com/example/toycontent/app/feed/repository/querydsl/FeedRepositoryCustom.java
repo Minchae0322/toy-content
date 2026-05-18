@@ -17,8 +17,11 @@ public interface FeedRepositoryCustom {
 
   /**
    * 핫 스코어 기반 피드 조회
+   *
+   * @param recentDays  포함 대상 기간(일)
+   * @param minViews    노출 자격 최소 조회수 (0이면 비활성)
    */
-  Page<HotFeedResponse> findAllByHotScore(int recentDays, Pageable pageable);
+  Page<HotFeedResponse> findAllByHotScore(int recentDays, int minViews, Pageable pageable);
 
   List<Feed> findFollowingFeeds(Following condition, List<Long> followings);
 

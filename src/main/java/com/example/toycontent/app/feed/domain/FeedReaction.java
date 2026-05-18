@@ -59,12 +59,26 @@ public class FeedReaction extends BaseTimeEntity {
   @Column(nullable = false, length = 20)
   private FeedReactionType reactionType;
 
+  @Column(name = "is_active", nullable = false)
+  @Comment("리액션 활성 여부 — 취소 시 false. 재리액션 시 true로 복귀하여 푸시 중복 방지에 사용.")
+  @Builder.Default
+  private boolean isActive = true;
+
   public static FeedReaction create(Feed feed, Long userId, FeedReactionType reactionType) {
     return FeedReaction.builder()
         .feed(feed)
         .userId(userId)
         .reactionType(reactionType)
+        .isActive(true)
         .build();
+  }
+
+  public void deactivate() {
+    this.isActive = false;
+  }
+
+  public void reactivate() {
+    this.isActive = true;
   }
 
 }

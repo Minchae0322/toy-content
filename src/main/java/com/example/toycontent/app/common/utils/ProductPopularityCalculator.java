@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -32,8 +33,14 @@ public class ProductPopularityCalculator {
 
   // 시간 감쇠 설정
   private static final int RECENT_DAYS = 30;
-  private static final double DECAY_HALF_LIFE_DAYS = 7.0;
   private static final double DEFAULT_DECAY = 0.5;
+
+  /**
+   * 인기도 감쇠 반감기(일). 피드보다 길게 잡아 한번 인기를 끈 상품이 더 오래 노출되도록 함.
+   * 예: 14일이면 Day 14에 50%, Day 30에 약 23%까지 유지.
+   */
+  @Value("${product.popularity.decay-half-life-days:14}")
+  private double decayHalfLifeDays;
 
   /**
    * 상품의 인기도 점수 계산
@@ -142,7 +149,7 @@ public class ProductPopularityCalculator {
     }
 
     long daysSinceActivity = ChronoUnit.DAYS.between(lastActivity, LocalDateTime.now());
-    double lambda = Math.log(2) / DECAY_HALF_LIFE_DAYS;
+    double lambda = Math.log(2) / decayHalfLifeDays;
 
     return Math.exp(-lambda * daysSinceActivity);
   }
