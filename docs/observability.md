@@ -6,6 +6,46 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-05-19 추가 — Tempo 실제 연결 (401 인증 문제 해결)
+
+### 증상
+
+- helm 적용 + Alloy receiver Pod 정상 기동
+- content-service → Alloy 전송은 성공 (앱 로그 깨끗)
+- Alloy → Grafana Cloud Tempo 전송 단계에서 `401 Unauthorized`
+- Grafana Explore Tempo Search: 0건
+
+### 원인
+
+- 기존 사용 중이던 Access Policy 토큰이 **read-only** 권한
+- 정책 이름: `stack-1606854-ht-read` (scopes: `traces:read`, ...)
+- `traces:write` 권한 없는 토큰으로 Alloy가 OTLP push 시도 → 401
+
+### 조치
+
+1. Grafana Cloud → Access Policies → 새 정책 생성
+   - scope: `traces:write` (필수)
+   - realm: `prod-ap-northeast-0`
+2. 토큰 발급 후 `values.yaml`의 `grafana-cloud-traces` destination의 `password` 교체
+3. `helm upgrade --version 3.8.7` (revision 8)
+4. ⚠️ `alloy-receiver`는 **DaemonSet** (StatefulSet 아님)
+   → `kubectl rollout restart daemonset/...` 또는 `kubectl delete pod`로 강제 재시작
+5. 재시작 후 `dropped_items` 사라짐 확인
+
+```bash
+# Controller 종류 확인
+kubectl get daemonset -n monitoring | grep alloy
+```
+
+### 학습 포인트
+
+- **Access Policy 토큰의 권한은 이름이 아니라 scope로 결정** — 이전 토큰 이름이 `*-read-*`였지만 발급 시 실제로 어떤 scope를 줬는지가 핵심. 이름만 보고 권한을 짐작하면 안 됨.
+- **"Helm upgrade 성공 = Pod 재시작"이 아님** — config(Secret/ConfigMap)이 바뀌어도 기존 Pod는 옛날 메모리 상태 유지 가능. 명시적 rollout restart 필요.
+- **chart의 controller 종류(Deployment/StatefulSet/DaemonSet)를 정확히 알아야 재시작 명령이 맞음** — `kubectl rollout restart deployment/x`는 DaemonSet에 안 먹힌다. 먼저 `kubectl get all -n <ns>`로 controller kind 확인할 것.
+- **에러는 hop 단위로 끊어서 본다** — 앱 로그 깨끗 ≠ end-to-end OK. Alloy 자체 로그/메트릭(`otelcol_exporter_send_failed_log_records`, `dropped_items`)을 따로 봐야 송신 측 실패가 보인다.
+
+---
+
 ## 2026-05-19 — Tempo 연결 완성 (Alloy zipkin receiver 도입)
 
 ### 왜 했나
