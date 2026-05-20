@@ -6,6 +6,101 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-05-21 — toy-chat 표준 이식 + WebSocket 관측성
+
+### 왜 했나
+
+3-tier MSA(auth → content → chat)의 Service Graph를 Tempo에서 보려면 모든 서비스가 **같은 traceId/span 컨벤션**으로 telemetry를 내야 한다. toy-content/toy-auth는 표준화 완료, 마지막 남은 toy-chat이 가장 결핍이 컸음:
+
+| 항목 | toy-chat 이전 상태 |
+|---|---|
+| tracing 의존성(brave bridge, zipkin reporter) | 부재 — trace 자체가 생성 안 됨 |
+| `application.yml` management 블록 | 거의 부재 (prometheus만 expose) |
+| graceful shutdown / app.name | 부재 |
+| MetricsConfig (MeterFilter) | 부재 — URI 카디널리티 무방어 |
+| JwtFilter MDC | 부재 |
+| **WebSocket 메시지의 MDC** | **부재** — 채팅 메시지 로그가 userId=NONE으로 찍힘 |
+| WebSocket 메트릭 | 부재 |
+
+WebSocket이 끼어 있어서 HTTP 서비스와 똑같이 가면 부족함 — 메시지 처리 스레드가 다른 풀이라 MDC가 자동으로 따라오지 않는다.
+
+### 무엇을 했나 (toy-chat)
+
+| 파일 | 변경 |
+|---|---|
+| `build.gradle` | `micrometer-tracing-bridge-brave` + `zipkin-reporter-brave` 의존성 추가 (trace 생성 가능), `springBoot { buildInfo() }` |
+| `src/main/resources/application.yml` (base) | `spring.application.name=chat-service`, `server.shutdown=graceful`, `spring.lifecycle.timeout-per-shutdown-phase=30s`, management 블록 전체(8090 분리, prometheus 노출, SLO 버킷, W3C tracing, zipkin endpoint), `logging.pattern.level`로 traceId/spanId/userId MDC 패턴 |
+| `app/config/MetricsConfig.java` (신규) | MeterFilter 4종 — URI 카디널리티 상한(100), `/actuator/*` 자기 scrape 제외, `error` 태그 제거, 404/405 → `UNMATCHED` 통합 |
+| `app/auth/filter/JwtFilter.java` | JWT 검증 직후 `MDC.put("userId", ...)`, `try-finally`로 remove. HTTP 요청 경로용. |
+| `app/websocket/interceptor/StompChannelInterceptor.java` | **`preSend`에서 `sessionAttributes.userId` → `MDC.put`, `afterSendCompletion`에서 finally로 `MDC.remove`**. WebSocket 메시지 경로용. |
+| `app/config/WebSocketMetricsConfig.java` (신규) | `SimpUserRegistry.getUserCount()` 기반 `websocket.active_users` Gauge 1개 |
+
+### 핵심 의사결정
+
+#### (1) WebSocket MDC 전파를 ChannelInterceptor의 preSend에 둠
+
+선택지가 두 가지였다:
+- **A) `StompConnectHandler`에서 한 번만 put** — 연결 시점에 박고 끝. 간단.
+- **B) `ChannelInterceptor.preSend`에서 매 메시지마다 put + afterSendCompletion에서 remove** — 채택.
+
+A를 안 한 이유: STOMP 메시지는 **Spring Messaging의 별도 스레드 풀**(`clientInboundChannel.taskExecutor`)에서 처리된다. CONNECT 한 번에 MDC를 박아도 그 다음 SEND/SUBSCRIBE 메시지는 풀 안의 **다른 스레드**가 처리하니까 MDC가 따라오지 않는다. 풀의 스레드 N개 × 동시 사용자 M명이 섞여서 어느 스레드가 누구의 MDC를 갖고 있는지 보장이 안 됨. → 매 메시지마다 다시 박는 게 안전.
+
+#### (2) `MDC.remove`를 `finally`에 두는 이유 (재확인)
+
+`preSend`에서 `put`만 하고 안 지우면, 메시지 처리 끝난 스레드가 풀로 반납되는데 MDC는 그대로 남는다. 다음 메시지가 그 스레드를 잡으면 다른 사용자 행동이 이전 사용자 ID로 로깅됨. 같은 메시지 풀 안에서도 동일 문제가 재현 — Tomcat HTTP 스레드 재사용과 본질적으로 같다.
+
+#### (3) 활성 사용자 메트릭은 SimpUserRegistry로 — 직접 카운트 안 함
+
+Phase 3(자체 카운터)를 선택지 위에 두고 비교한 끝에 옵션 1 채택. 근거:
+- **Spring이 이미 카운팅 중**이므로 `Gauge`로 read-only 노출만 하면 됨 → 5줄, hot path 영향 0
+- 사이드 프로젝트 트래픽에서 Phase 3가 만들 부가 지표(메시지 throughput, SUBSCRIBE 카운터, 세션 지속시간 히스토그램)는 거의 0이거나 변동 없음 — "있는데 의미 없는 메트릭"이 카디널리티만 차지
+- **확장 경로 보존**: 세션 단위 카운트가 필요해지면 `StompConnectHandler/DisconnectHandler`에서 `AtomicInteger` 증감 + `Gauge` 한 줄 추가로 보강 가능. 지금 안 해도 됨 = YAGNI.
+- 면접 답변: "`SimpUserRegistry`를 발견해 5줄로 활성 사용자 메트릭 노출. 세션 단위까지 필요해지면 STOMP 핸들러에 카운터 추가로 확장 — 트래픽이 그 정도로 차야 의미 있는 메트릭이라 지금은 보류."
+
+#### (4) 카운트 단위: 유저 vs 세션
+
+`SimpUserRegistry.getUserCount()`는 **고유 사용자** 카운트. 1명이 PC + 모바일 2대 접속하면 1로 잡힘. 우리 도메인에서는 "지금 채팅 가능한 사람 수"가 의미 있는 지표라 유저 단위로 OK. 다중 디바이스가 비즈니스 핵심이 되면 세션 단위로 보강.
+
+#### (5) HTTP shouldNotFilter에서 `/api/ws`는 어차피 통과
+
+JwtFilter는 `/api/ws` 경로를 `shouldNotFilter`로 빠져나가게 둠 — WebSocket 핸드셰이크 자체는 HTTP 필터 체인을 안 거치고 (`HandshakeInterceptor`로 따로 처리), 인증은 STOMP CONNECT 시점의 `StompConnectHandler`에서 JWT 검증. JwtFilter의 MDC.put은 일반 HTTP REST API 호출용이고, WebSocket 메시지 MDC는 ChannelInterceptor가 담당 — 두 경로가 깔끔히 분리됨.
+
+### 검증 방법
+
+```bash
+# 1) 컴파일
+./gradlew compileJava
+
+# 2) Pod 재배포 후 trace 전송 에러 사라지는지
+kubectl logs deployment/chat-service --tail=50 | grep -E "WebClient|Spans were dropped"
+
+# 3) HTTP REST 호출 로그에 traceId/userId 찍히는지
+kubectl logs deployment/chat-service --tail=30 | grep -oE 'traceId=[a-f0-9]+,spanId=[a-f0-9]+,userId=[^]]+'
+
+# 4) ⭐ WebSocket 메시지 처리 로그에도 userId 찍히는지 (이게 새로 추가된 핵심)
+#    채팅 메시지 한 번 보내고 메시지 처리 로그 확인 — userId=NONE이 아니라 실제 ID여야 함
+kubectl logs deployment/chat-service --tail=30 | grep -E "ChatStomp|SEND" | head -3
+
+# 5) /actuator/prometheus에 활성 사용자 메트릭 노출 확인
+kubectl exec deployment/chat-service -- wget -qO- http://localhost:8090/actuator/prometheus \
+  | grep "websocket_active_users"
+```
+
+### Grafana 대시보드에서 보기
+
+- **PromQL**: `websocket_active_users{application="chat-service"}` — 시계열 그래프
+- **알람 후보**: 평소 대비 50% 이상 감소 5분 지속 → 채팅 연결 장애 의심
+
+### 다음 단계
+
+- [ ] chat-service Deployment에 `TEMPO_ZIPKIN_ENDPOINT` 환경변수 적용 + rolling restart
+- [ ] Tempo에서 한 traceId 추적: REST 호출 시작 → auth(JWT 검증) → content(피드 조회) → chat(메시지 발송) 한 trace로 묶이는지
+- [ ] `websocket.active_users` Grafana 패널 추가 (Four Golden Signals 대시보드에 한 panel 추가)
+- [ ] 트래픽 데이터 1주일 모은 뒤 Phase 3 진입 가치 재평가 — 세션 단위 카운트, 메시지 throughput, CONNECT 실패율 중 실제로 알람 후보가 되는 게 있는지 보고 결정
+- [ ] (별도 작업) 카프카 컨슈머 lag 메트릭 — chat-service가 kafka로 메시지 받아 처리하는데 lag 모니터링이 없음. Micrometer Kafka binder 활성화 필요
+
+---
+
 ## 2026-05-20 — toy-auth 옆 서비스에 동일 표준 이식
 
 ### 왜 했나

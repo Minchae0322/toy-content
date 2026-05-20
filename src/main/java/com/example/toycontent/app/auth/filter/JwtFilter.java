@@ -112,8 +112,13 @@ public class JwtFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
 
+        // 관리 포트(8090) actuator는 context-path(/api) prefix 없이 /actuator/...로 온다.
+        // JwtFilter는 @Component라 양쪽 서블릿 컨텍스트에 등록될 수 있어 명시적으로 제외해야
+        // K8s probe(readiness/liveness)가 401을 받지 않는다.
         return path.startsWith("/api/login")
             || path.startsWith("/api/oauth2")
+            || path.startsWith("/api/actuator")
+            || path.startsWith("/actuator")
             || path.startsWith("/swagger")
             || path.startsWith("/v3/api-docs")
             || path.startsWith("/swagger-resources/")
