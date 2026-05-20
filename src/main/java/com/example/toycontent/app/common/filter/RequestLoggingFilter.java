@@ -14,7 +14,7 @@ import java.io.IOException;
 
 @Slf4j
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final long SLOW_THRESHOLD_MS = 1000L;
