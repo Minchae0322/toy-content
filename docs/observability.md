@@ -6,6 +6,90 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-05-20 추가 — SRE Four Golden Signals 대시보드 구성
+
+### 무엇을 했나
+
+Grafana Cloud에 `$application` 변수(template variable, multi-value) 기반 대시보드 1개 신규. 4개 패널 모두 `application=~"$application"` 필터 + `$__rate_interval` 사용 → 시간 범위에 따라 자동으로 1m/5m/15m 등으로 적응.
+
+| 패널 | PromQL 핵심 | 단위/설정 |
+|---|---|---|
+| **Traffic** — Request Rate | `sum(rate(http_server_requests_seconds_count{application=~"$application"}[$__rate_interval])) by (application)` | `reqps`, Min=0 |
+| **Errors** — 5xx % | `sum(rate(...{status=~"5.."}[...])) / sum(rate(...[...])) * 100` (by application) | `percent (0-100)`, Min=0 / Max=100, Thresholds: 1% yellow / 5% red, **As filled regions** |
+| **Latency** — P50/P95/P99 | `histogram_quantile(0.50/0.95/0.99, sum(rate(http_server_requests_seconds_bucket{...}[...])) by (le, application))` × 3 쿼리 | `seconds`, **Log scale (base 2)** — P99 튀어도 P50과 한 화면 |
+| **Saturation** — Tomcat threads / CPU | (별도 패널) | — |
+
+모든 패널 Legend는 `{{application}}` custom 포맷.
+
+### 핵심 의사결정
+
+- **Four Golden Signals 기준** — Google SRE 정의(Latency / Traffic / Errors / Saturation). "어떻게 모니터링하시나요?" 면접 질문에 단일 프레임워크로 답 가능. 임의로 패널 나열하면 누락/중복 생기지만 4 시그널은 빠짐없고 겹침없다.
+- **`$__rate_interval` 사용 (고정 `5m` 아님)** — Grafana가 dashboard time range + scrape interval로 자동 계산. zoom-in 시 `1m`, zoom-out 시 더 큰 윈도우. 고정값이면 짧은 구간에서 빈 그래프 또는 긴 구간에서 너무 노이지.
+- **Error Rate threshold = 1% / 5%** — 1%는 "주의 깊게 봐야 함", 5%는 "사용자 피해 발생 중" 경험적 기준. Filled region으로 그려서 한 화면에 위험도 즉시 시각화.
+- **Latency Log scale** — P99가 P50보다 10~100배 튀는 게 정상 분포. Linear scale이면 P50/P95가 바닥에 깔려서 안 보임. Log scale이 SRE 대시보드 표준.
+- **`application` 라벨 기준 집계** — `pod`나 `instance`로 by 하면 시리즈 폭발(+ 면접에서 "deployment 단위 SLO"라는 답이 더 깔끔). 카디널리티 관리는 [[2026-05-17]] MeterFilter 결정의 연장선.
+
+### 검증 방법
+
+- chat-service: 약 0.15 RPS (health check 트래픽 추정), content-service: 0.005 RPS 미만(idle). 둘 다 그래프에 표시되어 `$application` multi-select 정상 동작 확인.
+- Error Rate "No data" — 5xx가 한 건도 없으면 정상. Explore에서 `http_server_requests_seconds_count{status=~"5.."}` 직접 조회로 데이터 유무 사전 확인.
+- Latency: 트래픽 적을 때 P50/P95/P99가 거의 같은 선으로 겹쳐 보이는 게 정상 — 분포가 좁아서. 부하 들어가면 분리됨.
+
+### 핵심 사전 조건
+
+- `http_server_requests_seconds_bucket` (histogram) 메트릭이 있어야 P95/P99 계산 가능. `application.yml`의 `management.metrics.distribution.percentiles-histogram.http.server.requests=true`가 [[2026-05-17]] 표준화 때 이미 켜져 있음.
+
+### 다음 단계
+
+- [ ] **Critical 알림 4개** — 메트릭은 다 있으므로 Grafana Alerting 규칙만 추가: 5xx 비율 > 5% (5m) / OOMKilled / Kafka consumer lag / p99 SLO 위반
+- [ ] **비즈니스 메트릭** — `yogurtte.feed.created`, `yogurtte.battle.vote` 카운터 추가. 기술 메트릭과 별개 패널로 묶어 "Business KPI" 행 신설
+- [ ] **k6 부하 → N+1 발견 → `@EntityGraph` 개선** 사이클 (면접용 임팩트 사례)
+
+---
+
+## 2026-05-20 — Loki ↔ Tempo 양방향 점프 검증 완료
+
+### 무엇을 했나
+
+| 영역 | 결과 |
+|---|---|
+| Tempo에서 Trace ID 검색 | `6a0d3fd0...` trace 정상 표시 |
+| Trace → Logs 자동 점프 | trace span 클릭 시 우측 Loki 패널 자동 split view로 열림 |
+| LogQL 라벨 변환 | `service.name` (OTel attr) → `service_name` (Loki 라벨)로 자동 정규화 — Grafana data source가 알아서 처리 |
+| Trace ID 필터링 | `{service_name="content-service"}` + `trace_id="6a0d3fd0..."` 조합으로 같은 시간대 다른 trace 섞이지 않음 |
+| 로그 결과 | 14:00:00 시점 `BattleHotScoreScheduler` 로그 2건 정확히 매칭 |
+| Logs volume 그래프 | trace 발생 시점에 정확히 스파이크 |
+| Loki → Tempo | 로그의 `View Trace` 링크 → trace 트리 정상 점프 (derivedFields 정규식 동작) |
+
+Grafana가 자동 생성한 LogQL:
+
+```logql
+{service_name="content-service"}
+| label_format log_line_contains_trace_id=`{{ contains "6a0d3fd0..." __line__ }}`
+| log_line_contains_trace_id="true" or trace_id="6a0d3fd0..."
+```
+
+### 핵심 의사결정
+
+- **"Logs for this span" 별도 버튼 없음 = 정상** — 이전 검증 노트에서 버튼이 안 보인다고 적어뒀는데, Grafana는 trace 검색 시 우측 패널에 자동으로 관련 로그를 띄우는 split view가 기본 UX. 버튼은 없어도 점프는 되고 있는 상태였다. UI 요소 부재를 곧장 "기능 누락"으로 단정하지 말 것.
+- **두 방식 OR로 둠** — 자동 생성된 LogQL이 (1) 로그 라인에 `traceId=...` 문자열 포함 여부 (2) `trace_id` 라벨 일치, 둘 중 하나만 맞으면 표시. 우리 케이스는 MDC 패턴으로 로그 본문에 박혀 있는 (1) 경로지만, OTel 자동 계측 환경(라벨로 주입)이 섞여도 누락 없이 동작. 굳이 한쪽으로 통일하지 않음.
+- **`trace_id`는 Loki 라벨 아닌 라인 내 값** — 이전 결정([[2026-05-18]] cardinality 항목) 그대로 유지. 검색은 line filter로 충분히 빠르고 50GB/월 한도를 지킴.
+
+### 검증 방법
+
+1. content-service에 임의 요청 흘려서 로그/trace 생성
+2. Grafana Explore → Tempo → Trace ID로 검색
+3. 좌측 trace 트리, 우측 Loki 로그 패널 동시 표시 확인
+4. 같은 traceId의 로그가 시간순으로 정렬되어 trace span 시작/종료 시점과 일치하는지
+
+### 다음 단계
+
+- [ ] Service Graph 확인 (auth-service ↔ content-service, 24h 데이터 축적 후)
+- [ ] DB/Redis span은 보류 — 필요해질 때 OTel agent / datasource-proxy 별도 판단 ([[2026-05-19]] 결정 그대로)
+- [ ] 면접 자료용 스크린샷 보관: trace + 로그 split view 한 화면
+
+---
+
 ## 2026-05-19 추가 — Tempo 실제 연결 (401 인증 문제 해결)
 
 ### 증상
