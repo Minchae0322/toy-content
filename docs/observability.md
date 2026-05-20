@@ -6,6 +6,54 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-05-20 — toy-auth 옆 서비스에 동일 표준 이식
+
+### 왜 했나
+
+Tempo Service Graph에서 `auth-service ↔ content-service` 호출 관계를 보려면 양쪽 서비스가 **같은 traceId를 공유**하고 **같은 라벨 컨벤션**으로 메트릭/로그를 내야 함. content-service만 표준화돼 있고 auth-service는 누락분이 있어서 동일한 3종 패치를 이식.
+
+조사 결과 toy-auth는 application.yml(`spring.application.name=auth-service`, `server.shutdown=graceful`, management 블록, `logging.pattern.level` traceId/spanId/userId)과 의존성 4종(actuator + prometheus + brave + zipkin-reporter)이 이미 적용된 상태였음(`168ad0b`). **앱 코드 3가지가 빠져 있었음**.
+
+### 무엇을 했나 (toy-auth-user-region)
+
+| 파일 | 변경 |
+|---|---|
+| `src/main/java/com/example/toyauth/app/config/MetricsConfig.java` (신규) | MeterFilter 4종: URI 카디널리티 상한(100), `error` 태그 제거, `/actuator/*` 자기 scrape 제외, 404/405 → `UNMATCHED` 통합. toy-content와 동일 구현. |
+| `src/main/java/com/example/toyauth/app/common/filter/JwtFilter.java` | JWT 검증 직후 `MDC.put("userId", ...)`, `try-finally`로 `MDC.remove` 보장. |
+| `build.gradle` | `springBoot { buildInfo() }` 추가 — `/actuator/info`에 빌드 시간/버전 노출. |
+
+K8s Deployment에는 `TEMPO_ZIPKIN_ENDPOINT` 환경변수로 cluster-internal Alloy receiver(`grafana-k8s-monitoring-alloy-receiver.monitoring.svc.cluster.local:9411/api/v2/spans`)를 주입. 두 서비스가 동일 endpoint를 보므로 Tempo Service Graph가 자동 구성됨.
+
+### 핵심 의사결정
+
+- **MDC.remove를 `finally`에 두는 이유** — Tomcat은 스레드 풀에서 스레드를 재사용한다. `MDC.put`만 하고 안 지우면 다음 요청이 같은 스레드를 잡았을 때 이전 사용자의 userId를 그대로 물려받아 **다른 사람 행동이 내 ID로 로깅**되는 사고가 난다. `return`/예외/401 어떤 경로로 빠지든 무조건 청소되도록 try-finally. 개인정보/감사 로그 무결성에 직결되는 표준 패턴.
+- **MDC.put은 try 밖, remove만 finally 안** — put 자체는 절대 throw 안 함. 예외 위험이 있는 `filterChain.doFilter()`만 try로 감싸면 충분. 불필요하게 범위를 넓히지 않음.
+- **두 서비스의 management 포트를 8090으로 통일** — Pod마다 별도 network namespace라 같은 노드에 떠도 충돌 없음. 일관된 포트가 NetworkPolicy/SG/scrape annotation 룰을 단순하게 만듦.
+- **MetricsConfig를 두 서비스에 똑같이 복제** — 살짝 DRY 위반이지만 공용 라이브러리 추출은 과한 추상화. 두 서비스가 분리된 배포 단위인 한 코드 복제(< 100 lines)가 더 단순.
+- **chart는 그대로 두고 앱 측만 패치** — k8s-monitoring chart는 이미 alloy-receiver(zipkin 9411)를 노출 중([[2026-05-19]]). 인프라는 무변경, 앱만 같은 endpoint를 보도록 환경변수 주입.
+
+### 검증 방법
+
+```bash
+# 1) auth-service Pod 재배포 후 trace 전송 에러 사라졌는지
+kubectl logs deployment/auth-service --tail=50 | grep -E "WebClient|spans"
+
+# 2) MDC 패턴 정상 출력
+kubectl logs deployment/auth-service --tail=20 | grep -oE 'traceId=[a-f0-9]+,spanId=[a-f0-9]+,userId=[^]]+'
+
+# 3) auth → content 호출 trace가 같은 traceId로 묶이는지
+#    Grafana Explore → Tempo → 임의 traceId 검색 → span 트리에 두 service.name 모두 표시되는지
+```
+
+### 다음 단계
+
+- [ ] auth-service Deployment에 `TEMPO_ZIPKIN_ENDPOINT` 환경변수 적용 + rolling restart
+- [ ] Tempo Service Graph에서 `auth-service → content-service` 호출 화살표 확인 (트래픽 누적 수 분 필요)
+- [ ] 24h 후 양 서비스의 P50/P95/P99 latency 분포 비교 — chat-service까지 같은 표준으로 묶이면 3-tier MSA 관측성 완성
+- [ ] toy-chat 동일 패치 적용 (`MetricsConfig` 복제 + MDC put/remove)
+
+---
+
 ## 2026-05-20 추가 — SRE Four Golden Signals 대시보드 구성
 
 ### 무엇을 했나
