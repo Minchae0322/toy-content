@@ -93,11 +93,93 @@ kubectl exec deployment/chat-service -- wget -qO- http://localhost:8090/actuator
 
 ### 다음 단계
 
-- [ ] chat-service Deployment에 `TEMPO_ZIPKIN_ENDPOINT` 환경변수 적용 + rolling restart
+- [x] chat-service Deployment YAML 업데이트 — 관리 포트 8090 추가, probe/scrape 경로 `/actuator/...`로 변경, `TEMPO_ZIPKIN_ENDPOINT` env, `terminationGracePeriodSeconds: 60` (WebSocket 세션 cleanup 여유)
+- [ ] `kubectl apply` 후 검증: trace 전송 에러 없음, WS 메시지 로그에 userId MDC, `websocket_active_users` 메트릭 노출 확인
 - [ ] Tempo에서 한 traceId 추적: REST 호출 시작 → auth(JWT 검증) → content(피드 조회) → chat(메시지 발송) 한 trace로 묶이는지
 - [ ] `websocket.active_users` Grafana 패널 추가 (Four Golden Signals 대시보드에 한 panel 추가)
 - [ ] 트래픽 데이터 1주일 모은 뒤 Phase 3 진입 가치 재평가 — 세션 단위 카운트, 메시지 throughput, CONNECT 실패율 중 실제로 알람 후보가 되는 게 있는지 보고 결정
 - [ ] (별도 작업) 카프카 컨슈머 lag 메트릭 — chat-service가 kafka로 메시지 받아 처리하는데 lag 모니터링이 없음. Micrometer Kafka binder 활성화 필요
+
+---
+
+## 2026-05-21 (오후) — JwtFilter mgmt 포트 화이트리스트 + RequestLoggingFilter 정책
+
+위 오전 작업 배포 직전 추가로 발견/정리한 항목들.
+
+### (1) JwtFilter가 관리 포트(8090) actuator 요청을 가로채는 문제
+
+**증상**: toy-auth 배포 직후 K8s probe 실패. 로그에 다음이 반복:
+```
+[http-nio-8090-exec-1] ... c.e.t.app.common.filter.JwtFilter
+- >>>> JwtFilter 진입, URI: /actuator/health/readiness
+```
+
+readiness 경로가 JwtFilter를 거치는데 토큰이 없으니 401 반환 → probe 실패 → Pod NotReady.
+
+**원인 분석**
+- `JwtFilter`가 `@Component`로 등록되면 Spring Boot가 `FilterRegistrationBean`을 자동 생성. 이 등록이 메인 ServletContext뿐 아니라 관리 서버 컨텍스트(별도 Tomcat connector)에도 적용되는 케이스가 존재.
+- 적용 여부는 **Spring Boot 버전에 따라 다름** — 3.2.x는 관리 컨텍스트에도 자동 등록되는 경향, 3.4+는 분리되는 경향. 거기에 `addFilterBefore(jwtFilter, ...)`로 SecurityFilterChain에 같은 빈을 추가하면 양쪽 컨텍스트에 모두 적용될 가능성이 커짐.
+- 관리 포트 actuator는 `context-path`(/api)가 적용되지 않아 경로가 `/actuator/health/readiness`로 옴 — 기존 `shouldNotFilter`의 `/api/actuator` 화이트리스트로는 막아지지 않음.
+
+**왜 content-service는 작동했나**
+- content-service: Spring Boot 3.4.1 + SecurityConfig가 `JwtAuthenticationFilter`라는 **별도 빈**을 만들어 Security chain에 추가. `@Component` JwtFilter는 servlet container 자동 등록만 됨. 3.4의 새 동작상 관리 컨텍스트에 자동 적용 안 됨.
+- auth-service: Spring Boot 3.2.1 + `@Component` JwtFilter를 직접 `addFilterBefore`로 Security chain에도 추가. 두 경로로 등록되면서 관리 포트에도 필터가 붙음.
+- chat-service: 3.5.3 + Spring Boot 동작이 어느 쪽으로 바뀔지 불명 → defensive하게 두는 게 안전.
+
+**조치**: 세 서비스 모두 `shouldNotFilter`에 `/api/actuator` + `/actuator` 두 경로 모두 화이트리스트.
+```java
+return path.startsWith("/api/actuator")     // main port (8082/8084) + context /api
+    || path.startsWith("/actuator")          // mgmt port (8090), context 없음
+    || ...
+```
+주석에 "Spring Boot 버전이 바뀌어도 K8s probe가 401을 받지 않도록" 명시.
+
+### (2) RequestLoggingFilter — content-service에만 있고 다른 서비스엔 없는 이유 정리
+
+**파일**: `toy-content/src/main/java/com/example/toycontent/app/common/filter/RequestLoggingFilter.java`
+
+```java
+if (status >= 500)       → log.error
+else if (status >= 400)  → log.warn
+else if (elapsed > 1s)   → log.warn ("HTTP-SLOW")
+else                     → log.info
+```
+
+`OncePerRequestFilter`로 모든 HTTP 요청에 대해 method/URI/status/elapsed 1줄 출력. JwtFilter 뒤에 실행돼서 MDC userId가 이미 박힌 상태로 로그가 찍힘.
+
+**결정**: 다른 두 서비스(auth, chat)에는 **추가하지 않음**. 근거:
+- metric + trace 두 채널이 같은 정보를 이미 가지고 있음. 필터는 "Loki에서 1줄 grep으로 보는 단축 채널" 역할 — 정보 중복.
+- Loki 50GB/월 한도가 빠듯한 사이드 프로젝트 규모에서 모든 요청을 추가 로그로 적재하는 비용이 큼.
+- content-service만 두는 이유: 트래픽 70% 처리하는 메인 서비스라 "Loki에서 사용자별 요청 timeline 빠르게 grep" 유스케이스가 있음. auth는 인증 요청만, chat은 WebSocket 위주라 REST 요청 자체가 적음.
+
+**확장 기준**: 운영 중 "특정 요청 패턴(예: 4xx의 client IP/UA)을 Loki에서 자주 grep해야 한다"는 요건이 생기면 그때 해당 서비스에 추가. 지금은 YAGNI.
+
+### (3) chat-service Deployment YAML 업데이트 — WebSocket 특화 고려사항
+
+기존 chat 배포는 port 8084 단일, context `/api/actuator/...`로 probe. 새 표준 적용으로 6곳 변경:
+
+| 항목 | 기존 | 변경 |
+|---|---|---|
+| annotation `metrics.portNumber` | `"8084"` | `"8090"` |
+| annotation `metrics.path` | `/api/actuator/prometheus` | `/actuator/prometheus` |
+| `ports` | `containerPort: 8084` | `8084`(http) + `8090`(mgmt) |
+| env | 없음 | `TEMPO_ZIPKIN_ENDPOINT` 추가 |
+| livenessProbe / readinessProbe | port `8084`, path `/api/actuator/...` | port `8090`, path `/actuator/...` |
+| `terminationGracePeriodSeconds` | 미설정(기본 30s) | **`60s`** |
+
+**WebSocket 특화 — `terminationGracePeriodSeconds: 60`**
+- 일반 HTTP 서비스는 30s면 충분. 채팅은 **동시접속 300명 기준 WebSocket 상시 연결**이라 30s 안에 모든 세션에 close frame 보내고 client ack 받기 빠듯.
+- SIGTERM → Spring graceful shutdown 시작 → 모든 WS 세션에 close frame 전송 → 30s 안에 못 끝내면 K8s가 SIGKILL → TCP RST → client는 연결 끊긴 줄 모르고 한참 후 재연결.
+- 60s면 안전 마진 확보. 트래픽 더 늘면 `spring.lifecycle.timeout-per-shutdown-phase`도 같이 늘려야 함 (현재 30s).
+
+### 오늘 커밋 정리
+
+| 저장소 | 브랜치 | 커밋 | 내용 |
+|---|---|---|---|
+| toy-chat | develop | `8f0822a` | observability 6개 파일 (build.gradle / yml / MetricsConfig / JwtFilter / StompChannelInterceptor / WebSocketMetricsConfig) |
+| toy-content | main | `1a3bccf` | docs/observability.md 2026-05-21 섹션 + JwtFilter `/actuator` 화이트리스트 추가 |
+
+(이전 푸시들: toy-auth develop `d86763e` MetricsConfig + JwtFilter MDC + buildInfo, content develop `5af854e` 핫피드/리액션 등)
 
 ---
 
