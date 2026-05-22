@@ -97,6 +97,68 @@ public class NotificationService {
     );
   }
 
+  @Async("notificationExecutor")
+  public void notifyBattleItemAdded(Long battleCreatorId, Long actorId, String actorNickname,
+      String actorProfileImageUrl,
+      Long battleId, String battleTitle,
+      Long firstItemId, String firstItemTitle, int additionalCount) {
+    if (battleCreatorId.equals(actorId)) {
+      return;
+    }
+
+    boolean batch = additionalCount > 0;
+    NotificationType type = batch ? NotificationType.BATTLE_ITEM_ADDED_BATCH : NotificationType.BATTLE_ITEM_ADDED;
+    String content = batch
+        ? type.formatContent(actorNickname, battleTitle, firstItemTitle, String.valueOf(additionalCount))
+        : type.formatContent(actorNickname, battleTitle, firstItemTitle);
+
+    sendSafely(type, KafkaNotificationDto.builder()
+        .userId(battleCreatorId)
+        .type(type)
+        .title(type.getTitle())
+        .content(content)
+        .referenceId(String.valueOf(firstItemId))
+        .referenceType(NotificationReferenceType.BATTLE_ITEM)
+        .actionUrl("/battle/" + battleId)
+        .actorId(actorId)
+        .actorNickname(actorNickname)
+        .actorProfileImageUrl(actorProfileImageUrl)
+        .channels(List.of(NotificationChannel.IN_APP, NotificationChannel.PUSH))
+        .build()
+    );
+  }
+
+  @Async("notificationExecutor")
+  public void notifyBattleItemApprovalRequest(Long battleCreatorId, Long actorId, String actorNickname,
+      String actorProfileImageUrl,
+      Long battleId, String battleTitle,
+      Long firstItemId, String firstItemTitle, int additionalCount) {
+    if (battleCreatorId.equals(actorId)) {
+      return;
+    }
+
+    boolean batch = additionalCount > 0;
+    NotificationType type = batch ? NotificationType.BATTLE_ITEM_APPROVAL_REQUEST_BATCH : NotificationType.BATTLE_ITEM_APPROVAL_REQUEST;
+    String content = batch
+        ? type.formatContent(actorNickname, battleTitle, firstItemTitle, String.valueOf(additionalCount))
+        : type.formatContent(actorNickname, battleTitle, firstItemTitle);
+
+    sendSafely(type, KafkaNotificationDto.builder()
+        .userId(battleCreatorId)
+        .type(type)
+        .title(type.getTitle())
+        .content(content)
+        .referenceId(String.valueOf(firstItemId))
+        .referenceType(NotificationReferenceType.BATTLE_ITEM)
+        .actionUrl("/battle/" + battleId)
+        .actorId(actorId)
+        .actorNickname(actorNickname)
+        .actorProfileImageUrl(actorProfileImageUrl)
+        .channels(List.of(NotificationChannel.IN_APP, NotificationChannel.PUSH))
+        .build()
+    );
+  }
+
   @Deprecated
   @Async("notificationExecutor")
   public void notifyBattleItemLike(Long battleItemCreatorId, Long actorId, String actorNickname,
@@ -143,6 +205,21 @@ public class NotificationService {
         .actorNickname(actorNickname)
         .actorProfileImageUrl(actorProfileImageUrl)
         .channels(List.of(NotificationChannel.IN_APP, NotificationChannel.PUSH))
+        .build()
+    );
+  }
+
+  @Async("notificationExecutor")
+  public void notifyBattleDeadlineOwnerD7(Long creatorId, Long battleId, String battleTitle) {
+    sendSafely(NotificationType.BATTLE_DEADLINE_OWNER_D7, KafkaNotificationDto.builder()
+        .userId(creatorId)
+        .type(NotificationType.BATTLE_DEADLINE_OWNER_D7)
+        .title(NotificationType.BATTLE_DEADLINE_OWNER_D7.getTitle())
+        .content(NotificationType.BATTLE_DEADLINE_OWNER_D7.formatContent(battleTitle))
+        .referenceId(String.valueOf(battleId))
+        .referenceType(NotificationReferenceType.BATTLE)
+        .actionUrl("/battle/" + battleId)
+        .channels(List.of(NotificationChannel.IN_APP))
         .build()
     );
   }

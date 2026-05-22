@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 
+import com.example.toycontent.app.common.enumuration.NotificationChannel;
 import com.example.toycontent.app.common.enumuration.NotificationType;
 import com.example.toycontent.app.kafka.KafkaNotificationProducer;
 import com.example.toycontent.app.kafka.dto.KafkaNotificationDto;
@@ -204,6 +205,38 @@ class NotificationServiceTest {
       assertSoftly(softly -> {
         softly.assertThat(captor.getValue().getType()).isEqualTo(NotificationType.SYSTEM);
         softly.assertThat(captor.getValue().getActionUrl()).isEqualTo("/notice/1");
+      });
+    }
+  }
+
+  @Nested
+  @DisplayName("notifyBattleDeadlineOwnerD7 - 배틀 D-7 생성자 알림")
+  class NotifyBattleDeadlineOwnerD7 {
+
+    private static final long CREATOR_ID = 500L;
+    private static final long BATTLE_ID = 50L;
+    private static final String BATTLE_TITLE = "곧 끝나는 배틀";
+
+    @Test
+    @DisplayName("생성자에게 BATTLE_DEADLINE_OWNER_D7 타입 알림이 in-app 채널로만 발행된다")
+    void D7_알림_발행() {
+      // when
+      notificationService.notifyBattleDeadlineOwnerD7(CREATOR_ID, BATTLE_ID, BATTLE_TITLE);
+
+      // then
+      ArgumentCaptor<KafkaNotificationDto> captor = ArgumentCaptor.forClass(KafkaNotificationDto.class);
+      then(kafkaNotificationProducer).should().send(captor.capture());
+
+      KafkaNotificationDto sent = captor.getValue();
+      assertSoftly(softly -> {
+        softly.assertThat(sent.getUserId()).isEqualTo(CREATOR_ID);
+        softly.assertThat(sent.getType()).isEqualTo(NotificationType.BATTLE_DEADLINE_OWNER_D7);
+        softly.assertThat(sent.getReferenceId()).isEqualTo(String.valueOf(BATTLE_ID));
+        softly.assertThat(sent.getActionUrl()).isEqualTo("/battle/" + BATTLE_ID);
+        softly.assertThat(sent.getContent()).contains(BATTLE_TITLE);
+        softly.assertThat(sent.getChannels())
+            .as("D-7은 in-app 채널만 사용")
+            .containsExactly(NotificationChannel.IN_APP);
       });
     }
   }

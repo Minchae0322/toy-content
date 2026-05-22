@@ -41,7 +41,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
         @Index(name = "idx_battle_status_hot_score", columnList = "status, hotScore DESC"),
         @Index(name = "idx_battle_status_start_date", columnList = "status, startDate"),
         @Index(name = "idx_battle_hot_score_updated", columnList = "hotScoreUpdatedAt"),
-        @Index(name = "idx_battle_is_deleted", columnList = "isDeleted")
+        @Index(name = "idx_battle_is_deleted", columnList = "isDeleted"),
+        @Index(name = "idx_battle_end_date", columnList = "endDate")
 })
 public class Battle extends BaseTimeEntity {
 

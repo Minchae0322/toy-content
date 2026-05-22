@@ -22,14 +22,19 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.common.exception.impl.ProductErrorCode;
 import com.example.toycontent.app.common.utils.YoutubeUtils;
+import com.example.toycontent.app.notification.NotificationService;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.app.reward.exp.service.ExpGrantService;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantInfo;
 import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
+import com.example.toycontent.external.user.dto.ExternalAttachmentFileDto;
+import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +53,8 @@ public class BattleItemService {
   private final BattleItemCommentRepository battleItemCommentRepository;
   private final ProductRepository productRepository;
   private final ExpGrantService expGrantService;
+  private final ExternalUserInfoService externalUserInfoService;
+  private final NotificationService notificationService;
 
   private static final int MAX_ITEMS = 20;
   private static final int MAX_ADDITIONAL_ITEMS = 3;
@@ -118,7 +125,8 @@ public class BattleItemService {
     List<ItemRequest> items = request.getItems();
 
     validateItemAddition(battle, userId, items);
-    addItemsByPermission(battle, userId, items);
+    List<BattleItem> savedItems = addItemsByPermission(battle, userId, items);
+    notifyCreatorOnItemAddition(battle, userId, savedItems);
 
     ExpGrantResult grant = expGrantService.grantBattleItemAdd(userId, battleId);
     return ExpGrantInfo.aggregate(grant);
@@ -142,14 +150,13 @@ public class BattleItemService {
     }
   }
 
-  private void addItemsByPermission(Battle battle, Long userId, List<ItemRequest> items) {
+  private List<BattleItem> addItemsByPermission(Battle battle, Long userId, List<ItemRequest> items) {
     ItemAddPermissionType permission = battle.getItemAddPermissionType();
 
     if (permission == ItemAddPermissionType.PUBLIC_APPROVAL) {
-      requestAddBattleItems(userId, battle, items);
-    } else {
-      createBattleItems(userId, battle, items);
+      return requestAddBattleItems(userId, battle, items);
     }
+    return createBattleItems(userId, battle, items);
   }
 
   /**
@@ -157,8 +164,8 @@ public class BattleItemService {
    * - CREATOR_ONLY, PUBLIC 권한의 배틀에서 사용
    */
   @Transactional
-  public void createBattleItems(Long userId, Battle battle, List<ItemRequest> request) {
-    saveBattleItems(userId, battle, request, BattleItemStatus.ACTIVE);
+  public List<BattleItem> createBattleItems(Long userId, Battle battle, List<ItemRequest> request) {
+    return saveBattleItems(userId, battle, request, BattleItemStatus.ACTIVE);
   }
 
   /**
@@ -167,17 +174,61 @@ public class BattleItemService {
    * - 배틀 생성자가 승인해야 활성화됨
    */
   @Transactional
-  public void requestAddBattleItems(Long userId, Battle battle, List<ItemRequest> request) {
-    saveBattleItems(userId, battle, request, BattleItemStatus.UNDER_REVIEW);
+  public List<BattleItem> requestAddBattleItems(Long userId, Battle battle, List<ItemRequest> request) {
+    return saveBattleItems(userId, battle, request, BattleItemStatus.UNDER_REVIEW);
   }
 
-  private void saveBattleItems(Long userId, Battle battle, List<ItemRequest> request,
+  private List<BattleItem> saveBattleItems(Long userId, Battle battle, List<ItemRequest> request,
       BattleItemStatus status) {
     List<BattleItem> battleItems = request.stream()
         .map(itemRequest -> createBattleItem(userId, battle, itemRequest, status))
         .toList();
 
-    battleItemRepository.saveAll(battleItems);
+    return battleItemRepository.saveAll(battleItems);
+  }
+
+  /**
+   * 아이템 추가 시 배틀 생성자에게 알림.
+   *
+   * <p>본인이 자기 배틀에 추가한 경우는 외부 유저 정보 조회까지 모두 skip.
+   * {@code PUBLIC_FREE}는 즉시 추가 알림, {@code PUBLIC_APPROVAL}은 승인 요청 알림.
+   *
+   * <p>한 요청에 여러 아이템이 들어오면 첫 아이템을 대표로 한 묶음 알림 1건으로
+   * 발송 — 사용자에게 알림이 파바박 날아가지 않도록.
+   */
+  private void notifyCreatorOnItemAddition(Battle battle, Long actorId, List<BattleItem> savedItems) {
+    if (battle.getCreatorId().equals(actorId)) {
+      return;
+    }
+
+    ItemAddPermissionType permission = battle.getItemAddPermissionType();
+    if (permission == ItemAddPermissionType.CREATOR_ONLY) {
+      return;
+    }
+
+    BattleItem first = savedItems.stream().findFirst().orElse(null);
+    if (first == null) {
+      return;
+    }
+    int additionalCount = savedItems.size() - 1;
+
+    ExternalUserInfo actor = externalUserInfoService.getUserInfo(actorId);
+    String actorNickname = actor.getNickname();
+    String actorProfileImageUrl = Optional.ofNullable(actor.getProfileImageFile())
+        .map(ExternalAttachmentFileDto::getFileUrl)
+        .orElse(null);
+
+    if (permission == ItemAddPermissionType.PUBLIC_APPROVAL) {
+      notificationService.notifyBattleItemApprovalRequest(
+          battle.getCreatorId(), actorId, actorNickname, actorProfileImageUrl,
+          battle.getId(), battle.getTitle(),
+          first.getId(), first.getDisplayName(), additionalCount);
+    } else {
+      notificationService.notifyBattleItemAdded(
+          battle.getCreatorId(), actorId, actorNickname, actorProfileImageUrl,
+          battle.getId(), battle.getTitle(),
+          first.getId(), first.getDisplayName(), additionalCount);
+    }
   }
 
   /**

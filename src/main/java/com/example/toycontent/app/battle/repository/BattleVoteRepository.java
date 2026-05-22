@@ -6,9 +6,18 @@ import com.example.toycontent.app.battle.domain.BattleVote;
 import com.example.toycontent.app.battle.repository.querydsl.BattleVoteRepositoryCustom;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface BattleVoteRepository extends JpaRepository<BattleVote, Long>,
     BattleVoteRepositoryCustom {
+
+  @Query("""
+      SELECT DISTINCT v.userId FROM BattleVote v
+      WHERE v.battle.id = :battleId
+        AND v.userId IS NOT NULL
+      """)
+  List<Long> findDistinctVoterUserIdsByBattleId(@Param("battleId") Long battleId);
 
   List<BattleVote> findByBattleItem(BattleItem item);
 

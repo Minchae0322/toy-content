@@ -39,4 +39,14 @@ public interface BattleRepository extends JpaRepository<Battle, Long>, BattleRep
    */
   @Query("SELECT COUNT(b) FROM Battle b WHERE b.isDeleted = false AND b.startDate <= :now AND b.endDate > :now")
   long countActiveBattles(@Param("now") LocalDateTime now);
+
+  @Query("""
+      SELECT b FROM Battle b
+      WHERE b.isDeleted = false
+        AND b.endDate >= :from
+        AND b.endDate < :to
+      """)
+  List<Battle> findByEndDateBetween(
+      @Param("from") LocalDateTime from,
+      @Param("to") LocalDateTime to);
 }
