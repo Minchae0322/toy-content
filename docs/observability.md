@@ -6,6 +6,135 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-05-22 — Saturation 패널 + Alert/Notification 시스템 구축
+
+### 왜 했나
+
+[[2026-05-20]]의 Four Golden Signals 대시보드는 Latency/Traffic/Errors 3개만 완성된 상태였고 **Saturation 영역이 비어있었다**. 메트릭은 [[2026-05-17]] 표준화로 수집 중이지만 **알람 룰이 전무**해서 사실상 "박물관" — 사고가 나도 대시보드를 직접 들여다보지 않으면 모름. 곧 진행할 k6 부하테스트 사이클(N+1 발견 → 개선 → 재부하)에서 어느 자원이 먼저 포화되는지 보려면 Saturation 패널이 선행 조건이고, 면접에서 "메트릭 → 알람 → 발화 → 통보" 한 사이클을 답하려면 Notification까지 닫혀 있어야 함.
+
+부수적으로 디버깅 중 `application` 라벨이 `auth-service`가 아닌 `toy-auth`로 박혀있는 회귀 발견 + `tomcat_threads_*` 메트릭 미노출 발견.
+
+### 무엇을 했나
+
+| 영역 | 변경 |
+|---|---|
+| **`auth-service/application.yml`** | `spring.application.name` 회귀 수정 — 빌드된 JAR에 `toy-auth`로 박혀있던 것을 `auth-service`로 통일. 메트릭 라벨, Tempo `service.name`, Loki 라벨 모두 영향 |
+| **Grafana 대시보드 — JVM Heap 패널** | `sum by (application) (jvm_memory_used_bytes{application=~"$application", area="heap"})`, 단위 bytes(IEC), threshold 384 MiB(75%)/461 MiB(90%) 절대값으로 박음 |
+| **Grafana 대시보드 — DB Connection Pool 패널** | HikariCP active/idle/pending 4종 시리즈 한 패널. `hikaricp_connections_pending > 0`이 즉시 비상 시그널 |
+| **Grafana 대시보드 — JVM Threads 패널** | `sum by (application) (jvm_threads_live_threads{application=~"$application"})`, threshold 100/300 절대값 |
+| **Contact point — Email** | Grafana Cloud 내장 Email integration. 별도 SMTP 불필요. Test 발송 성공 확인 |
+| **Notification policy** | Group by: `grafana_folder`, `alertname`, `application`. Group wait 30s / interval 5m / **repeat 4h** |
+| **Alert rules (일부 구현, 일부 계획)** | P0: HikariCP Pending > 0 (1m) / 5xx > 5% (5m). P1: P99 > 1s (5m, `uri!~".*ws.*"` SockJS 제외) / Old Gen > 90% (10m). P2: Pod restart (kube-state-metrics 활성화 후) |
+
+### `application` 라벨 회귀 — 진단 과정
+
+**증상**: Grafana 대시보드 `$application` 변수 드롭다운에 `toy-auth`만 표시, `auth-service` 없음.
+
+1. `/actuator/prometheus` 호출 → 메트릭에 `application="toy-auth"` 확인
+2. `/actuator/info`의 `build.name="toy-auth"` 확인 → Gradle 프로젝트 이름 잔재
+3. ConfigMap `auth-config` 검사 → `SPRING_APPLICATION_NAME` env 없음 (override 아님)
+4. JAR 안의 `application.yml`은 `auth-service`로 적혀있는데 빌드된 결과는 다름 → yml 적용 시점/이미지 빌드 시점에서 변형 발생. CI/CD 빌드 사이클 점검 필요
+
+조치: yml 통일 후 rolling restart. 단, **2주간 옛 `toy-auth` 시리즈는 Mimir retention 안에 잔존**하다 자연 소멸.
+
+### 핵심 의사결정
+
+#### (1) Saturation은 단일 지표가 아니라 자원별 3-tier 구조
+
+SRE 4 Signals에서 "Saturation"이 하나의 패널처럼 쓰이지만, **실제 병목은 자원마다 신호가 다르다**:
+
+| 자원 | 병목 신호 | 측정 메트릭 |
+|---|---|---|
+| 메모리 | Old Gen 고갈 → OOMKilled | `jvm_memory_used_bytes{id="G1 Old Gen"}` |
+| DB I/O | Pool 고갈 → request queue 쌓임 | `hikaricp_connections_pending` |
+| HTTP 처리 능력 | Tomcat/STOMP executor 포화 | (case-by-case, 아래 (3) 참조) |
+
+→ "saturation %" 한 줄 요약보다 **자원별 패널 분리**가 SRE 관점에서 정확. "Tomcat thread 사용률"같은 일반론적 지표보다 도메인 특화 지표(DB pool, STOMP channel)가 우선.
+
+#### (2) JVM Heap을 비율(%) 대신 절대값(MiB)으로 표시
+
+처음 `used/max * 100`으로 만들었으나 두 문제:
+- G1GC가 Eden/Survivor의 `max`를 `-1`로 보고 → `sum`이 의미 망가짐
+- "78%"보다 "400 MiB / 512 MiB"가 OOM 임박감을 시각적으로 더 잘 전달
+
+→ **절대값 + max 점선 + threshold를 bytes 절대값(402653184, 483183820)으로** 박는 방식. 부하테스트 시 "실선이 점선 향해 차오르는 시각화"가 직관적.
+
+#### (3) `tomcat_threads_*` 미노출 — 우회 측정으로 분산
+
+`tomcat.threads: true` 설정에도 prometheus endpoint에 `tomcat_threads_*` 미노출. `executor_*` 메트릭은 Spring `@Async`/Scheduler 풀이지 Tomcat HTTP connector 풀 아님.
+
+→ "Tomcat thread 포화"를 직접 측정 불가. 대안: **JVM Live Threads (절대값)** + **HikariCP saturation** + (chat 한정) **STOMP channel executor**로 분산 측정. Tomcat thread는 결국 DB pool 고갈의 후행 지표(thread가 DB에서 대기)라 우회가 무의미하진 않음.
+
+⚠️ **솔직한 한계**: 정확한 Tomcat HTTP saturation은 아직 측정 못 함. 진짜 필요해지면 Spring Boot 버전별 Tomcat metrics binder 검토.
+
+#### (4) SockJS WebSocket fallback이 P99 메트릭 오염
+
+P99가 평소 10초로 튀는 이슈 발견. Tempo에서 trace 추적해보니 **`/api/ws/{server_id}/{session_id}/xhr` 경로의 SockJS long-polling fallback이 의도적으로 25초간 연결 유지**하는 정상 동작.
+
+→ 즉시 조치: P99 PromQL에 `uri!~".*ws.*"` 필터 추가. 코드 레벨 영구 조치(MetricsConfig에 SockJS URI 필터링)는 별도 작업으로 분리. **면접 답변**: "P99 10초가 진짜 느린 게 아니라 SockJS의 정상 동작이라는 걸 trace로 검증 — 메트릭 단독으로 false alarm 일으키는 시그널을 trace로 교차검증한 사례."
+
+#### (5) Alert Pending Period — 알람 종류별 차등
+
+| 알람 | Pending | 근거 |
+|---|---|---|
+| HikariCP Pending > 0 | 1m | 즉시 비상 — pool 고갈은 곧장 사용자 영향 |
+| 5xx > 5%, P99 > 1s | 5m | 단발 spike 무시, 지속성 확인 후 발화 |
+| Old Gen > 90% | 10m | Major GC 후 떨어질 수 있음, 지속 우상향만 알람 |
+
+"알람 피로(alert fatigue) 방지"가 SRE 기본 — 1분 spike에 다 발화하면 진짜 사고 시 묻힌다.
+
+#### (6) Repeat interval 4h
+
+미해결 알람 재발송 주기. 1h는 너무 잦아 피로, 24h는 잊혀짐. **4h = 근무 시간 중 6번** = 의식 가능한 빈도. 사이드 프로젝트 규모 적합.
+
+### 검증 방법
+
+```bash
+# 1) application 라벨 통일 확인
+kubectl exec deployment/auth-service -- wget -qO- http://localhost:8090/actuator/prometheus \
+  | grep -oE 'application="[^"]+"' | sort -u
+# application="auth-service" 단독으로 나와야 함
+
+# 2) Grafana Cloud 도달 확인 (Explore)
+#    group by (application) (http_server_requests_seconds_count)
+#    → auth-service, chat-service, content-service 세 값 모두 표시
+
+# 3) Saturation 패널 정상 동작 (대시보드)
+# - JVM Heap: 세 서비스 모두 시계열, 0 ~ 512 MiB Y축
+# - Hikari: chat-service는 메트릭 없음(NoSQL만 사용, 정상), auth/content는 idle=10
+
+# 4) Alert 시스템 — Email contact point
+# Alerting → Contact points → email-me → Test 버튼
+# → 본인 이메일 (스팸함 포함) 확인
+```
+
+### 부하테스트 직전 체크리스트
+
+- [x] Saturation — JVM Heap 패널 (절대값, 512 MiB 상한)
+- [x] Saturation — DB Connection Pool 패널 (active/idle/pending 분리)
+- [x] Saturation — JVM Threads 패널 (live threads, 절대값)
+- [x] Email Contact point 등록 + Test 발송 성공
+- [x] Notification policy (default → email-me)
+- [ ] **GC Activity 패널** — `rate(jvm_gc_pause_seconds_sum[30s])` by action
+- [ ] **JVM Thread States 패널** — stacked, blocked 시리즈 강조
+- [ ] **Old Gen 별도 패널** — `jvm_memory_used_bytes{id="G1 Old Gen"}`
+- [ ] **Alert Rule — HikariCP Pending > 0** 발화 테스트 (실 발화 확인까지)
+- [ ] **부하테스트용 별도 대시보드** (Refresh 5s, Time range 15m)
+
+### 다음 단계
+
+- [ ] GC Activity / Thread States / Old Gen 패널 추가 (부하테스트 1순위 시각화)
+- [ ] Alert Rule 4종 실 구현: HikariCP Pending → 5xx → P99 → Old Gen 순서로
+- [ ] k6 가벼운 부하(10 VUs, 1m)로 어느 패널이 가장 먼저 튀는지 관찰
+- [ ] N+1 발견 → `@EntityGraph` 개선 → 재부하 → 골든 시나리오 완성 ([[2026-05-17]] 다음 단계의 연장)
+- [ ] content-service heap이 평상시 400 MiB대 — sawtooth(정상) vs 우상향(memory leak) 6h 그래프 확인
+- [ ] content-service `Max` 컬럼 610 MiB 이상값 원인 추적 (Eden/Survivor `-1` 합산 영향 또는 컨테이너 limit 동적 조정)
+- [ ] MetricsConfig에 SockJS URI 필터 추가 — 대시보드 쿼리 레벨 임시 처리를 코드 레벨로 영구화
+- [ ] `tomcat_threads_*` 메트릭 부재 원인 추적 — Spring Boot 3.x Tomcat metrics binder 검토 (낮은 우선순위)
+- [ ] 부하테스트 실제 발화 검증되면 별도 섹션(`2026-05-23 — 부하테스트 사이클 1회차`)으로 기록
+
+---
+
 ## 2026-05-21 — toy-chat 표준 이식 + WebSocket 관측성
 
 ### 왜 했나
