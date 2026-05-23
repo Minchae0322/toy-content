@@ -105,29 +105,26 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
    *   hotScore = engagementScore / decayFactor
    *
    *   engagementScore = (like_count × 5) + (comment_count × 3) + (view_count × 0.5)
-   *   decayFactor     = POWER(GREATEST(경과시간(h) + 24, 1), 0.9)
+   *   decayFactor     = POWER(GREATEST(경과시간(h) + 24, 1), :decayExponent)
    * </pre>
    *
-   * <p>계산 근거 (저트래픽 단계 기준):</p>
-   * <ul>
-   *   <li>좋아요(×5) > 댓글(×3) > 조회(×0.5): 참여 강도 순. 1 like = 10 view,
-   *       1 comment = 6 view 가중치. 누적 조회량이 많아질수록 view도 의미 있는 시그널이 됨.</li>
-   *   <li>시간 감쇠(0.9승, +24 평탄): 3일 정도 누적 호응을 받은 피드는 7일차에서도
-   *       경쟁력을 갖되, 그 이상은 새 시그널 없이 무한 노출되지 않도록 균형점 잡음.</li>
-   * </ul>
+   * <p>감쇠 지수(decayExponent)는 스케줄러가 최근 신규 피드 수에 따라 동적으로 결정한다.
+   * 신규 유입이 많으면 큰 값(빠른 감쇠), 적으면 작은 값(완만한 감쇠)을 사용한다.</p>
    *
    * @param since 이 시각 이후 updated_at이 갱신된 피드만 대상
+   * @param decayExponent 시간 감쇠 지수
    * @return 업데이트된 피드 수
    */
   @Modifying(clearAutomatically = true)
   @Query(value = """
     UPDATE tb_feed
     SET hot_score = (like_count * 5 + comment_count * 3 + view_count * 0.5)
-                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 24, 1), 0.9)
+                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 24, 1), :decayExponent)
     WHERE deleted = false
       AND updated_at >= :since
     """, nativeQuery = true)
-  int bulkUpdateHotScoreRecent(@Param("since") LocalDateTime since);
+  int bulkUpdateHotScoreRecent(@Param("since") LocalDateTime since,
+                               @Param("decayExponent") double decayExponent);
 
   /**
    * 피드 핫 스코어 벌크 업데이트 (전체 재계산)
@@ -136,18 +133,27 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
    * 시간 감쇠를 반영하여 핫 스코어를 재계산한다.
    *
    * @param recentDays 재계산 대상 기간 (일)
+   * @param decayExponent 시간 감쇠 지수
    * @return 업데이트된 피드 수
-   * @see #bulkUpdateHotScoreRecent(LocalDateTime) 핫 스코어 계산식 상세
+   * @see #bulkUpdateHotScoreRecent(LocalDateTime, double) 핫 스코어 계산식 상세
    */
   @Modifying(clearAutomatically = true)
   @Query(value = """
     UPDATE tb_feed
     SET hot_score = (like_count * 5 + comment_count * 3 + view_count * 0.5)
-                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 24, 1), 0.9)
+                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 24, 1), :decayExponent)
     WHERE deleted = false
       AND created_at >= DATE_SUB(NOW(), INTERVAL :recentDays DAY)
     """, nativeQuery = true)
-  int bulkUpdateHotScoreAll(@Param("recentDays") int recentDays);
+  int bulkUpdateHotScoreAll(@Param("recentDays") int recentDays,
+                            @Param("decayExponent") double decayExponent);
+
+  /**
+   * 최근 N시간 내 생성된 활성 피드 수
+   * - 핫 스코어 시간 감쇠 지수 동적 선택에 사용
+   */
+  @Query("SELECT COUNT(f) FROM Feed f WHERE f.isDeleted = false AND f.createdAt >= :since")
+  long countRecentFeeds(@Param("since") LocalDateTime since);
 
   Long countByHotScoreGreaterThanEqualAndIsDeletedFalse(double hotScoreThreshold);
 }

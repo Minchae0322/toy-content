@@ -179,6 +179,11 @@ scheduler:
       cron: "0 0 3 * * *"
       enabled: ${FEED_HOT_SCORE_FULL_RECALC_ENABLED:true}
       recent-days: ${FEED_HOT_SCORE_RECENT_DAYS:30}
+    decay:
+      recent-window-hours: ${FEED_HOT_SCORE_DECAY_WINDOW_HOURS:24}
+      threshold: ${FEED_HOT_SCORE_DECAY_THRESHOLD:10}
+      fast: ${FEED_HOT_SCORE_DECAY_FAST:1.1}
+      slow: ${FEED_HOT_SCORE_DECAY_SLOW:0.7}
 
 springdoc:
   api-docs:
