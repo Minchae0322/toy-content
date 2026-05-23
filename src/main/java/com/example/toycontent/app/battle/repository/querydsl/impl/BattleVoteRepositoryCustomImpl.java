@@ -49,4 +49,16 @@ public class BattleVoteRepositoryCustomImpl implements BattleVoteRepositoryCusto
             Function.identity()
         ));
   }
+
+  @Override
+  public List<Long> findDistinctVoterUserIdsByBattleId(Long battleId) {
+    return queryFactory
+        .select(battleVote.userId).distinct()
+        .from(battleVote)
+        .where(
+            battleVote.battle.id.eq(battleId),
+            battleVote.userId.isNotNull()
+        )
+        .fetch();
+  }
 }

@@ -8,4 +8,6 @@ public interface BattleVoteRepositoryCustom {
 
   Map<Long, BattleVote> findUserVotesByBattleItemIds(List<Long> battleItemIds, Long userId);
 
+  List<Long> findDistinctVoterUserIdsByBattleId(Long battleId);
+
 }

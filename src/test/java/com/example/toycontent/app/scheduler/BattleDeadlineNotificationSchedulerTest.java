@@ -114,6 +114,83 @@ class BattleDeadlineNotificationSchedulerTest {
       then(sentRepository).should().saveAll(captor.capture());
       assertThat(captor.getValue()).isEmpty();
     }
+
+    @Test
+    @DisplayName("여러 배틀이 D-7 윈도우에 잡히면 각 생성자에게 모두 발송된다")
+    void 다수_배틀_정상_발송() {
+      // given
+      Battle b1 = BattleFixture.active();
+      Battle b2 = Battle.builder()
+          .id(2L)
+          .title("배틀2")
+          .creatorId(200L)
+          .startDate(LocalDateTime.now().minusDays(1))
+          .participationStartDate(LocalDateTime.now().minusDays(1))
+          .endDate(LocalDateTime.now().plusDays(7))
+          .itemAddPermissionType(ItemAddPermissionType.PUBLIC_FREE)
+          .voteType(VoteType.MULTIPLE)
+          .status(BattleStatus.NORMAL)
+          .build();
+      given(battleRepository.findByEndDateBetween(any(), any()))
+          .willReturn(List.of(b1, b2));
+      given(sentRepository.findByBattleIdInAndPhase(
+          List.of(b1.getId(), b2.getId()), BattleNotificationPhase.D7))
+          .willReturn(List.of());
+
+      // when
+      scheduler.notifyD7();
+
+      // then
+      then(notificationService).should()
+          .notifyBattleDeadlineOwnerD7(b1.getCreatorId(), b1.getId(), b1.getTitle());
+      then(notificationService).should()
+          .notifyBattleDeadlineOwnerD7(b2.getCreatorId(), b2.getId(), b2.getTitle());
+      then(notificationService).should(times(2))
+          .notifyBattleDeadlineOwnerD7(anyLong(), anyLong(), anyString());
+
+      ArgumentCaptor<List<BattleNotificationSent>> captor = ArgumentCaptor.forClass(List.class);
+      then(sentRepository).should().saveAll(captor.capture());
+      assertThat(captor.getValue()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("여러 배틀 중 일부만 발송 기록이 있으면 미발송 배틀만 발송된다")
+    void 다수_배틀_일부_중복_방지() {
+      // given
+      Battle b1 = BattleFixture.active();
+      Battle b2 = Battle.builder()
+          .id(2L)
+          .title("배틀2")
+          .creatorId(200L)
+          .startDate(LocalDateTime.now().minusDays(1))
+          .participationStartDate(LocalDateTime.now().minusDays(1))
+          .endDate(LocalDateTime.now().plusDays(7))
+          .itemAddPermissionType(ItemAddPermissionType.PUBLIC_FREE)
+          .voteType(VoteType.MULTIPLE)
+          .status(BattleStatus.NORMAL)
+          .build();
+      given(battleRepository.findByEndDateBetween(any(), any()))
+          .willReturn(List.of(b1, b2));
+      // b1만 이미 발송됨
+      given(sentRepository.findByBattleIdInAndPhase(
+          List.of(b1.getId(), b2.getId()), BattleNotificationPhase.D7))
+          .willReturn(List.of(BattleNotificationSent.of(
+              b1.getId(), BattleNotificationPhase.D7, b1.getCreatorId())));
+
+      // when
+      scheduler.notifyD7();
+
+      // then - b1은 스킵, b2만 발송
+      then(notificationService).should(never())
+          .notifyBattleDeadlineOwnerD7(eq(b1.getCreatorId()), eq(b1.getId()), anyString());
+      then(notificationService).should()
+          .notifyBattleDeadlineOwnerD7(b2.getCreatorId(), b2.getId(), b2.getTitle());
+
+      ArgumentCaptor<List<BattleNotificationSent>> captor = ArgumentCaptor.forClass(List.class);
+      then(sentRepository).should().saveAll(captor.capture());
+      assertThat(captor.getValue()).hasSize(1);
+      assertThat(captor.getValue().get(0).getBattleId()).isEqualTo(b2.getId());
+    }
   }
 
   @Nested
@@ -222,6 +299,169 @@ class BattleDeadlineNotificationSchedulerTest {
       // then - 생성자에게만 발송 (null 무시)
       then(notificationService).should(times(1))
           .notifyBattleResult(creatorId, battle.getId(), battle.getTitle());
+    }
+
+    @Test
+    @DisplayName("투표자가 없으면 생성자에게만 발송한다")
+    void 투표자_없음_생성자만() {
+      // given
+      Battle battle = endingBattle();
+      Long creatorId = battle.getCreatorId();
+
+      given(battleRepository.findByEndDateBetween(any(), any()))
+          .willReturn(List.of(battle));
+      given(sentRepository.findByBattleIdInAndPhase(
+          List.of(battle.getId()), BattleNotificationPhase.END))
+          .willReturn(List.of());
+      given(battleVoteRepository.findDistinctVoterUserIdsByBattleId(battle.getId()))
+          .willReturn(List.of());
+
+      // when
+      scheduler.notifyEnd();
+
+      // then
+      then(notificationService).should(times(1))
+          .notifyBattleResult(creatorId, battle.getId(), battle.getTitle());
+
+      ArgumentCaptor<List<BattleNotificationSent>> captor = ArgumentCaptor.forClass(List.class);
+      then(sentRepository).should().saveAll(captor.capture());
+      assertThat(captor.getValue()).hasSize(1);
+      assertThat(captor.getValue().get(0).getUserId()).isEqualTo(creatorId);
+    }
+
+    @Test
+    @DisplayName("다수 투표자가 있으면 생성자 + 모든 투표자에게 발송된다")
+    void 다수_투표자_정상_발송() {
+      // given
+      Battle battle = endingBattle();
+      Long creatorId = battle.getCreatorId();
+      Long v1 = 201L, v2 = 202L, v3 = 203L;
+
+      given(battleRepository.findByEndDateBetween(any(), any()))
+          .willReturn(List.of(battle));
+      given(sentRepository.findByBattleIdInAndPhase(
+          List.of(battle.getId()), BattleNotificationPhase.END))
+          .willReturn(List.of());
+      given(battleVoteRepository.findDistinctVoterUserIdsByBattleId(battle.getId()))
+          .willReturn(List.of(v1, v2, v3));
+
+      // when
+      scheduler.notifyEnd();
+
+      // then - 4명에게 발송 (creator + v1,v2,v3)
+      then(notificationService).should(times(4))
+          .notifyBattleResult(anyLong(), eq(battle.getId()), eq(battle.getTitle()));
+
+      ArgumentCaptor<List<BattleNotificationSent>> captor = ArgumentCaptor.forClass(List.class);
+      then(sentRepository).should().saveAll(captor.capture());
+      assertThat(captor.getValue()).hasSize(4);
+    }
+
+    @Test
+    @DisplayName("게스트(null)와 유효 유저가 섞이면 null만 제외하고 발송된다")
+    void 게스트_혼합_null만_제외() {
+      // given
+      Battle battle = endingBattle();
+      Long creatorId = battle.getCreatorId();
+      Long voterId = 999L;
+
+      given(battleRepository.findByEndDateBetween(any(), any()))
+          .willReturn(List.of(battle));
+      given(sentRepository.findByBattleIdInAndPhase(
+          List.of(battle.getId()), BattleNotificationPhase.END))
+          .willReturn(List.of());
+      given(battleVoteRepository.findDistinctVoterUserIdsByBattleId(battle.getId()))
+          .willReturn(Arrays.asList(voterId, null));
+
+      // when
+      scheduler.notifyEnd();
+
+      // then - creator + voter 2명
+      then(notificationService).should()
+          .notifyBattleResult(creatorId, battle.getId(), battle.getTitle());
+      then(notificationService).should()
+          .notifyBattleResult(voterId, battle.getId(), battle.getTitle());
+      then(notificationService).should(times(2))
+          .notifyBattleResult(anyLong(), eq(battle.getId()), eq(battle.getTitle()));
+
+      ArgumentCaptor<List<BattleNotificationSent>> captor = ArgumentCaptor.forClass(List.class);
+      then(sentRepository).should().saveAll(captor.capture());
+      assertThat(captor.getValue()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("모든 대상자가 이미 발송되었으면 누구에게도 발송되지 않는다")
+    void 전원_중복_방지() {
+      // given
+      Battle battle = endingBattle();
+      Long creatorId = battle.getCreatorId();
+      Long voterId = 999L;
+
+      given(battleRepository.findByEndDateBetween(any(), any()))
+          .willReturn(List.of(battle));
+      given(sentRepository.findByBattleIdInAndPhase(
+          List.of(battle.getId()), BattleNotificationPhase.END))
+          .willReturn(List.of(
+              BattleNotificationSent.of(battle.getId(), BattleNotificationPhase.END, creatorId),
+              BattleNotificationSent.of(battle.getId(), BattleNotificationPhase.END, voterId)));
+      given(battleVoteRepository.findDistinctVoterUserIdsByBattleId(battle.getId()))
+          .willReturn(List.of(voterId));
+
+      // when
+      scheduler.notifyEnd();
+
+      // then
+      then(notificationService).should(never())
+          .notifyBattleResult(anyLong(), anyLong(), anyString());
+
+      ArgumentCaptor<List<BattleNotificationSent>> captor = ArgumentCaptor.forClass(List.class);
+      then(sentRepository).should().saveAll(captor.capture());
+      assertThat(captor.getValue()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("여러 배틀이 동시에 종료되면 각 배틀의 생성자+투표자에게 발송된다")
+    void 다수_배틀_정상_발송() {
+      // given
+      Battle b1 = endingBattle();
+      Battle b2 = Battle.builder()
+          .id(2L)
+          .title("종료 배틀2")
+          .creatorId(300L)
+          .startDate(LocalDateTime.now().minusDays(7))
+          .participationStartDate(LocalDateTime.now().minusDays(7))
+          .endDate(LocalDateTime.now())
+          .itemAddPermissionType(ItemAddPermissionType.PUBLIC_FREE)
+          .voteType(VoteType.MULTIPLE)
+          .status(BattleStatus.NORMAL)
+          .build();
+
+      given(battleRepository.findByEndDateBetween(any(), any()))
+          .willReturn(List.of(b1, b2));
+      given(sentRepository.findByBattleIdInAndPhase(
+          List.of(b1.getId(), b2.getId()), BattleNotificationPhase.END))
+          .willReturn(List.of());
+      given(battleVoteRepository.findDistinctVoterUserIdsByBattleId(b1.getId()))
+          .willReturn(List.of(401L));
+      given(battleVoteRepository.findDistinctVoterUserIdsByBattleId(b2.getId()))
+          .willReturn(List.of(402L));
+
+      // when
+      scheduler.notifyEnd();
+
+      // then - b1 creator + 401, b2 creator + 402 = 4건
+      then(notificationService).should()
+          .notifyBattleResult(b1.getCreatorId(), b1.getId(), b1.getTitle());
+      then(notificationService).should()
+          .notifyBattleResult(401L, b1.getId(), b1.getTitle());
+      then(notificationService).should()
+          .notifyBattleResult(b2.getCreatorId(), b2.getId(), b2.getTitle());
+      then(notificationService).should()
+          .notifyBattleResult(402L, b2.getId(), b2.getTitle());
+
+      ArgumentCaptor<List<BattleNotificationSent>> captor = ArgumentCaptor.forClass(List.class);
+      then(sentRepository).should().saveAll(captor.capture());
+      assertThat(captor.getValue()).hasSize(4);
     }
 
     private Battle endingBattle() {
