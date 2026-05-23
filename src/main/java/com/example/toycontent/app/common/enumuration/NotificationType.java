@@ -30,6 +30,9 @@ public enum NotificationType {
   BATTLE_RESULT_WITH_WINNER("배틀 결과", "[%s] 배틀 종료! 1위는 [%s] 🏆 결과를 확인해보세요!"),
   BATTLE_DEADLINE_OWNER_D7("마감 7일 전", "내 배틀 [%s] 종료까지 7일 남았어요. 공유하고 참여를 늘려보세요."),
 
+  // 발견
+  HOT_CONTENT_DISCOVERY("인기 콘텐츠", "지금 인기 있는 %s [%s]를 확인해보세요!"),
+
   // 시스템
   SYSTEM("시스템 알림", "%s");
 

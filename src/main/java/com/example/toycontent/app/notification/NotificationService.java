@@ -5,6 +5,8 @@ import com.example.toycontent.app.common.enumuration.NotificationReferenceType;
 import com.example.toycontent.app.common.enumuration.NotificationType;
 import com.example.toycontent.app.kafka.KafkaNotificationProducer;
 import com.example.toycontent.app.kafka.dto.KafkaNotificationDto;
+import com.example.toycontent.app.notification.hotcontent.HotContentCandidate;
+import com.example.toycontent.app.notification.hotcontent.HotContentType;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -278,6 +280,33 @@ public class NotificationService {
         .actorNickname(actorNickname)
         .actorProfileImageUrl(actorProfileImageUrl)
         .channels(List.of(NotificationChannel.IN_APP, NotificationChannel.PUSH))
+        .build()
+    );
+  }
+
+  // ============================
+  // 발견 (브로드캐스트)
+  // ============================
+
+  /**
+   * 핫 콘텐츠 발견 알림을 푸시 동의자 전원에게 브로드캐스트한다.
+   *
+   * <p>{@code userId=null} 마커로 카프카에 1건만 발행하고, 컨슈머가 푸시 동의 유저
+   * 대상 fanout 및 FCM 발송을 담당한다. 인앱 알림함에 N건이 쌓이지 않도록 채널은
+   * {@link NotificationChannel#PUSH}만 사용한다.
+   */
+  public void broadcastHotContentDiscovery(HotContentCandidate candidate) {
+    HotContentType type = candidate.getType();
+    sendSafely(NotificationType.HOT_CONTENT_DISCOVERY, KafkaNotificationDto.builder()
+        .userId(null)
+        .type(NotificationType.HOT_CONTENT_DISCOVERY)
+        .title(NotificationType.HOT_CONTENT_DISCOVERY.getTitle())
+        .content(NotificationType.HOT_CONTENT_DISCOVERY.formatContent(
+            type.getLabel(), candidate.getDisplayName()))
+        .referenceId(String.valueOf(candidate.getContentId()))
+        .referenceType(type.getReferenceType())
+        .actionUrl(type.buildActionUrl(candidate.getContentId()))
+        .channels(List.of(NotificationChannel.PUSH))
         .build()
     );
   }
