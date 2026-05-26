@@ -6,9 +6,11 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.feed.controller.dto.FeedCommentRequest.CommentCreate;
@@ -22,6 +24,7 @@ import com.example.toycontent.app.reward.exp.service.ExpGrantService;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import com.example.toycontent.support.fixture.FeedFixture;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -128,6 +131,134 @@ class FeedCommentServiceTest {
 
       then(feedCommentRepository).shouldHaveNoInteractions();
       then(notificationService).shouldHaveNoInteractions();
+    }
+  }
+
+  @Nested
+  @DisplayName("createComment - 답글 알림 fan-out")
+  class CreateReplyNotificationFanOut {
+
+    private static final long PARENT_COMMENT_ID = 50L;
+    private static final long PARENT_AUTHOR_ID = 300L;
+    private static final long EXISTING_REPLIER_A = 400L;
+    private static final long EXISTING_REPLIER_B = 500L;
+    private static final long NEW_REPLIER_ID = COMMENTER_ID;
+
+    @Test
+    @DisplayName("답글 시 부모 작성자와 같은 부모에 답글 단 다른 사용자에게 모두 알림이 발송된다")
+    void 부모_및_답글러_모두에게_알림() {
+      // given
+      Feed feed = FeedFixture.withUserId(FEED_OWNER_ID);
+      FeedComment parent = FeedComment.builder()
+          .id(PARENT_COMMENT_ID).feed(feed).creatorId(PARENT_AUTHOR_ID)
+          .content("부모 댓글").deleted(false)
+          .build();
+      given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
+      given(feedCommentRepository.findByIdAndFeedId(PARENT_COMMENT_ID, FEED_ID))
+          .willReturn(Optional.of(parent));
+      given(externalUserInfoService.getUserInfo(NEW_REPLIER_ID))
+          .willReturn(externalUser(COMMENTER_NICKNAME));
+      given(feedCommentRepository.findReplyCreatorIdsByParentId(PARENT_COMMENT_ID))
+          .willReturn(List.of(EXISTING_REPLIER_A, EXISTING_REPLIER_B));
+
+      // when
+      feedCommentService.createComment(
+          FEED_ID, new CommentCreate("답글 내용", PARENT_COMMENT_ID), NEW_REPLIER_ID);
+
+      // then
+      ArgumentCaptor<Long> targetCaptor = ArgumentCaptor.forClass(Long.class);
+      then(notificationService).should(times(3)).notifyFeedComment(
+          targetCaptor.capture(), eq(NEW_REPLIER_ID), anyString(), any(), eq(FEED_ID), any()
+      );
+      assertThat(targetCaptor.getAllValues())
+          .as("부모 작성자 + 기존 답글러 두 명")
+          .containsExactlyInAnyOrder(PARENT_AUTHOR_ID, EXISTING_REPLIER_A, EXISTING_REPLIER_B);
+    }
+
+    @Test
+    @DisplayName("부모 작성자가 답글러 목록에 포함돼도 중복 없이 한 번만 알림이 발송된다")
+    void 부모와_답글러_중복_제거() {
+      // given
+      Feed feed = FeedFixture.withUserId(FEED_OWNER_ID);
+      FeedComment parent = FeedComment.builder()
+          .id(PARENT_COMMENT_ID).feed(feed).creatorId(PARENT_AUTHOR_ID)
+          .content("부모 댓글").deleted(false)
+          .build();
+      given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
+      given(feedCommentRepository.findByIdAndFeedId(PARENT_COMMENT_ID, FEED_ID))
+          .willReturn(Optional.of(parent));
+      given(externalUserInfoService.getUserInfo(NEW_REPLIER_ID))
+          .willReturn(externalUser(COMMENTER_NICKNAME));
+      // 부모 작성자가 본인 댓글에 답글을 단 경우 + 다른 답글러도 있음
+      given(feedCommentRepository.findReplyCreatorIdsByParentId(PARENT_COMMENT_ID))
+          .willReturn(List.of(PARENT_AUTHOR_ID, EXISTING_REPLIER_A));
+
+      // when
+      feedCommentService.createComment(
+          FEED_ID, new CommentCreate("답글", PARENT_COMMENT_ID), NEW_REPLIER_ID);
+
+      // then
+      ArgumentCaptor<Long> targetCaptor = ArgumentCaptor.forClass(Long.class);
+      then(notificationService).should(times(2)).notifyFeedComment(
+          targetCaptor.capture(), anyLong(), anyString(), any(), anyLong(), any()
+      );
+      assertThat(targetCaptor.getAllValues())
+          .as("부모 작성자는 1번만 포함")
+          .containsExactlyInAnyOrder(PARENT_AUTHOR_ID, EXISTING_REPLIER_A);
+    }
+
+    @Test
+    @DisplayName("새 답글 작성자 본인은 수신자에서 제외된다")
+    void 본인_제외() {
+      // given
+      Feed feed = FeedFixture.withUserId(FEED_OWNER_ID);
+      FeedComment parent = FeedComment.builder()
+          .id(PARENT_COMMENT_ID).feed(feed).creatorId(PARENT_AUTHOR_ID)
+          .content("부모 댓글").deleted(false)
+          .build();
+      given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
+      given(feedCommentRepository.findByIdAndFeedId(PARENT_COMMENT_ID, FEED_ID))
+          .willReturn(Optional.of(parent));
+      given(externalUserInfoService.getUserInfo(NEW_REPLIER_ID))
+          .willReturn(externalUser(COMMENTER_NICKNAME));
+      // 본인이 이미 답글을 단 적이 있어 reply creator 목록에 포함됨
+      given(feedCommentRepository.findReplyCreatorIdsByParentId(PARENT_COMMENT_ID))
+          .willReturn(List.of(NEW_REPLIER_ID, EXISTING_REPLIER_A));
+
+      // when
+      feedCommentService.createComment(
+          FEED_ID, new CommentCreate("두 번째 답글", PARENT_COMMENT_ID), NEW_REPLIER_ID);
+
+      // then
+      ArgumentCaptor<Long> targetCaptor = ArgumentCaptor.forClass(Long.class);
+      then(notificationService).should(times(2)).notifyFeedComment(
+          targetCaptor.capture(), anyLong(), anyString(), any(), anyLong(), any()
+      );
+      assertThat(targetCaptor.getAllValues())
+          .as("본인은 제외하고 부모 작성자와 기존 다른 답글러에게만 알림")
+          .containsExactlyInAnyOrder(PARENT_AUTHOR_ID, EXISTING_REPLIER_A);
+    }
+
+    @Test
+    @DisplayName("루트 댓글일 때는 피드 작성자에게만 알림이 발송되고 답글러 조회 쿼리가 호출되지 않는다")
+    void 루트_댓글은_피드_작성자에게만() {
+      // given
+      Feed feed = FeedFixture.withUserId(FEED_OWNER_ID);
+      given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
+      given(externalUserInfoService.getUserInfo(COMMENTER_ID))
+          .willReturn(externalUser(COMMENTER_NICKNAME));
+
+      // when
+      feedCommentService.createComment(
+          FEED_ID, new CommentCreate("루트 댓글", null), COMMENTER_ID);
+
+      // then
+      ArgumentCaptor<Long> targetCaptor = ArgumentCaptor.forClass(Long.class);
+      then(notificationService).should(times(1)).notifyFeedComment(
+          targetCaptor.capture(), anyLong(), anyString(), any(), anyLong(), any()
+      );
+      assertThat(targetCaptor.getValue()).isEqualTo(FEED_OWNER_ID);
+      then(feedCommentRepository).should(never()).findReplyCreatorIdsByParentId(anyLong());
     }
   }
 

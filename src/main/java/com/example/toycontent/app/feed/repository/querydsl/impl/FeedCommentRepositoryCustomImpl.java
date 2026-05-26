@@ -60,6 +60,18 @@ public class FeedCommentRepositoryCustomImpl implements FeedCommentRepositoryCus
     return new PageImpl<>(items, pageable, total != null ? total : 0L);
   }
 
+  @Override
+  public List<Long> findReplyCreatorIdsByParentId(Long parentCommentId) {
+    return queryFactory
+        .select(feedComment.creatorId).distinct()
+        .from(feedComment)
+        .where(
+            feedComment.parent.id.eq(parentCommentId),
+            feedComment.deleted.eq(false)
+        )
+        .fetch();
+  }
+
   private Map<Long, List<ReplyItem>> fetchRepliesGroupedByParent(List<FeedComment> roots) {
     if (roots.isEmpty()) {
       return Collections.emptyMap();

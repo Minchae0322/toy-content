@@ -24,7 +24,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -61,21 +64,25 @@ public class FeedCommentService {
     feedCommentRepository.save(comment);
     feed.incrementCommentCount();
 
-    // 알림 대상: 답글이면 부모 댓글 작성자, 일반 댓글이면 피드 작성자
-    Long notifyTargetUserId = parent != null
-        ? parent.getCreatorId()
-        : feed.getUserId();
+    // 알림 대상:
+    //  - 답글: 부모 댓글 작성자 + 같은 부모에 답글 단 사람들 (중복/본인 제외)
+    //  - 일반 댓글: 피드 작성자
+    List<Long> notifyTargetUserIds = resolveCommentNotifyTargets(feed, parent, creatorId);
 
-    notificationService.notifyFeedComment(
-        notifyTargetUserId,
-        creatorId,
-        externalUserInfo.getNickname(),
-        Optional.ofNullable(externalUserInfo.getProfileImageFile())
-            .map(ExternalAttachmentFileDto::getFileUrl)
-            .orElse(null),
-        feedId,
-        feed.getProductNameCustom()
-    );
+    String actorProfileUrl = Optional.ofNullable(externalUserInfo.getProfileImageFile())
+        .map(ExternalAttachmentFileDto::getFileUrl)
+        .orElse(null);
+
+    for (Long targetUserId : notifyTargetUserIds) {
+      notificationService.notifyFeedComment(
+          targetUserId,
+          creatorId,
+          externalUserInfo.getNickname(),
+          actorProfileUrl,
+          feedId,
+          feed.getProductNameCustom()
+      );
+    }
 
     // 댓글 작성에 대한 EXP 지급
     ExpGrantResult grant = expGrantService.grantCommentCreate(creatorId, comment.getId());
@@ -111,6 +118,18 @@ public class FeedCommentService {
     }
 
     return parent;
+  }
+
+  private List<Long> resolveCommentNotifyTargets(Feed feed, FeedComment parent, Long creatorId) {
+    if (parent == null) {
+      return List.of(feed.getUserId());
+    }
+
+    Set<Long> targets = new LinkedHashSet<>();
+    targets.add(parent.getCreatorId());
+    targets.addAll(feedCommentRepository.findReplyCreatorIdsByParentId(parent.getId()));
+    targets.remove(creatorId);
+    return List.copyOf(targets);
   }
 
   private FeedComment toFeedComment(Feed feed, CommentCreate create, Long creatorId,
