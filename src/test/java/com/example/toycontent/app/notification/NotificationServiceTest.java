@@ -232,7 +232,7 @@ class NotificationServiceTest {
         softly.assertThat(sent.getUserId()).isEqualTo(CREATOR_ID);
         softly.assertThat(sent.getType()).isEqualTo(NotificationType.BATTLE_DEADLINE_OWNER_D7);
         softly.assertThat(sent.getReferenceId()).isEqualTo(String.valueOf(BATTLE_ID));
-        softly.assertThat(sent.getActionUrl()).isEqualTo("/battle/" + BATTLE_ID);
+        softly.assertThat(sent.getActionUrl()).isEqualTo("/battles/" + BATTLE_ID);
         softly.assertThat(sent.getContent()).contains(BATTLE_TITLE);
         softly.assertThat(sent.getChannels())
             .as("D-7은 in-app 채널만 사용")
