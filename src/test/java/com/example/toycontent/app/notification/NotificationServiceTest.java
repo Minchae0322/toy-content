@@ -218,7 +218,7 @@ class NotificationServiceTest {
     private static final String BATTLE_TITLE = "곧 끝나는 배틀";
 
     @Test
-    @DisplayName("생성자에게 BATTLE_DEADLINE_OWNER_D7 타입 알림이 in-app 채널로만 발행된다")
+    @DisplayName("생성자에게 BATTLE_DEADLINE_OWNER_D7 타입 알림이 in-app + push 채널로 발행된다")
     void D7_알림_발행() {
       // when
       notificationService.notifyBattleDeadlineOwnerD7(CREATOR_ID, BATTLE_ID, BATTLE_TITLE);
@@ -235,8 +235,7 @@ class NotificationServiceTest {
         softly.assertThat(sent.getActionUrl()).isEqualTo("/battles/" + BATTLE_ID);
         softly.assertThat(sent.getContent()).contains(BATTLE_TITLE);
         softly.assertThat(sent.getChannels())
-            .as("D-7은 in-app 채널만 사용")
-            .containsExactly(NotificationChannel.IN_APP);
+            .containsExactlyInAnyOrder(NotificationChannel.IN_APP, NotificationChannel.PUSH);
       });
     }
   }

@@ -219,7 +219,7 @@ public class NotificationService {
         .referenceId(String.valueOf(battleId))
         .referenceType(NotificationReferenceType.BATTLE)
         .actionUrl("/battles/" + battleId)
-        .channels(List.of(NotificationChannel.IN_APP))
+        .channels(List.of(NotificationChannel.IN_APP, NotificationChannel.PUSH))
         .build()
     );
   }
