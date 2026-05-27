@@ -4,6 +4,7 @@ import static com.example.toycontent.app.battle.domain.QBattle.battle;
 import static com.example.toycontent.app.battle.domain.QBattleAttachmentFile.battleAttachmentFile;
 import static com.example.toycontent.app.battle.domain.QBattleItem.battleItem;
 import static com.example.toycontent.app.category.domain.QCategory.category;
+import static com.example.toycontent.app.product.domain.QProduct.product;
 
 import com.example.toycontent.app.battle.controller.dto.BattleResponse;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleHotList;
@@ -244,9 +245,23 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
       builder.and(battle.creatorId.eq(condition.getCreatorId()));
     }
 
-    // 키워드 검색 (제목)
+    // 키워드 검색 (제목 OR 활성 아이템명 — customName/product.name)
     if (condition.getKeyword() != null && !condition.getKeyword().isBlank()) {
-      builder.and(battle.title.containsIgnoreCase(condition.getKeyword()));
+      String keyword = condition.getKeyword();
+      builder.and(
+          battle.title.containsIgnoreCase(keyword)
+              .or(JPAExpressions.selectOne()
+                  .from(battleItem)
+                  .leftJoin(battleItem.product, product)
+                  .where(
+                      battleItem.battle.eq(battle),
+                      battleItem.isDeleted.isFalse(),
+                      battleItem.status.eq(BattleItemStatus.ACTIVE),
+                      battleItem.customName.containsIgnoreCase(keyword)
+                          .or(product.name.containsIgnoreCase(keyword))
+                  )
+                  .exists())
+      );
     }
 
     return builder;
