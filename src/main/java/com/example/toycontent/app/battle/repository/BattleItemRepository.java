@@ -1,6 +1,5 @@
 package com.example.toycontent.app.battle.repository;
 
-import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.repository.querydsl.BattleItemRepositoryCustom;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
@@ -12,8 +11,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface BattleItemRepository extends JpaRepository<BattleItem, Long>,
     BattleItemRepositoryCustom {
-
-  long countByBattleAndIsDeletedFalse(Battle battle);
 
   @Query("""
     SELECT bi FROM BattleItem bi

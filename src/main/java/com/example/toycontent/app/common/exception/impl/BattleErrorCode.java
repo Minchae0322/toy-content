@@ -33,7 +33,6 @@ public enum BattleErrorCode implements ErrorCode {
   BATTLE_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "배틀 아이템을 찾을 수 없습니다."),
   INVALID_BATTLE_ITEM(HttpStatus.BAD_REQUEST, "유효하지 않은 배틀 아이템입니다."),
   TOO_MANY_ITEMS(HttpStatus.BAD_REQUEST, "한 번에 추가할 수 있는 아이템 수를 초과했습니다."),
-  MAX_ITEMS_EXCEEDED(HttpStatus.BAD_REQUEST, "배틀당 최대 아이템 수를 초과했습니다."),
   INVALID_ITEM_STATUS(HttpStatus.BAD_REQUEST, "아이템 상태가 유효하지 않습니다."),
   CANNOT_VOTE_ITEM(HttpStatus.BAD_REQUEST, "투표할 수 없는 아이템입니다."),
   DUPLICATE_PRODUCT(HttpStatus.BAD_REQUEST, "이미 등록된 제품입니다."),

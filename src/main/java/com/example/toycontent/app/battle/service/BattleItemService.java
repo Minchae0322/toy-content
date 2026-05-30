@@ -56,7 +56,6 @@ public class BattleItemService {
   private final ExternalUserInfoService externalUserInfoService;
   private final NotificationService notificationService;
 
-  private static final int MAX_ITEMS = 20;
   private static final int MAX_ADDITIONAL_ITEMS = 3;
   private static final int AUTO_REVIEW_REPORT_COUNT = 3;
 
@@ -141,12 +140,6 @@ public class BattleItemService {
     // 최대 3개까지만 추가 가능
     if (items.size() > MAX_ADDITIONAL_ITEMS) {
       throw new RestApiException(BattleErrorCode.TOO_MANY_ITEMS);
-    }
-
-    // 현재 아이템 수 확인
-    long currentCount = battleItemRepository.countByBattleAndIsDeletedFalse(battle);
-    if (currentCount + items.size() > MAX_ITEMS) {
-      throw new RestApiException(BattleErrorCode.MAX_ITEMS_EXCEEDED);
     }
   }
 
