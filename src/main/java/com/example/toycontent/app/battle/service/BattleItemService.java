@@ -7,6 +7,7 @@ import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest.ItemRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleItemInfo;
 import com.example.toycontent.app.battle.controller.dto.BattleVoteRequest;
+import com.example.toycontent.app.battle.audit.VoteAuditLogger;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.domain.BattleItemEventEntry;
@@ -59,6 +60,7 @@ public class BattleItemService {
   private final ExpGrantService expGrantService;
   private final ExternalUserInfoService externalUserInfoService;
   private final NotificationService notificationService;
+  private final VoteAuditLogger voteAuditLogger;
 
   private static final int MAX_ADDITIONAL_ITEMS = 3;
   private static final int AUTO_REVIEW_REPORT_COUNT = 3;
@@ -358,6 +360,8 @@ public class BattleItemService {
     battleVoteRepository.saveAll(newVotes);
     applyVoteStatistics(battle, newVotes);
 
+    voteAuditLogger.logVote(battleId, voter, request);
+
     if (voter.isGuest()) {
       return ExpGrantInfo.aggregate();
     }
@@ -497,6 +501,8 @@ public class BattleItemService {
 
     battle.getVotes().removeAll(votes);
     battleVoteRepository.deleteAll(votes);
+
+    voteAuditLogger.logCancelVote(battleId, voter);
   }
 
 

@@ -6,6 +6,7 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import com.example.toycontent.app.battle.audit.VoteAuditLogger;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleRequest.ItemRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleVoteRequest;
@@ -69,6 +70,7 @@ class BattleItemServiceTest {
   @Mock private ExpGrantService expGrantService;
   @Mock private ExternalUserInfoService externalUserInfoService;
   @Mock private NotificationService notificationService;
+  @Mock private VoteAuditLogger voteAuditLogger;
 
   @InjectMocks private BattleItemService battleItemService;
 
