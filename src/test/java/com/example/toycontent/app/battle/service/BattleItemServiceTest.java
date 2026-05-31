@@ -6,21 +6,31 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import com.example.toycontent.app.battle.controller.dto.BattleRequest;
+import com.example.toycontent.app.battle.controller.dto.BattleRequest.ItemRequest;
 import com.example.toycontent.app.battle.controller.dto.BattleVoteRequest;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.battle.domain.BattleItemEventEntry;
 import com.example.toycontent.app.battle.domain.BattleVote;
+import com.example.toycontent.app.battle.repository.BattleItemCommentRepository;
+import com.example.toycontent.app.battle.repository.BattleItemEventEntryRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.battle.repository.BattleRepository;
 import com.example.toycontent.app.battle.repository.BattleVoteRepository;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
+import com.example.toycontent.app.common.enumuration.BattleItemType;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
 import com.example.toycontent.app.common.enumuration.ItemAddPermissionType;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.common.voter.VoterId;
+import com.example.toycontent.app.notification.NotificationService;
 import com.example.toycontent.app.product.repository.ProductRepository;
 import com.example.toycontent.app.reward.exp.service.ExpGrantService;
+import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
+import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import com.example.toycontent.support.fixture.BattleFixture;
 import com.example.toycontent.support.fixture.BattleItemFixture;
 import java.time.LocalDateTime;
@@ -30,9 +40,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("BattleItemService")
@@ -48,8 +63,12 @@ class BattleItemServiceTest {
   @Mock private BattleRepository battleRepository;
   @Mock private BattleItemRepository battleItemRepository;
   @Mock private BattleVoteRepository battleVoteRepository;
+  @Mock private BattleItemCommentRepository battleItemCommentRepository;
+  @Mock private BattleItemEventEntryRepository battleItemEventEntryRepository;
   @Mock private ProductRepository productRepository;
   @Mock private ExpGrantService expGrantService;
+  @Mock private ExternalUserInfoService externalUserInfoService;
+  @Mock private NotificationService notificationService;
 
   @InjectMocks private BattleItemService battleItemService;
 
@@ -315,6 +334,161 @@ class BattleItemServiceTest {
 
       // then
       assertThat(item.getReportCount()).isEqualTo(1);
+    }
+  }
+
+  @Nested
+  @DisplayName("addBattleItems - eventId 처리")
+  class AddBattleItems {
+
+    private static final Long EVENT_BATTLE_ID = 21L;
+    private static final Long CREATOR_ID = 100L;
+
+    @Test
+    @DisplayName("이벤트 배틀(21)에 eventId가 있으면 각 아이템마다 entry 1행씩 저장된다")
+    void 이벤트_배틀_정상_저장() {
+      // given
+      Battle battle = eventBattle();
+      List<ItemRequest> items = List.of(customItemReq("A"), customItemReq("B"));
+      List<BattleItem> savedItems = List.of(
+          savedItem(battle, 1001L, "A"),
+          savedItem(battle, 1002L, "B"));
+
+      given(battleRepository.findById(EVENT_BATTLE_ID)).willReturn(Optional.of(battle));
+      given(battleItemRepository.saveAll(anyList())).willReturn(savedItems);
+      given(expGrantService.grantBattleItemAdd(anyLong(), anyLong()))
+          .willReturn(ExpGrantResult.granted(10, 10, false));
+
+      // when - actor == creator라 알림 분기 skip
+      battleItemService.addBattleItems(EVENT_BATTLE_ID, CREATOR_ID,
+          addRequest(items, "EVENT-2026"));
+
+      // then
+      ArgumentCaptor<List<BattleItemEventEntry>> captor = ArgumentCaptor.forClass(List.class);
+      then(battleItemEventEntryRepository).should().saveAll(captor.capture());
+      List<BattleItemEventEntry> saved = captor.getValue();
+      assertSoftly(softly -> {
+        softly.assertThat(saved).hasSize(2);
+        softly.assertThat(saved).extracting(BattleItemEventEntry::getBattleItemId)
+            .containsExactly(1001L, 1002L);
+        softly.assertThat(saved).extracting(BattleItemEventEntry::getEventId)
+            .containsOnly("EVENT-2026");
+      });
+    }
+
+    @Test
+    @DisplayName("이벤트 배틀(21)에 eventId가 null이면 entry 저장이 일어나지 않는다")
+    void 이벤트_배틀_eventId_없으면_저장_skip() {
+      // given
+      Battle battle = eventBattle();
+      List<ItemRequest> items = List.of(customItemReq("A"));
+      given(battleRepository.findById(EVENT_BATTLE_ID)).willReturn(Optional.of(battle));
+      given(battleItemRepository.saveAll(anyList()))
+          .willReturn(List.of(savedItem(battle, 1001L, "A")));
+      given(expGrantService.grantBattleItemAdd(anyLong(), anyLong()))
+          .willReturn(ExpGrantResult.granted(10, 10, false));
+
+      // when
+      battleItemService.addBattleItems(EVENT_BATTLE_ID, CREATOR_ID, addRequest(items, null));
+
+      // then
+      then(battleItemEventEntryRepository).should(never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("이벤트 배틀에 공백만 들어온 eventId는 미입력으로 취급되어 entry 저장이 일어나지 않는다")
+    void 이벤트_배틀_eventId_공백이면_저장_skip() {
+      // given
+      Battle battle = eventBattle();
+      given(battleRepository.findById(EVENT_BATTLE_ID)).willReturn(Optional.of(battle));
+      given(battleItemRepository.saveAll(anyList()))
+          .willReturn(List.of(savedItem(battle, 1001L, "A")));
+      given(expGrantService.grantBattleItemAdd(anyLong(), anyLong()))
+          .willReturn(ExpGrantResult.granted(10, 10, false));
+
+      // when
+      battleItemService.addBattleItems(EVENT_BATTLE_ID, CREATOR_ID,
+          addRequest(List.of(customItemReq("A")), "   "));
+
+      // then
+      then(battleItemEventEntryRepository).should(never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("일반 배틀에 eventId가 들어오면 EVENT_ID_NOT_ALLOWED 에러가 발생한다")
+    void 일반_배틀_eventId_들어오면_에러() {
+      // given - 화이트리스트(21)에 없는 배틀
+      Battle battle = BattleFixture.active();  // id=1
+      given(battleRepository.findById(BATTLE_ID)).willReturn(Optional.of(battle));
+
+      // when/then
+      assertThatThrownBy(() ->
+          battleItemService.addBattleItems(BATTLE_ID, CREATOR_ID,
+              addRequest(List.of(customItemReq("A")), "EVENT-2026")))
+          .isInstanceOf(RestApiException.class)
+          .hasMessageContaining(BattleErrorCode.EVENT_ID_NOT_ALLOWED.getMessage());
+
+      then(battleItemEventEntryRepository).should(never()).saveAll(any());
+      then(battleItemRepository).should(never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("일반 배틀에 eventId가 null이면 정상 처리되고 entry 저장이 일어나지 않는다")
+    void 일반_배틀_eventId_없으면_정상() {
+      // given
+      Battle battle = BattleFixture.active();
+      given(battleRepository.findById(BATTLE_ID)).willReturn(Optional.of(battle));
+      given(battleItemRepository.saveAll(anyList()))
+          .willReturn(List.of(savedItem(battle, 1001L, "A")));
+      given(expGrantService.grantBattleItemAdd(anyLong(), anyLong()))
+          .willReturn(ExpGrantResult.granted(10, 10, false));
+
+      // when
+      battleItemService.addBattleItems(BATTLE_ID, CREATOR_ID,
+          addRequest(List.of(customItemReq("A")), null));
+
+      // then
+      then(battleItemEventEntryRepository).should(never()).saveAll(any());
+    }
+
+    private Battle eventBattle() {
+      LocalDateTime now = LocalDateTime.now();
+      return Battle.builder()
+          .id(EVENT_BATTLE_ID)
+          .title("이벤트 배틀")
+          .creatorId(CREATOR_ID)
+          .startDate(now.minusDays(1))
+          .participationStartDate(now.minusDays(1))
+          .endDate(now.plusDays(7))
+          .itemAddPermissionType(ItemAddPermissionType.PUBLIC_FREE)
+          .voteType(VoteType.MULTIPLE)
+          .status(BattleStatus.NORMAL)
+          .build();
+    }
+
+    private ItemRequest customItemReq(String name) {
+      return ItemRequest.builder()
+          .itemType(BattleItemType.CUSTOM)
+          .customName(name)
+          .build();
+    }
+
+    private BattleItem savedItem(Battle battle, Long id, String name) {
+      return BattleItem.builder()
+          .id(id)
+          .battle(battle)
+          .itemType(BattleItemType.CUSTOM)
+          .customName(name)
+          .registerId(CREATOR_ID)
+          .status(BattleItemStatus.ACTIVE)
+          .build();
+    }
+
+    private BattleRequest.AddBattleItems addRequest(List<ItemRequest> items, String eventId) {
+      return BattleRequest.AddBattleItems.builder()
+          .items(items)
+          .eventId(eventId)
+          .build();
     }
   }
 

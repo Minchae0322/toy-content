@@ -9,8 +9,10 @@ import com.example.toycontent.app.battle.controller.dto.BattleResponse.BattleIte
 import com.example.toycontent.app.battle.controller.dto.BattleVoteRequest;
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.domain.BattleItem;
+import com.example.toycontent.app.battle.domain.BattleItemEventEntry;
 import com.example.toycontent.app.battle.domain.BattleVote;
 import com.example.toycontent.app.battle.repository.BattleItemCommentRepository;
+import com.example.toycontent.app.battle.repository.BattleItemEventEntryRepository;
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.battle.repository.BattleRepository;
 import com.example.toycontent.app.battle.repository.BattleVoteRepository;
@@ -35,6 +37,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +54,7 @@ public class BattleItemService {
   private final BattleItemRepository battleItemRepository;
   private final BattleVoteRepository battleVoteRepository;
   private final BattleItemCommentRepository battleItemCommentRepository;
+  private final BattleItemEventEntryRepository battleItemEventEntryRepository;
   private final ProductRepository productRepository;
   private final ExpGrantService expGrantService;
   private final ExternalUserInfoService externalUserInfoService;
@@ -58,6 +62,9 @@ public class BattleItemService {
 
   private static final int MAX_ADDITIONAL_ITEMS = 3;
   private static final int AUTO_REVIEW_REPORT_COUNT = 3;
+
+  /** 이벤트 ID 입력을 허용하는 배틀 화이트리스트. 이벤트 추가 시 한 줄씩 등록. */
+  private static final Set<Long> EVENT_BATTLE_IDS = Set.of(21L);
 
   /**
    * 배틀 아이템 목록 조회
@@ -122,16 +129,19 @@ public class BattleItemService {
   public ExpGrantInfo addBattleItems(Long battleId, Long userId, BattleRequest.AddBattleItems request) {
     Battle battle = getBattleById(battleId);
     List<ItemRequest> items = request.getItems();
+    String eventId = normalizeEventId(request.getEventId());
 
-    validateItemAddition(battle, userId, items);
+    validateItemAddition(battle, userId, items, eventId);
     List<BattleItem> savedItems = addItemsByPermission(battle, userId, items);
+    saveEventEntriesIfPresent(savedItems, eventId);
     notifyCreatorOnItemAddition(battle, userId, savedItems);
 
     ExpGrantResult grant = expGrantService.grantBattleItemAdd(userId, battleId);
     return ExpGrantInfo.aggregate(grant);
   }
 
-  private void validateItemAddition(Battle battle, Long userId, List<ItemRequest> items) {
+  private void validateItemAddition(Battle battle, Long userId, List<ItemRequest> items,
+      String eventId) {
     // 생성자 권한 확인
     if (battle.getItemAddPermissionType() == ItemAddPermissionType.CREATOR_ONLY) {
       validateBattleCreator(battle, userId);
@@ -141,6 +151,29 @@ public class BattleItemService {
     if (items.size() > MAX_ADDITIONAL_ITEMS) {
       throw new RestApiException(BattleErrorCode.TOO_MANY_ITEMS);
     }
+
+    // 이벤트 ID는 화이트리스트 배틀에서만 허용. 없으면 통과.
+    if (eventId != null && !EVENT_BATTLE_IDS.contains(battle.getId())) {
+      throw new RestApiException(BattleErrorCode.EVENT_ID_NOT_ALLOWED);
+    }
+  }
+
+  /** 공백만 입력된 eventId는 미입력으로 취급해 entry 저장을 건너뛴다. */
+  private static String normalizeEventId(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return null;
+    }
+    return raw.trim();
+  }
+
+  private void saveEventEntriesIfPresent(List<BattleItem> savedItems, String eventId) {
+    if (eventId == null) {
+      return;
+    }
+    List<BattleItemEventEntry> entries = savedItems.stream()
+        .map(item -> BattleItemEventEntry.of(item.getId(), eventId))
+        .toList();
+    battleItemEventEntryRepository.saveAll(entries);
   }
 
   private List<BattleItem> addItemsByPermission(Battle battle, Long userId, List<ItemRequest> items) {

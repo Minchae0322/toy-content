@@ -162,6 +162,10 @@ public abstract class BattleRequest {
     @NotNull(message = "추가할 아이템을 선택해주세요")
     @Size(min = 1, max = 3, message = "한 번에 1~3개까지 추가 가능합니다")
     private List<ItemRequest> items;
+
+    @Schema(description = "이벤트 ID (지정된 이벤트 배틀에서만 허용. 내부 메타로만 저장되며 응답 노출 없음)")
+    @Size(max = 50, message = "이벤트 ID는 50자 이내여야 합니다")
+    private String eventId;
   }
 
 
