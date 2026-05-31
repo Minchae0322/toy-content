@@ -303,6 +303,10 @@ public abstract class BattleResponse {
         example = "나이키 덩크 로우 판다")
     private String customName;
 
+    @Schema(description = "브랜드명 - CUSTOM, YOUTUBE 타입에서 사용자가 입력한 값. PRODUCT는 battleItemProduct 쪽 사용",
+        example = "Nike")
+    private String customBrand;
+
     @Schema(description = "아이템 이미지 URL - PRODUCT인 경우 null이므로 battleItemProduct.thumbnailDto 사용 필요. "
         + "CUSTOM은 사용자가 등록한 이미지, YOUTUBE는 영상 썸네일")
     private String customImageUrl;
@@ -352,6 +356,7 @@ public abstract class BattleResponse {
               item.getProduct() != null ? BattleItemProduct.of(item.getProduct()) : null)
           .contentUrl(item.getContentUrl())
           .customName(item.getDisplayName())
+          .customBrand(item.getCustomBrand())
           .customImageUrl(item.getDisplayImageUrl())
           .contentUrl(item.getContentUrl())
           .embedUrl(item.getEmbedUrl())
