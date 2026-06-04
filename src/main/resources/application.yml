@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}  # 환경변수로 제어
+    active: ${SPRING_PROFILES_ACTIVE:dev}  # 환경변수로 제어
 
   application:
     name: content-service                    # 메트릭/트레이스 라벨에 사용
@@ -66,15 +66,9 @@ management:
       application: ${spring.application.name}
     distribution:
       percentiles-histogram:
-        http.server.requests: true
-      percentiles:
-        http.server.requests: 0.5, 0.95, 0.99
+        http.server.requests: false
       slo:
-        http.server.requests: 100ms, 200ms, 500ms, 1s, 2s
-      minimum-expected-value:
-        http.server.requests: 10ms
-      maximum-expected-value:
-        http.server.requests: 10s
+        http.server.requests: 5ms, 10ms, 20ms, 30ms, 50ms, 75ms, 100ms, 150ms, 200ms, 300ms, 500ms, 1s, 2s, 5s
     enable:
       jvm.memory: true
       jvm.gc: true
