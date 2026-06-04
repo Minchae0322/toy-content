@@ -81,6 +81,7 @@ class BattleSwipeServiceTest {
       assertThat(item.getStrongPickCount()).isEqualTo(1);
       assertThat(item.getPickCount()).isZero();
       assertThat(item.getPassCount()).isZero();
+      assertThat(battle.getTotalSwipes()).isEqualTo(1); // 신규 swipe → hot score 기여 +0.5
       assertThat(ack.getItemId()).isEqualTo(item.getId());
       assertThat(ack.getCompletedCount()).isEqualTo(1);
       assertThat(ack.getTotalCount()).isEqualTo(3);
@@ -126,6 +127,7 @@ class BattleSwipeServiceTest {
               .verdict(SwipeVerdict.STRONG_PICK).build());
 
       assertThat(item.getStrongPickCount()).isEqualTo(1); // 변동 없음
+      assertThat(battle.getTotalSwipes()).isZero(); // 멱등 no-op이라 카운트 안 늘림
       then(battleSwipeRepository).should(never()).save(any());
       assertThat(existing.getVerdict()).isEqualTo(SwipeVerdict.STRONG_PICK);
     }
@@ -151,6 +153,7 @@ class BattleSwipeServiceTest {
 
       assertThat(item.getStrongPickCount()).isZero();
       assertThat(item.getPickCount()).isEqualTo(1);
+      assertThat(battle.getTotalSwipes()).isZero(); // 덮어쓰기는 카운트 안 늘림 (이미 카운트됨)
       assertThat(existing.getVerdict()).isEqualTo(SwipeVerdict.PICK);
       then(battleSwipeRepository).should(never()).save(any()); // 신규 row 저장 없음
     }

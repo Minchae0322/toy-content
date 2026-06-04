@@ -107,6 +107,11 @@ public class Battle extends BaseTimeEntity {
   private Integer totalVotes = 0;
 
   @Builder.Default
+  @Column(name = "total_swipes", nullable = false, columnDefinition = "INT DEFAULT 0")
+  @Comment("총 스와이프 수 (VoteType.SWIPE 배틀 — 신규 swipe 시점에만 +1)")
+  private Integer totalSwipes = 0;
+
+  @Builder.Default
   @Column(nullable = false)
   @Comment("총 점수")
   private Integer totalScore = 0;
@@ -155,6 +160,11 @@ public class Battle extends BaseTimeEntity {
 
   public void incrementTotalVotes(int delta) {
     this.totalVotes += delta;
+  }
+
+  /** SWIPE 배틀의 신규 스와이프 1건 카운트 (upsert 멱등 정책상 동일 verdict no-op/덮어쓰기는 호출 안 함). */
+  public void incrementTotalSwipes() {
+    this.totalSwipes++;
   }
 
   public boolean hasParticipants() {
@@ -217,13 +227,23 @@ public class Battle extends BaseTimeEntity {
   }
 
   /**
-   * 핫 스코어 계산
+   * 핫 스코어 계산.
+   *
+   * <p>baseScore: 무거운 행위(vote/participant)는 높은 가중치, 가벼운 행위(swipe/view)는 낮은 가중치.
+   * SWIPE 배틀은 totalVotes/totalParticipants 대신 totalSwipes로 활동량이 잡힌다.
+   * <pre>
+   *   vote      *2.0   1인 1~3표의 무거운 행위
+   *   participant *3.0   유니크 참여자 — 가장 강한 인기 신호
+   *   swipe     *0.5   가벼우나 횟수 많음 — 한 명 풀완주(예: 20개) ≈ vote 5번 가치
+   *   view      *0.1   매우 가벼움
+   * </pre>
    */
   public double calculateHotScore() {
-    // 기본 인기도 점수
-    double baseScore = (totalVotes * 2.0) + (totalParticipants * 3.0) + (totalViews * 0.1);
+    double baseScore = (totalVotes * 2.0)
+        + (totalParticipants * 3.0)
+        + (totalSwipes * 0.4)
+        + (totalViews * 0.1);
 
-    // 시간 가중치 (최근일수록 높은 점수)
     long hoursSinceStart = ChronoUnit.HOURS.between(startDate, LocalDateTime.now());
     double timeDecay = Math.pow(hoursSinceStart + 2, 1.5); // +2는 0으로 나누기 방지
 

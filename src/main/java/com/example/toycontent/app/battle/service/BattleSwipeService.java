@@ -100,6 +100,7 @@ public class BattleSwipeService {
         : BattleSwipe.ofGuest(battle, item, voter.guestId(), verdict);
     battleSwipeRepository.save(swipe);
     incrementCounter(item, verdict);
+    battle.incrementTotalSwipes();
   }
 
   private void applyOverwrite(BattleItem item, BattleSwipe existing, SwipeVerdict newVerdict) {
