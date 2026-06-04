@@ -192,8 +192,8 @@ class BattleSwipeServiceTest {
     }
 
     @Test
-    @DisplayName("전체 다 진행했으면 빈 리스트")
-    void 전부_완료() {
+    @DisplayName("전부 완료한 voter에게도 next는 active 전체를 돌려준다 (재스와이프용)")
+    void 전부_완료_재스와이프() {
       Battle battle = swipeBattle(BATTLE_ID, 2);
       List<Long> allIds = battle.getItems().stream().map(BattleItem::getId).toList();
       given(battleRepository.findById(BATTLE_ID)).willReturn(Optional.of(battle));
@@ -201,7 +201,9 @@ class BattleSwipeServiceTest {
 
       NextItems next = battleSwipeService.findNextItems(BATTLE_ID, VoterId.user(USER_ID), 10);
 
-      assertThat(next.getItems()).isEmpty();
+      // 끝났음에도 active 전체 반환 — completedCount==totalCount로 "끝났음" 판단
+      assertThat(next.getItems()).hasSize(2);
+      assertThat(next.getCompletedCount()).isEqualTo(next.getTotalCount());
       assertThat(next.getCompletedCount()).isEqualTo(2);
     }
   }

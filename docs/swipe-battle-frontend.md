@@ -74,7 +74,8 @@ GET /battles/{battleId}/swipe/next?size=10
 ```
 
 - 랜덤 순서로 반환됨
-- `items`가 빈 배열이면 전부 완료 → 결과 화면으로
+- `completedCount === totalCount`이면 전부 완료 상태
+- **전부 완료한 voter에게도 `items`는 active 전체가 반환됨** — 재스와이프 가능. 멱등 덮어쓰기 정책으로 점수 이중 가산 없음
 - `size` 미지정 시 기본 10
 
 ### 3-2. 스와이프 1건 등록

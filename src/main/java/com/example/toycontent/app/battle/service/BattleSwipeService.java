@@ -119,6 +119,11 @@ public class BattleSwipeService {
         .build();
   }
 
+  /**
+   * 미진행 아이템을 랜덤으로 반환. 멱등 덮어쓰기 정책 덕에 같은 아이템을 다시 만나도 점수가
+   * 이중 가산되지 않으므로, 전부 완료한 voter에게도 active 전체를 재스와이프용으로 돌려준다.
+   * 클라이언트는 {@code completedCount == totalCount}로 "끝났음" 상태를 판단할 수 있다.
+   */
   public NextItems findNextItems(Long battleId, VoterId voter, int size) {
     Battle battle = loadSwipeBattle(battleId);
     List<BattleItem> active = activeItems(battle);
@@ -127,6 +132,9 @@ public class BattleSwipeService {
     List<BattleItem> pending = new ArrayList<>(active.stream()
         .filter(i -> !swipedIds.contains(i.getId()))
         .toList());
+    if (pending.isEmpty()) {
+      pending = new ArrayList<>(active);
+    }
     Collections.shuffle(pending);
 
     List<NextItem> nextItems = pending.stream()
