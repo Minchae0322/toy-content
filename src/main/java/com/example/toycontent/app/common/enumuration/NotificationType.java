@@ -27,6 +27,7 @@ public enum NotificationType {
   // 배틀
   BATTLE_INVITE("배틀 초대", "%s님이 [%s] 배틀에 초대했습니다."),
   BATTLE_RESULT("배틀 결과", "[%s] 배틀이 종료되었어요. 결과를 확인해보세요!"),
+  BATTLE_RESULT_WITH_WINNER("배틀 결과", "[%s] 배틀 종료! 1위는 [%s] 🏆 결과를 확인해보세요!"),
   BATTLE_DEADLINE_OWNER_D7("마감 7일 전", "내 배틀 [%s] 종료까지 7일 남았어요. 공유하고 참여를 늘려보세요."),
 
   // 시스템

@@ -1,15 +1,20 @@
 package com.example.toycontent.app.scheduler;
 
 import com.example.toycontent.app.battle.domain.Battle;
+import com.example.toycontent.app.battle.domain.BattleItem;
 import com.example.toycontent.app.battle.repository.BattleRepository;
 import com.example.toycontent.app.battle.repository.BattleVoteRepository;
+import com.example.toycontent.app.common.enumuration.BattleItemStatus;
+import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.notification.BattleNotificationPhase;
 import com.example.toycontent.app.notification.BattleNotificationSent;
 import com.example.toycontent.app.notification.BattleNotificationSentRepository;
 import com.example.toycontent.app.notification.NotificationService;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -91,8 +96,12 @@ public class BattleDeadlineNotificationScheduler {
     Set<String> alreadySent = loadAlreadySentKeys(battles, BattleNotificationPhase.END);
 
     List<BattleNotificationSent> newSent = battles.stream()
-        .flatMap(battle -> resolveEndRecipients(battle, alreadySent).stream()
-            .map(userId -> sendResultAndMark(battle, userId)))
+        .flatMap(battle -> {
+          // 배틀 단위로 winner 1회 계산 후 recipient들에게 재사용
+          String winnerName = resolveWinnerName(battle).orElse(null);
+          return resolveEndRecipients(battle, alreadySent).stream()
+              .map(userId -> sendResultAndMark(battle, userId, winnerName));
+        })
         .toList();
 
     sentRepository.saveAll(newSent);
@@ -105,9 +114,31 @@ public class BattleDeadlineNotificationScheduler {
     return BattleNotificationSent.of(battle.getId(), BattleNotificationPhase.D7, battle.getCreatorId());
   }
 
-  private BattleNotificationSent sendResultAndMark(Battle battle, Long userId) {
-    notificationService.notifyBattleResult(userId, battle.getId(), battle.getTitle());
+  private BattleNotificationSent sendResultAndMark(Battle battle, Long userId, String winnerName) {
+    if (winnerName != null) {
+      notificationService.notifyBattleResultWithWinner(
+          userId, battle.getId(), battle.getTitle(), winnerName);
+    } else {
+      notificationService.notifyBattleResult(userId, battle.getId(), battle.getTitle());
+    }
     return BattleNotificationSent.of(battle.getId(), BattleNotificationPhase.END, userId);
+  }
+
+  /**
+   * 종료 알림에 포함할 1위 아이템명. SWIPE 배틀의 swipe 점수 1위만 현재 지원.
+   * 점수가 0인(아무도 스와이프 안 한) 경우 빈 Optional 반환 → 호출자는 기존 메시지로 폴백.
+   */
+  private Optional<String> resolveWinnerName(Battle battle) {
+    if (battle.getVoteType() != VoteType.SWIPE) {
+      return Optional.empty();
+    }
+    return battle.getItems().stream()
+        .filter(i -> i.getStatus() == BattleItemStatus.ACTIVE
+            && !Boolean.TRUE.equals(i.getIsDeleted()))
+        .filter(i -> i.getSwipeRankingScore() > 0)
+        .max(Comparator.comparingInt(BattleItem::getSwipeRankingScore)
+            .thenComparing(Comparator.comparing(BattleItem::getId).reversed()))
+        .map(BattleItem::getDisplayName);
   }
 
   /** 생성자 + 투표자 중 미발송 유저만 추린다. 게스트(null)도 제외. */

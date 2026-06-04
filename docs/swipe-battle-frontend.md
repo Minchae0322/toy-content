@@ -274,10 +274,10 @@ GET /battles/{id}
 
 ## 8. 향후 확장 (후속 PR — 프론트는 지금 신경 안 써도 됨)
 
-- 배틀 종료 알림(`BATTLE_RESULT`)이 swipe 결과 1위를 포함하도록
 - batch swipe POST 엔드포인트 (UX 최적화 필요 시)
 - 결과 화면에서 verdict 변경 UI (현재 정책은 멱등 upsert로 백엔드 준비 완료)
 
 ### 백엔드 완료 (참고)
 
-- 핫스코어 계산이 swipe 통계 반영 — `Battle.totalSwipes`가 신규 swipe 시점에 +1, `baseScore`에 `totalSwipes * 0.5`로 가산됨 (한 명 풀완주 ≈ vote 5번 가치)
+- **핫스코어** — `Battle.totalSwipes`가 신규 swipe 시점에 +1, `baseScore`에 `totalSwipes * 0.5`로 가산 (한 명 풀완주 ≈ vote 5번 가치)
+- **종료 알림** — SWIPE 배틀에선 1위 아이템명이 포함된 `BATTLE_RESULT_WITH_WINNER`로 발송 ("[배틀명] 배틀 종료! 1위는 [아이템명] 🏆 결과를 확인해보세요!"). 점수 0(아무도 스와이프 안 한 경우)이면 기존 `BATTLE_RESULT` 메시지로 폴백

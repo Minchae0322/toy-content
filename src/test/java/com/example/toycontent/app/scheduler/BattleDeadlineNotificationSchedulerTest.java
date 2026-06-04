@@ -464,6 +464,62 @@ class BattleDeadlineNotificationSchedulerTest {
       assertThat(captor.getValue()).hasSize(4);
     }
 
+    @Test
+    @DisplayName("SWIPE 배틀 종료 시 1위 아이템명을 포함한 winner 알림으로 발송된다")
+    void SWIPE_배틀_winner_알림() {
+      // given - swipe 점수: A=4, B=9 (B가 1위), C=0
+      Battle battle = swipeEndingBattle();
+      com.example.toycontent.app.battle.domain.BattleItem a = swipeItem(battle, 10L, "맥북", 1, 1, 0); // 4
+      com.example.toycontent.app.battle.domain.BattleItem b = swipeItem(battle, 20L, "키보드", 2, 3, 0); // 9
+      com.example.toycontent.app.battle.domain.BattleItem c = swipeItem(battle, 30L, "마우스", 0, 0, 5); // 0
+      battle.getItems().add(a);
+      battle.getItems().add(b);
+      battle.getItems().add(c);
+
+      given(battleRepository.findByEndDateBetween(any(), any()))
+          .willReturn(List.of(battle));
+      given(sentRepository.findByBattleIdInAndPhase(
+          List.of(battle.getId()), BattleNotificationPhase.END))
+          .willReturn(List.of());
+      given(battleVoteRepository.findDistinctVoterUserIdsByBattleId(battle.getId()))
+          .willReturn(List.of());
+
+      // when
+      scheduler.notifyEnd();
+
+      // then - 생성자에게 winner 메서드로 발송 (B가 1위)
+      then(notificationService).should()
+          .notifyBattleResultWithWinner(
+              battle.getCreatorId(), battle.getId(), battle.getTitle(), "키보드");
+      then(notificationService).should(never())
+          .notifyBattleResult(anyLong(), anyLong(), anyString());
+    }
+
+    @Test
+    @DisplayName("SWIPE 배틀이라도 점수 0이면 winner 없음 → 기존 BATTLE_RESULT 메시지로 폴백")
+    void SWIPE_배틀_점수_0이면_폴백() {
+      // given - 모든 아이템 swipe 점수 0
+      Battle battle = swipeEndingBattle();
+      battle.getItems().add(swipeItem(battle, 10L, "맥북", 0, 0, 0));
+
+      given(battleRepository.findByEndDateBetween(any(), any()))
+          .willReturn(List.of(battle));
+      given(sentRepository.findByBattleIdInAndPhase(
+          List.of(battle.getId()), BattleNotificationPhase.END))
+          .willReturn(List.of());
+      given(battleVoteRepository.findDistinctVoterUserIdsByBattleId(battle.getId()))
+          .willReturn(List.of());
+
+      // when
+      scheduler.notifyEnd();
+
+      // then
+      then(notificationService).should()
+          .notifyBattleResult(battle.getCreatorId(), battle.getId(), battle.getTitle());
+      then(notificationService).should(never())
+          .notifyBattleResultWithWinner(anyLong(), anyLong(), anyString(), anyString());
+    }
+
     private Battle endingBattle() {
       LocalDateTime now = LocalDateTime.now();
       return Battle.builder()
@@ -476,6 +532,36 @@ class BattleDeadlineNotificationSchedulerTest {
           .itemAddPermissionType(ItemAddPermissionType.PUBLIC_FREE)
           .voteType(VoteType.MULTIPLE)
           .status(BattleStatus.NORMAL)
+          .build();
+    }
+
+    private Battle swipeEndingBattle() {
+      LocalDateTime now = LocalDateTime.now();
+      return Battle.builder()
+          .id(BattleFixture.DEFAULT_BATTLE_ID)
+          .title("스와이프 배틀")
+          .creatorId(BattleFixture.DEFAULT_CREATOR_ID)
+          .startDate(now.minusDays(7))
+          .participationStartDate(now.minusDays(7))
+          .endDate(now)
+          .itemAddPermissionType(ItemAddPermissionType.PUBLIC_FREE)
+          .voteType(VoteType.SWIPE)
+          .status(BattleStatus.NORMAL)
+          .build();
+    }
+
+    private com.example.toycontent.app.battle.domain.BattleItem swipeItem(
+        Battle battle, Long id, String name, int strong, int pick, int pass) {
+      return com.example.toycontent.app.battle.domain.BattleItem.builder()
+          .id(id)
+          .battle(battle)
+          .itemType(com.example.toycontent.app.common.enumuration.BattleItemType.CUSTOM)
+          .customName(name)
+          .registerId(100L)
+          .status(com.example.toycontent.app.common.enumuration.BattleItemStatus.ACTIVE)
+          .strongPickCount(strong)
+          .pickCount(pick)
+          .passCount(pass)
           .build();
     }
   }

@@ -239,6 +239,26 @@ public class NotificationService {
     );
   }
 
+  /**
+   * 1위 아이템명을 포함한 종료 알림. 1위가 명확한 배틀(예: SWIPE)에서 사용.
+   * winnerName이 null/blank면 호출자가 {@link #notifyBattleResult}로 폴백해야 한다.
+   */
+  @Async("notificationExecutor")
+  public void notifyBattleResultWithWinner(Long userId, Long battleId, String battleTitle,
+      String winnerName) {
+    sendSafely(NotificationType.BATTLE_RESULT_WITH_WINNER, KafkaNotificationDto.builder()
+        .userId(userId)
+        .type(NotificationType.BATTLE_RESULT_WITH_WINNER)
+        .title(NotificationType.BATTLE_RESULT_WITH_WINNER.getTitle())
+        .content(NotificationType.BATTLE_RESULT_WITH_WINNER.formatContent(battleTitle, winnerName))
+        .referenceId(String.valueOf(battleId))
+        .referenceType(NotificationReferenceType.BATTLE)
+        .actionUrl("/battles/" + battleId)
+        .channels(List.of(NotificationChannel.IN_APP, NotificationChannel.PUSH))
+        .build()
+    );
+  }
+
   // ============================
   // 소셜
   // ============================
