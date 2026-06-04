@@ -346,6 +346,11 @@ public class BattleItemService {
   @Transactional
   public ExpGrantInfo vote(Long battleId, VoterId voter, BattleVoteRequest.Vote request) {
     Battle battle = getBattleById(battleId);
+
+    if (battle.getVoteType() == com.example.toycontent.app.common.enumuration.VoteType.SWIPE) {
+      throw new RestApiException(BattleErrorCode.VOTE_NOT_ALLOWED_FOR_SWIPE);
+    }
+
     List<BattleVoteRequest.VoteItem> voteItems = request.getVotes();
     List<BattleVote> existingVotes = findVotesByVoter(battleId, voter);
 

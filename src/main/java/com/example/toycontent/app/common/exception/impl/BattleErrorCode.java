@@ -55,6 +55,8 @@ public enum BattleErrorCode implements ErrorCode {
   INVALID_VOTE_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 투표 타입입니다."),
   INVALID_VOTE_RANK(HttpStatus.BAD_REQUEST, "투표 순위가 유효하지 않습니다."),
   DUPLICATE_VOTE_RANK(HttpStatus.BAD_REQUEST, "중복된 순위로 투표할 수 없습니다."),
+  VOTE_NOT_ALLOWED_FOR_SWIPE(HttpStatus.BAD_REQUEST, "스와이프 배틀은 일반 투표가 불가합니다."),
+  SWIPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "스와이프 배틀이 아닙니다."),
 
   // 배틀 권한
   FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다."),

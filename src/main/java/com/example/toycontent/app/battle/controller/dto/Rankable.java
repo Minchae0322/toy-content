@@ -8,9 +8,16 @@ public interface Rankable extends Comparable<Rankable> {
 
   void setRank(Integer rank);
 
+  /**
+   * 랭킹 정렬용 점수. 기본은 totalScore(vote 배틀), SWIPE 배틀처럼 통계 모델이 다른 경우 override.
+   */
+  default Integer getRankingScore() {
+    return getTotalScore();
+  }
+
   @Override
   default int compareTo(Rankable other) {
-    return other.getTotalScore().compareTo(this.getTotalScore()); // 내림차순
+    return other.getRankingScore().compareTo(this.getRankingScore()); // 내림차순
   }
 
 }

@@ -346,34 +346,87 @@ public abstract class BattleResponse {
     @Schema(description = "BEST 코멘트 및 코멘트 수")
     private BattleItemCommentSummary commentSummary;
 
+    @Schema(description = "스와이프 통계 — VoteType.SWIPE 배틀에만 채워짐 (vote 배틀은 null)")
+    private SwipeStats swipeStats;
+
+    @Schema(hidden = true)
+    @JsonIgnore
+    private Integer rankingScore;
+
+    /**
+     * 랭킹 점수 — voteType별 계산식은 {@link VoteType#rankingScoreOf}에 캡슐화되어 있다.
+     * 매핑 시점에 미리 계산되어 {@link #rankingScore} 필드에 담기므로 본 메서드는 voteType이 늘어도 변경 불필요.
+     */
+    @Override
+    public Integer getRankingScore() {
+      return rankingScore != null ? rankingScore : totalScore;
+    }
+
     public static BattleItemInfo from(BattleItem item,
-        BattleItemCommentSummary battleItemCommentSummary, BattleVote userVote) {
+        BattleItemCommentSummary commentSummary, BattleVote userVote) {
+
+      VoteType voteType = item.getBattle().getVoteType();
 
       return BattleItemInfo.builder()
           .id(item.getId())
           .battleItemType(item.getItemType())
-          .battleItemProduct(
-              item.getProduct() != null ? BattleItemProduct.of(item.getProduct()) : null)
-          .contentUrl(item.getContentUrl())
+          .battleItemProduct(productOf(item))
           .customName(item.getDisplayName())
           .customBrand(item.getCustomBrand())
           .customImageUrl(item.getDisplayImageUrl())
           .contentUrl(item.getContentUrl())
           .embedUrl(item.getEmbedUrl())
-          .voteCount(item.getVoteCount())
-          .totalScore(item.getTotalScore())
           .status(item.getStatus())
           .reportCount(item.getReportCount())
           .registerId(item.getRegisterId())
+          .voteCount(item.getVoteCount())
+          .totalScore(item.getTotalScore())
+          .votePercentage(calcVotePercentage(item))
           .userBattleVote(userVote != null ? UserBattleVote.from(userVote) : null)
-          .votePercentage(
-              item.getBattle().getTotalScore() > 0
-                  ? (double) item.getTotalScore() / item.getBattle().getTotalScore()
-                  : 0.0)
-          .commentSummary(battleItemCommentSummary)
+          .commentSummary(commentSummary)
+          .swipeStats(voteType == VoteType.SWIPE ? SwipeStats.from(item) : null)
+          .rankingScore(voteType.rankingScoreOf(item))
           .build();
     }
 
+    private static BattleItemProduct productOf(BattleItem item) {
+      return item.getProduct() != null ? BattleItemProduct.of(item.getProduct()) : null;
+    }
+
+    private static double calcVotePercentage(BattleItem item) {
+      int battleTotal = item.getBattle().getTotalScore();
+      return battleTotal > 0 ? (double) item.getTotalScore() / battleTotal : 0.0;
+    }
+
+  }
+
+  @Schema(description = "스와이프 통계 (VoteType.SWIPE 전용)")
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class SwipeStats {
+
+    @Schema(description = "강추 PICK 수", example = "12")
+    private Integer strongPickCount;
+
+    @Schema(description = "PICK 수", example = "5")
+    private Integer pickCount;
+
+    @Schema(description = "PASS 수", example = "3")
+    private Integer passCount;
+
+    @Schema(description = "랭킹 점수 (strong*3 + pick*1)", example = "41")
+    private Integer score;
+
+    public static SwipeStats from(BattleItem item) {
+      return SwipeStats.builder()
+          .strongPickCount(item.getStrongPickCount())
+          .pickCount(item.getPickCount())
+          .passCount(item.getPassCount())
+          .score(item.getSwipeRankingScore())
+          .build();
+    }
   }
 }
 

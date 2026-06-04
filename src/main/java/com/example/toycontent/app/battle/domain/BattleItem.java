@@ -113,6 +113,22 @@ public class BattleItem extends BaseTimeEntity {
   @Comment("총 점수 (SINGLE: 투표당 1점, MULTIPLE: 1위=3점, 2위=2점, 3위=1점)")
   private Integer totalScore = 0;
 
+  // ========== SWIPE 통계 (VoteType.SWIPE 전용, vote 누적과 별도) ==========
+
+  @Builder.Default
+  @Column(name = "strong_pick_count", nullable = false, columnDefinition = "INT DEFAULT 0")
+  @Comment("강추 PICK 누적 수")
+  private Integer strongPickCount = 0;
+
+  @Builder.Default
+  @Column(name = "pick_count", nullable = false, columnDefinition = "INT DEFAULT 0")
+  @Comment("PICK 누적 수")
+  private Integer pickCount = 0;
+
+  @Builder.Default
+  @Column(name = "pass_count", nullable = false, columnDefinition = "INT DEFAULT 0")
+  @Comment("PASS 누적 수")
+  private Integer passCount = 0;
 
   @Builder.Default
   @Column(nullable = false)
@@ -154,6 +170,38 @@ public class BattleItem extends BaseTimeEntity {
   /** 복수 투표 재투표 시, 기존 점수를 되돌릴 때 감소 */
   public void subtractScore(int score) {
     this.totalScore = Math.max(0, this.totalScore - score);
+  }
+
+  // ========== SWIPE 카운터 ==========
+
+  public void incrementStrongPickCount() {
+    this.strongPickCount++;
+  }
+
+  public void incrementPickCount() {
+    this.pickCount++;
+  }
+
+  public void incrementPassCount() {
+    this.passCount++;
+  }
+
+  /** 멱등 덮어쓰기 정책에서 기존 verdict 카운터를 되돌릴 때 사용. 음수 방지. */
+  public void decrementStrongPickCount() {
+    this.strongPickCount = Math.max(0, this.strongPickCount - 1);
+  }
+
+  public void decrementPickCount() {
+    this.pickCount = Math.max(0, this.pickCount - 1);
+  }
+
+  public void decrementPassCount() {
+    this.passCount = Math.max(0, this.passCount - 1);
+  }
+
+  /** SWIPE 랭킹 점수: STRONG_PICK * 3 + PICK * 1 (PASS는 점수 미반영) */
+  public int getSwipeRankingScore() {
+    return strongPickCount * 3 + pickCount;
   }
 
   // ========== 상태 변경 ==========
