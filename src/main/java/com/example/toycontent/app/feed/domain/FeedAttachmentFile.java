@@ -7,6 +7,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -21,7 +22,10 @@ import org.hibernate.annotations.Comment;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "tb_feed_attachment_file")
+@Table(name = "tb_feed_attachment_file", indexes = {
+    // /feeds/scroll 응답 시 IN(feedIds) + is_primary 필터로 대표 썸네일 일괄 조회
+    @Index(name = "idx_feed_attachment_feed_primary", columnList = "feed_id, is_primary")
+})
 public class FeedAttachmentFile {
 
   @Id

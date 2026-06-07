@@ -41,6 +41,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     ),
     indexes = {
         @Index(name = "idx_feed_reaction", columnList = "feed_id, reactionType")
+        // 본인 반응 조회 (feed_id IN + user_id =)는 uk_feed_user_reaction_type의 prefix (feed_id, user_id)를 그대로 활용
     })
 public class FeedReaction extends BaseTimeEntity {
   @Id

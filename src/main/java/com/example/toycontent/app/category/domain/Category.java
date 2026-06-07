@@ -20,7 +20,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Entity
-@Table(name = "categories")
+@Table(name = "categories", indexes = {
+    // /list, /popular, /(page) 공통 필터 (is_active, type) + sort_order 정렬을 인덱스로 처리
+    @Index(name = "idx_category_filter_sort", columnList = "is_active, type, sort_order"),
+    // /popular의 GROUP BY COALESCE(parent_id, id) 및 부모-자식 조회
+    @Index(name = "idx_category_parent", columnList = "parent_id")
+})
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
