@@ -95,12 +95,27 @@ public class BattleSwipeService {
   }
 
   private void applyNew(Battle battle, BattleItem item, VoterId voter, SwipeVerdict verdict) {
+    boolean firstSwipe = isFirstSwipeForVoter(battle.getId(), voter);
+
     BattleSwipe swipe = voter.isUser()
         ? BattleSwipe.ofUser(battle, item, voter.userId(), verdict)
         : BattleSwipe.ofGuest(battle, item, voter.guestId(), verdict);
     battleSwipeRepository.save(swipe);
     incrementCounter(item, verdict);
     battle.incrementTotalSwipes();
+    if (firstSwipe) {
+      battle.incrementTotalParticipants(1);
+    }
+  }
+
+  /**
+   * 해당 voter가 이 배틀에 처음 스와이프하는지 판단. true면 totalParticipants를 늘린다.
+   * 게스트는 guestId 기반이므로 캐시 삭제 시 별개 voter로 카운트되는 한계는 수용.
+   */
+  private boolean isFirstSwipeForVoter(Long battleId, VoterId voter) {
+    return voter.isUser()
+        ? !battleSwipeRepository.existsByBattle_IdAndUserId(battleId, voter.userId())
+        : !battleSwipeRepository.existsByBattle_IdAndGuestId(battleId, voter.guestId());
   }
 
   private void applyOverwrite(BattleItem item, BattleSwipe existing, SwipeVerdict newVerdict) {

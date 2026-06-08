@@ -81,7 +81,8 @@ class BattleSwipeServiceTest {
       assertThat(item.getStrongPickCount()).isEqualTo(1);
       assertThat(item.getPickCount()).isZero();
       assertThat(item.getPassCount()).isZero();
-      assertThat(battle.getTotalSwipes()).isEqualTo(1); // 신규 swipe → hot score 기여 +0.5
+      assertThat(battle.getTotalSwipes()).isEqualTo(1);
+      assertThat(battle.getTotalParticipants()).isEqualTo(1); // 첫 swipe → 참여자 +1
       assertThat(ack.getItemId()).isEqualTo(item.getId());
       assertThat(ack.getCompletedCount()).isEqualTo(1);
       assertThat(ack.getTotalCount()).isEqualTo(3);

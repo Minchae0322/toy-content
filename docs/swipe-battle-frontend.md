@@ -279,5 +279,5 @@ GET /battles/{id}
 
 ### 백엔드 완료 (참고)
 
-- **핫스코어** — `Battle.totalSwipes`가 신규 swipe 시점에 +1, `baseScore`에 `totalSwipes * 0.5`로 가산 (한 명 풀완주 ≈ vote 5번 가치)
+- **핫스코어** — `Battle.totalSwipes`가 신규 swipe 시점에 +1, `baseScore`에 `totalSwipes * 0.1`로 가산 (가벼운 신호 — 풀완주 시 view 수준으로만 기여)
 - **종료 알림** — SWIPE 배틀에선 1위 아이템명이 포함된 `BATTLE_RESULT_WITH_WINNER`로 발송 ("[배틀명] 배틀 종료! 1위는 [아이템명] 🏆 결과를 확인해보세요!"). 점수 0(아무도 스와이프 안 한 경우)이면 기존 `BATTLE_RESULT` 메시지로 폴백

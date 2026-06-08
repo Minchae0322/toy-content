@@ -47,11 +47,17 @@ public abstract class BattleResponse {
     @Schema(description = "상위 아이템 이미지 목록 ((최대 4개) 대표이미지가 없으면)")
     private List<String> topItemImages;
 
+    @Schema(description = "투표 타입 — 클라이언트는 이 값으로 totalVotes/totalSwipes 중 어느 신호를 볼지 결정")
+    private VoteType voteType;
+
     @Schema(description = "총 참여자 수", example = "48")
     private Integer totalParticipants;
 
-    @Schema(description = "총 투표 수", example = "127")
+    @Schema(description = "총 투표 수 (vote 배틀만 의미)", example = "127")
     private Integer totalVotes;
+
+    @Schema(description = "총 스와이프 수 (SWIPE 배틀만 의미)", example = "240")
+    private Integer totalSwipes;
 
     @Schema(description = "총 조회 수", example = "523")
     private Integer totalViews;
@@ -74,7 +80,7 @@ public abstract class BattleResponse {
   @Builder
   @NoArgsConstructor
   @AllArgsConstructor
-  @Schema(description = "핫 배틀 TOP 3 아이템")
+  @Schema(description = "핫 배틀 TOP 3 아이템 — voteType별로 totalScore/votePercentage 의미가 달라짐")
   public static class BattleHotItem {
     @Schema(description = "아이템 ID")
     private Long id;
@@ -82,24 +88,32 @@ public abstract class BattleResponse {
     @Schema(description = "아이템명")
     private String displayName;
 
-    @Schema(description = "득표 스코어")
+    @Schema(description = "스코어 — vote: totalScore, SWIPE: strong*3 + pick*1")
     private Integer totalScore;
 
-    @Schema(description = "득표율 (%)", example = "33.07")
+    @Schema(description = "배틀 내 점유율 — vote: 본인 점수 ÷ 배틀 총 점수, SWIPE: 본인 swipe 점수 ÷ 배틀 활성 아이템의 swipe 점수 합",
+        example = "33.07")
     private Double votePercentage;
 
     @Schema(description = "순위")
     private Integer rank;
 
-    public static BattleHotItem from(BattleItem item, int rank) {
-      int battleTotalScore = item.getBattle().getTotalScore();
+    /**
+     * voteType별 점수 모델 분기. battleScoreDenominator는 배틀 단위 합산 점수(votePercentage 계산용).
+     */
+    public static BattleHotItem from(BattleItem item, int rank, VoteType voteType,
+        int battleScoreDenominator) {
+      int itemScore = (voteType == VoteType.SWIPE)
+          ? item.getSwipeRankingScore()
+          : item.getTotalScore();
+      double percentage = battleScoreDenominator > 0
+          ? (double) itemScore / battleScoreDenominator
+          : 0.0;
       return BattleHotItem.builder()
           .id(item.getId())
           .displayName(item.getDisplayName())
-          .totalScore(item.getTotalScore())
-          .votePercentage(battleTotalScore > 0
-              ? (double) item.getTotalScore() / battleTotalScore
-              : 0.0)
+          .totalScore(itemScore)
+          .votePercentage(percentage)
           .rank(rank)
           .build();
     }

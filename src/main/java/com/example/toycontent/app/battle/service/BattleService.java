@@ -24,6 +24,7 @@ import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.BattleItemStatus;
 import com.example.toycontent.app.common.enumuration.BattleStatus;
+import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
 import com.example.toycontent.app.common.exception.impl.CategoryErrorCode;
@@ -38,6 +39,7 @@ import com.example.toycontent.external.user.service.ExternalUserInfoService;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -199,30 +201,63 @@ public class BattleService {
 
   @Transactional(readOnly = true)
   public Page<BattleHotList> getHotBattleList(Pageable pageable) {
-    Page<BattleHotList> content = battleRepository.findHotBattlesWithSearchCondition(pageable);
+    Page<BattleHotList> page = battleRepository.findHotBattlesWithSearchCondition(pageable);
+    List<BattleHotList> hotList = page.getContent();
+    if (hotList.isEmpty()) {
+      return page;
+    }
+    attachTopItems(hotList);
+    return page;
+  }
 
-    List<Long> battleIds = content.getContent().stream().map(BattleHotList::getId).toList();
-    if (battleIds.isEmpty()) return content;
+  /**
+   * 핫 배틀 목록 각 항목에 voteType별 top N 아이템을 채워 넣는다.
+   * 활성 아이템은 한 번의 IN 쿼리로 모아오고, 배틀별 정렬·매핑은 메모리에서 처리한다.
+   */
+  private void attachTopItems(List<BattleHotList> hotList) {
+    List<Long> battleIds = hotList.stream().map(BattleHotList::getId).toList();
+    Map<Long, VoteType> voteTypeByBattle = hotList.stream()
+        .collect(Collectors.toMap(BattleHotList::getId, BattleHotList::getVoteType));
 
-    Map<Long, List<BattleHotItem>> topItemsMap = battleItemRepository
+    Map<Long, List<BattleItem>> itemsByBattle = battleItemRepository
         .findByBattleIdInAndStatusOrderByTotalScoreDesc(battleIds, BattleItemStatus.ACTIVE)
         .stream()
         .collect(Collectors.groupingBy(
             item -> item.getBattle().getId(),
             LinkedHashMap::new,
-            Collectors.collectingAndThen(
-                Collectors.toList(),
-                items -> IntStream.range(0, Math.min(TOP_ITEM_LIMIT, items.size()))
-                    .mapToObj(i -> BattleHotItem.from(items.get(i), i + 1))
-                    .toList()
-            )
-        ));
+            Collectors.toList()));
 
-    content.getContent()
-        .forEach(battleHotList -> battleHotList.setTopItems(
-            topItemsMap.getOrDefault(battleHotList.getId(), List.of()))
-        );
-    return content;
+    hotList.forEach(hot -> {
+      VoteType voteType = voteTypeByBattle.getOrDefault(hot.getId(), VoteType.SINGLE);
+      List<BattleItem> items = itemsByBattle.getOrDefault(hot.getId(), List.of());
+      hot.setTopItems(buildTopItems(items, voteType));
+    });
+  }
+
+  /**
+   * 배틀 내 점수 desc로 정렬해 top N 추출. 점수 모델은 {@link VoteType#rankingScoreOf}에 캡슐화돼 있어
+   * 새 voteType이 늘어도 이 메서드는 변경 불필요.
+   *
+   * <p>votePercentage 분모는 배틀의 활성 아이템 점수 합(메모리에서 합산).
+   */
+  private List<BattleHotItem> buildTopItems(List<BattleItem> items, VoteType voteType) {
+    int denominator = sumScores(items, voteType);
+    List<BattleItem> ranked = sortByScoreDesc(items, voteType);
+
+    int limit = Math.min(TOP_ITEM_LIMIT, ranked.size());
+    return IntStream.range(0, limit)
+        .mapToObj(i -> BattleHotItem.from(ranked.get(i), i + 1, voteType, denominator))
+        .toList();
+  }
+
+  private static int sumScores(List<BattleItem> items, VoteType voteType) {
+    return items.stream().mapToInt(voteType::rankingScoreOf).sum();
+  }
+
+  private static List<BattleItem> sortByScoreDesc(List<BattleItem> items, VoteType voteType) {
+    return items.stream()
+        .sorted(Comparator.comparingInt(voteType::rankingScoreOf).reversed())
+        .toList();
   }
 
 

@@ -234,14 +234,14 @@ public class Battle extends BaseTimeEntity {
    * <pre>
    *   vote      *2.0   1인 1~3표의 무거운 행위
    *   participant *3.0   유니크 참여자 — 가장 강한 인기 신호
-   *   swipe     *0.5   가벼우나 횟수 많음 — 한 명 풀완주(예: 20개) ≈ vote 5번 가치
+   *   swipe     *0.1   가벼우나 횟수 많음 — 풀완주 시 view 수준으로만 기여
    *   view      *0.1   매우 가벼움
    * </pre>
    */
   public double calculateHotScore() {
     double baseScore = (totalVotes * 2.0)
         + (totalParticipants * 3.0)
-        + (totalSwipes * 0.4)
+        + (totalSwipes * 0.1)
         + (totalViews * 0.1);
 
     long hoursSinceStart = ChronoUnit.HOURS.between(startDate, LocalDateTime.now());

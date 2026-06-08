@@ -14,6 +14,11 @@ public interface BattleSwipeRepository extends JpaRepository<BattleSwipe, Long> 
   java.util.Optional<BattleSwipe> findByBattle_IdAndBattleItem_IdAndGuestId(
       Long battleId, Long itemId, String guestId);
 
+  /** voter의 첫 스와이프 여부 판단 (totalParticipants 증가 시점 결정). */
+  boolean existsByBattle_IdAndUserId(Long battleId, Long userId);
+
+  boolean existsByBattle_IdAndGuestId(Long battleId, String guestId);
+
   @Query("""
       SELECT s.battleItem.id FROM BattleSwipe s
       WHERE s.battle.id = :battleId AND s.userId = :userId
