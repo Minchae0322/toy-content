@@ -41,7 +41,11 @@
       "Bash(./gradlew compileTestJava --console=plain)",
       "Bash(./gradlew compileJava compileTestJava -x test --no-daemon)",
       "Bash(./gradlew compileJava --no-daemon)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(git switch *)",
+      "Bash(git checkout *)",
+      "Bash(./gradlew compileJava compileTestJava --no-daemon)",
+      "Bash(xargs cat *)"
     ]
   }
 }
