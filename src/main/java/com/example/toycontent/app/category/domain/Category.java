@@ -64,8 +64,9 @@ public class Category extends BaseTimeEntity {
     @Comment("부모 카테고리")
     private Category parent;
 
-    // 자식 카테고리들
+    // 자식 카테고리들 — /list 트리 빌드 시 부모마다 children LAZY 호출되는 N+1을 BatchSize로 IN 쿼리 묶음
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @org.hibernate.annotations.BatchSize(size = 100)
     @Builder.Default
     private List<Category> children = new ArrayList<>();
 
