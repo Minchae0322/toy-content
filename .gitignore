@@ -39,3 +39,6 @@ out/
 application-local.yml
 logback-spring.xml
 app.jar
+
+# 런타임 로그 (절대 커밋 금지)
+logs/
