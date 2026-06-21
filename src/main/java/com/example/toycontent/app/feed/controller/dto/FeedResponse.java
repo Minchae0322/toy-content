@@ -100,10 +100,15 @@ public abstract class FeedResponse {
     @Schema(description = "수정일시")
     private LocalDateTime updatedAt;
 
+    /**
+     * 썸네일/이미지 개수는 외부에서 미리 fetch한 attachments 리스트로 결정한다.
+     * {@code feed.getAttachmentFiles()} LAZY 컬렉션을 호출하지 않아 N+1 차단 + primary 보장.
+     *
+     * @param attachments 이 피드에 속한 attachment 리스트 (없으면 빈 리스트 — null 금지)
+     */
     public static ListView from(Feed feed, ExternalUserInfo userInfo,
-        List<FeedReaction> userReactions, UserRewardInfo userRewardInfo) {
-
-      List<FeedAttachmentFile> feedAttachmentFiles = feed.getAttachmentFiles();
+        List<FeedReaction> userReactions, UserRewardInfo userRewardInfo,
+        List<FeedAttachmentFile> attachments) {
 
       return ListView.builder()
           .feedId(feed.getId())
@@ -118,13 +123,8 @@ public abstract class FeedResponse {
           .price(feed.getPrice())
           .viewCount(feed.getViewCount())
           .commentCount(feed.getCommentCount())
-          .thumbnailUrl(feedAttachmentFiles
-              .stream()
-              .findFirst()
-              .map(AttachmentFileResponse::of)
-              .orElse(null)
-          )
-          .imageCount(feedAttachmentFiles.size())
+          .thumbnailUrl(resolveThumbnail(attachments))
+          .imageCount(attachments.size())
           .hashtags(extractHashtags(feed.getHashtags()))
           .buyPlace(feed.getBuyPlace())
           .likeCount(feed.getLikeCount())
@@ -134,6 +134,16 @@ public abstract class FeedResponse {
           .createdAt(feed.getCreatedAt())
           .updatedAt(feed.getUpdatedAt())
           .build();
+    }
+
+    /** primary 우선, 없으면 첫 번째 attachment를 fallback으로 사용. 둘 다 없으면 null. */
+    private static AttachmentFileResponse resolveThumbnail(List<FeedAttachmentFile> attachments) {
+      return attachments.stream()
+          .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()))
+          .findFirst()
+          .or(() -> attachments.stream().findFirst())
+          .map(AttachmentFileResponse::of)
+          .orElse(null);
     }
 
     private static String truncateReview(String review, int maxLength) {

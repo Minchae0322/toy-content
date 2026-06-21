@@ -11,6 +11,7 @@ import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.HotFeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.domain.Feed;
+import com.example.toycontent.app.feed.domain.FeedAttachmentFile;
 import com.example.toycontent.app.feed.domain.QFeed;
 import com.example.toycontent.app.feed.repository.querydsl.FeedRepositoryCustom;
 import com.example.toycontent.app.file.controller.dto.AttachmentFileResponse;
@@ -113,13 +114,13 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
   }
 
   /**
-   * 연관 데이터 배치 조회
+   * 연관 데이터 배치 조회. 첨부 파일(thumbnail/imageCount)은 service에서
+   * {@link #findAttachmentsByFeedIds}로 별도 매핑하므로 여기선 다루지 않는다.
    */
   private void fetchAssociations(List<Feed> feeds, Long readerId) {
     List<Long> feedIds = extractFeedIds(feeds);
 
     fetchHashtags(feedIds);
-    fetchPrimaryAttachments(feedIds);
 
     if(readerId != null) {
       fetchUserReactions(feedIds, readerId);
@@ -147,6 +148,17 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
             feedAttachmentFile.feed.id.in(feedIds),
             feedAttachmentFile.isPrimary.isTrue()
         )
+        .fetch();
+  }
+
+  @Override
+  public List<FeedAttachmentFile> findAttachmentsByFeedIds(List<Long> feedIds) {
+    if (feedIds.isEmpty()) {
+      return List.of();
+    }
+    return queryFactory
+        .selectFrom(feedAttachmentFile)
+        .where(feedAttachmentFile.feed.id.in(feedIds))
         .fetch();
   }
 

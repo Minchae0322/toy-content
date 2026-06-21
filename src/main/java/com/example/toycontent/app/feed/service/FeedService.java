@@ -123,21 +123,35 @@ public class FeedService {
   }
 
   /**
-   * Feed 리스트 -> ListView 변환 (공통 메서드)
+   * Feed 리스트 -> ListView 변환 (공통 메서드).
+   *
+   * <p>썸네일/이미지 개수는 attachments를 한 번에 fetch해 feedId로 그룹화한 뒤
+   * ListView.from에 명시적으로 전달한다. {@code feed.getAttachmentFiles()} LAZY 호출을
+   * 피해 N+1을 차단하고, primary 보장 로직을 명시화.
    */
   private List<FeedResponse.ListView> toListView(List<Feed> feeds, Map<Long, List<FeedReaction>> userReactionsMap) {
     List<Long> creatorIds = feeds.stream()
         .map(Feed::getUserId)
         .toList();
+    List<Long> feedIds = feeds.stream().map(Feed::getId).toList();
 
     Map<Long, ExternalUserInfo> externalUserInfoMap = externalUserInfoService.getUserInfos(
         creatorIds);
 
     Map<Long, UserRewardInfo> userRewardInfoMap = userRewardService.getUserRewardInfoMap(creatorIds);
 
+    Map<Long, List<FeedAttachmentFile>> attachmentsByFeedId = feedRepository
+        .findAttachmentsByFeedIds(feedIds)
+        .stream()
+        .collect(Collectors.groupingBy(a -> a.getFeed().getId()));
+
     return feeds.stream()
-        .map(feed -> FeedResponse.ListView.from(feed, externalUserInfoMap.get(feed.getUserId()),
-            userReactionsMap.get(feed.getId()), userRewardInfoMap.get(feed.getUserId())))
+        .map(feed -> FeedResponse.ListView.from(
+            feed,
+            externalUserInfoMap.get(feed.getUserId()),
+            userReactionsMap.get(feed.getId()),
+            userRewardInfoMap.get(feed.getUserId()),
+            attachmentsByFeedId.getOrDefault(feed.getId(), List.of())))
         .toList();
   }
 
