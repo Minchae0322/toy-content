@@ -3,12 +3,11 @@ package com.example.toycontent.app.notification;
 import com.example.toycontent.app.common.enumuration.NotificationChannel;
 import com.example.toycontent.app.common.enumuration.NotificationReferenceType;
 import com.example.toycontent.app.common.enumuration.NotificationType;
-import com.example.toycontent.app.kafka.KafkaNotificationProducer;
 import com.example.toycontent.app.kafka.dto.KafkaNotificationDto;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -16,13 +15,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class NotificationService {
 
-  private final KafkaNotificationProducer notificationProducer;
+  private final ApplicationEventPublisher eventPublisher;
 
   // ============================
   // 피드
   // ============================
 
-  @Async("notificationExecutor")
   public void notifyFeedComment(Long feedCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl, Long feedId, String feedTitle) {
     if(feedCreatorId.equals(actorId)) {
@@ -45,7 +43,6 @@ public class NotificationService {
     );
   }
 
-  @Async("notificationExecutor")
   public void notifyFeedLike(Long feedCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl, Long feedId, String feedTitle) {
     if(feedCreatorId.equals(actorId)) {
@@ -72,7 +69,6 @@ public class NotificationService {
   // 배틀 아이템
   // ============================
 
-  @Async("notificationExecutor")
   public void notifyBattleItemComment(Long battleItemCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl,
       Long battleId, String battleTitle,
@@ -97,7 +93,6 @@ public class NotificationService {
     );
   }
 
-  @Async("notificationExecutor")
   public void notifyBattleItemAdded(Long battleCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl,
       Long battleId, String battleTitle,
@@ -128,7 +123,6 @@ public class NotificationService {
     );
   }
 
-  @Async("notificationExecutor")
   public void notifyBattleItemApprovalRequest(Long battleCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl,
       Long battleId, String battleTitle,
@@ -160,7 +154,6 @@ public class NotificationService {
   }
 
   @Deprecated
-  @Async("notificationExecutor")
   public void notifyBattleItemLike(Long battleItemCreatorId, Long actorId, String actorNickname,
       String actorProfileImageUrl,
       Long battleId, String battleTitle,
@@ -189,7 +182,6 @@ public class NotificationService {
   // 배틀
   // ============================
 
-  @Async("notificationExecutor")
   public void notifyBattleInvite(Long targetUserId, Long actorId, String actorNickname,
       String actorProfileImageUrl,
       Long battleId, String battleTitle) {
@@ -209,7 +201,6 @@ public class NotificationService {
     );
   }
 
-  @Async("notificationExecutor")
   public void notifyBattleDeadlineOwnerD7(Long creatorId, Long battleId, String battleTitle) {
     sendSafely(NotificationType.BATTLE_DEADLINE_OWNER_D7, KafkaNotificationDto.builder()
         .userId(creatorId)
@@ -224,7 +215,6 @@ public class NotificationService {
     );
   }
 
-  @Async("notificationExecutor")
   public void notifyBattleResult(Long userId, Long battleId, String battleTitle) {
     sendSafely(NotificationType.BATTLE_RESULT, KafkaNotificationDto.builder()
         .userId(userId)
@@ -243,7 +233,6 @@ public class NotificationService {
    * 1위 아이템명을 포함한 종료 알림. 1위가 명확한 배틀(예: SWIPE)에서 사용.
    * winnerName이 null/blank면 호출자가 {@link #notifyBattleResult}로 폴백해야 한다.
    */
-  @Async("notificationExecutor")
   public void notifyBattleResultWithWinner(Long userId, Long battleId, String battleTitle,
       String winnerName) {
     sendSafely(NotificationType.BATTLE_RESULT_WITH_WINNER, KafkaNotificationDto.builder()
@@ -263,7 +252,6 @@ public class NotificationService {
   // 소셜
   // ============================
 
-  @Async("notificationExecutor")
   public void notifyFollow(Long targetUserId, Long actorId, String actorNickname,
       String actorProfileImageUrl) {
     sendSafely(NotificationType.FOLLOW, KafkaNotificationDto.builder()
@@ -286,7 +274,6 @@ public class NotificationService {
   // 시스템
   // ============================
 
-  @Async("notificationExecutor")
   public void notifySystem(Long userId, String content, String actionUrl) {
     sendSafely(NotificationType.SYSTEM, KafkaNotificationDto.builder()
         .userId(userId)
@@ -301,15 +288,17 @@ public class NotificationService {
   }
 
   // ============================
-  // 공통 안전 발행
+  // 공통 발행
   // ============================
 
+  /**
+   * 실제 Kafka 발행을 직접 호출하지 않고 이벤트만 등록한다.
+   *
+   * <p>이 메서드는 호출자의 트랜잭션 스레드에서 동기로 실행되므로, 트랜잭션이 살아 있으면
+   * {@link NotificationEventListener}가 커밋 이후(AFTER_COMMIT)에 발행을 수행한다.
+   * 롤백 시 이벤트는 폐기되어 유령 알림이 생기지 않는다.
+   */
   private void sendSafely(NotificationType type, KafkaNotificationDto dto) {
-    try {
-      notificationProducer.send(dto);
-    } catch (Exception e) {
-      log.error("[Notification] 알림 발행 실패: userId={}, type={}, error={}",
-          dto.getUserId(), type, e.getMessage(), e);
-    }
+    eventPublisher.publishEvent(new NotificationEvent(dto));
   }
 }

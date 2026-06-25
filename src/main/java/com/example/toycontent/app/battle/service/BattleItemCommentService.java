@@ -67,6 +67,11 @@ public class BattleItemCommentService {
       battleItem.getBattle().incrementTotalCommentCount();
       log.debug("4단계 통과 - 댓글 수 증가 완료");
 
+      commentRepository.save(comment);
+      log.debug("5단계 통과 - 댓글 저장 완료");
+
+      // 알림은 이벤트로 등록만 한다. 실제 발행은 트랜잭션 커밋 이후에 일어나므로,
+      // 이 트랜잭션이 롤백되면 알림도 함께 폐기된다(유령 알림 방지).
       notificationService.notifyBattleItemComment(
               battleItem.getRegisterId(),
               actionUserId,
@@ -80,10 +85,6 @@ public class BattleItemCommentService {
               battleItem.getDisplayName()
       );
 
-
-      log.debug("5단계 통과 - 알림 발송 완료");
-
-      commentRepository.save(comment);
       log.info("댓글 작성 완료 - commentId: {}, battleId: {}, itemId: {}", comment.getId(), battleId, itemId);
 
     } catch (RestApiException e) {
