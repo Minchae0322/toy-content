@@ -54,6 +54,12 @@ dependencies {
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
+    // @Observed AOP — 서비스/스케줄러 메서드 단위 span 생성
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+    // JDBC 자동 계측 — Hikari + JPA에서 실행되는 SQL마다 span 자동 생성 (Tempo에서 병목 SQL 식별용)
+    implementation 'net.ttddyy.observation:datasource-micrometer-spring-boot:1.1.1'
+
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'

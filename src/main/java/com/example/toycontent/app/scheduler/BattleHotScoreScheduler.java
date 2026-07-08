@@ -2,6 +2,7 @@ package com.example.toycontent.app.scheduler;
 
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.repository.BattleRepository;
+import io.micrometer.observation.annotation.Observed;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,8 @@ public class BattleHotScoreScheduler {
    * 시간 가중치 재계산 (매시간)
    * - 최근 30분 내 활동이 있는 배틀만 처리
    */
+  @Observed(name = "scheduler.battle.hotScore.timeWeight",
+      contextualName = "battle-hot-score:time-weight")
   @Scheduled(cron = "${scheduler.hot-score.time-weight-update.cron}")
   @SchedulerLock(
       name = "productPopularity",
@@ -71,6 +74,8 @@ public class BattleHotScoreScheduler {
    * 전체 재계산 (새벽 3시)
    * - 시간 감쇠 반영을 위해 전체 배틀 재계산
    */
+  @Observed(name = "scheduler.battle.hotScore.fullRecalculate",
+      contextualName = "battle-hot-score:full")
   @Scheduled(cron = "${scheduler.hot-score.full-recalculate.cron}")
   @SchedulerLock(
       name = "productPopularity",

@@ -2,6 +2,7 @@ package com.example.toycontent.app.scheduler;
 
 
 import com.example.toycontent.app.feed.repository.FeedRepository;
+import io.micrometer.observation.annotation.Observed;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +62,8 @@ public class FeedHotScoreScheduler {
    * - 최근 60분 내 활동이 있는 피드만 벌크 업데이트
    * - 직전 fullRecalculate가 결정한 decay 지수를 그대로 사용
    */
+  @Observed(name = "scheduler.feed.hotScore.timeWeight",
+      contextualName = "feed-hot-score:time-weight")
   @Scheduled(cron = "${scheduler.feed-hot-score.time-weight-update.cron}")
   @SchedulerLock(
       name = "feedHotScoreTimeWeight",
@@ -96,6 +99,8 @@ public class FeedHotScoreScheduler {
    * - 최근 신규 피드 수를 기준으로 decay 지수를 결정하고 Redis에 저장
    * - 최근 N일 피드 전체 벌크 업데이트
    */
+  @Observed(name = "scheduler.feed.hotScore.fullRecalculate",
+      contextualName = "feed-hot-score:full")
   @Scheduled(cron = "${scheduler.feed-hot-score.full-recalculate.cron}")
   @SchedulerLock(
       name = "feedHotScoreFullRecalculate",

@@ -10,6 +10,7 @@ import com.example.toycontent.app.notification.BattleNotificationPhase;
 import com.example.toycontent.app.notification.BattleNotificationSent;
 import com.example.toycontent.app.notification.BattleNotificationSentRepository;
 import com.example.toycontent.app.notification.NotificationService;
+import io.micrometer.observation.annotation.Observed;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -44,6 +45,8 @@ public class BattleDeadlineNotificationScheduler {
    * in-app만 사용한다. 이미 발송된 {@code (battleId, creatorId)} 쌍은
    * {@link BattleNotificationSent}로 dedup하여 cron이 다시 돌아도 idempotent하다.
    */
+  @Observed(name = "scheduler.battle.notification.d7",
+      contextualName = "battle-deadline:d7")
   @Scheduled(cron = "0 0 * * * *")
   @SchedulerLock(name = "battleDeadlineD7", lockAtLeastFor = "1m", lockAtMostFor = "10m")
   @Transactional
@@ -80,6 +83,8 @@ public class BattleDeadlineNotificationScheduler {
    * 배틀에 투표한 경우 {@code Set}으로 1건 dedup. {@link BattleNotificationSent}로
    * {@code (battleId, userId)} 단위 idempotent 보장.
    */
+  @Observed(name = "scheduler.battle.notification.end",
+      contextualName = "battle-deadline:end")
   @Scheduled(cron = "0 * * * * *")
   @SchedulerLock(name = "battleDeadlineEnd", lockAtLeastFor = "30s", lockAtMostFor = "5m")
   @Transactional
