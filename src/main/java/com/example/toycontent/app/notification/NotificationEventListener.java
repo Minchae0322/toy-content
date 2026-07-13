@@ -2,6 +2,9 @@ package com.example.toycontent.app.notification;
 
 import com.example.toycontent.app.kafka.KafkaNotificationProducer;
 import com.example.toycontent.app.kafka.dto.KafkaNotificationDto;
+import io.micrometer.observation.annotation.Observed;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -29,7 +32,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class NotificationEventListener {
 
   private final KafkaNotificationProducer notificationProducer;
+  private final Tracer tracer;
 
+  @Observed(name = "notification.publish",
+      contextualName = "notification-publish")
   @Async("notificationExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
   public void onNotification(NotificationEvent event) {
@@ -37,6 +43,12 @@ public class NotificationEventListener {
     try {
       notificationProducer.send(dto);
     } catch (Exception e) {
+      // 예외를 삼키더라도 현재 span에는 error를 명시 기록 —
+      // tail sampling "에러 100% 보존" 정책이 이 실패를 놓치지 않도록.
+      Span current = tracer.currentSpan();
+      if (current != null) {
+        current.error(e);
+      }
       log.error("[Notification] 알림 발행 실패: userId={}, type={}, error={}",
           dto.getUserId(), dto.getType(), e.getMessage(), e);
     }

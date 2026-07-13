@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.willThrow;
 import com.example.toycontent.app.common.enumuration.NotificationType;
 import com.example.toycontent.app.kafka.KafkaNotificationProducer;
 import com.example.toycontent.app.kafka.dto.KafkaNotificationDto;
+import io.micrometer.tracing.Tracer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class NotificationEventListenerTest {
 
   @Mock private KafkaNotificationProducer notificationProducer;
+  @Mock private Tracer tracer;
 
   @InjectMocks private NotificationEventListener listener;
 

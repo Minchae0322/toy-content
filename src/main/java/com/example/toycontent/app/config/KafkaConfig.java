@@ -88,8 +88,18 @@ public class KafkaConfig {
     return new DefaultKafkaProducerFactory<>(props);
   }
 
+  /**
+   * KafkaTemplate의 Micrometer Observation을 활성화한다.
+   *
+   * <p>이걸 켜면 {@code kafkaTemplate.send()} 호출이 자체 span을 만들고, traceId를 Kafka
+   * 헤더로 자동 전파한다. 결과적으로 <b>content → Kafka → chat</b>이 하나의 trace로 연결되고,
+   * send 실패 시 error 태그도 observation 컨텍스트에 자동 기록된다. Brave 경로에서
+   * "Agent였다면 공짜였을" 항목을 명시적으로 켜주는 지점.
+   */
   @Bean
   public KafkaTemplate<String, Object> kafkaTemplate() {
-    return new KafkaTemplate<>(producerFactory());
+    KafkaTemplate<String, Object> template = new KafkaTemplate<>(producerFactory());
+    template.setObservationEnabled(true);
+    return template;
   }
 }
