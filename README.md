@@ -30,7 +30,7 @@
 | 레포 | 역할 |
 |---|---|
 | [toy-client](https://github.com/Minchae0322/toy-client) | Vue 3 프론트엔드. 웹과 iOS/Android 앱(Capacitor)을 하나의 코드로 서빙 |
-| [toy-auth-user-region](https://github.com/Minchae0322/toy-auth-user-region) | 회원, 인증, 소셜 로그인, 팔로우, 알림 설정 |
+| [toy-user](https://github.com/Minchae0322/toy-user) | 회원, 인증, 소셜 로그인, 팔로우, 알림 설정 |
 | **toy-content** (이 레포) | 배틀, 피드, 제품, 보상 등 콘텐츠 도메인 |
 | [toy-chat](https://github.com/Minchae0322/toy-chat) | 실시간 채팅과 푸시 알림 발송 |
 
