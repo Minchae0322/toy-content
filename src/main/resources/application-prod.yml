@@ -119,6 +119,13 @@ file:
 jwt:
   secret: ${JWT_SECRET}
 
+# 프로덕션에서는 API 문서 노출 차단 (기본 off, 필요 시 환경변수로만 임시 허용)
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
 
 scheduler:
   product-popularity:
