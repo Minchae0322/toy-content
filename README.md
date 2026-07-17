@@ -25,6 +25,15 @@
 
 이 레포는 그중 **콘텐츠 서비스(content-service)** 입니다. 전체 백엔드는 인증, 콘텐츠, 채팅 세 개의 서비스로 나뉘어 있는데, 그중 배틀과 피드, 제품, 보상 등 서비스의 중심 도메인을 맡아 전체 트래픽의 약 70%를 처리합니다.
 
+### 요거뜨 서비스 구성
+
+| 레포 | 역할 |
+|---|---|
+| [toy-client](https://github.com/Minchae0322/toy-client) | Vue 3 프론트엔드. 웹과 iOS/Android 앱(Capacitor)을 하나의 코드로 서빙 |
+| [toy-auth-user-region](https://github.com/Minchae0322/toy-auth-user-region) | 회원, 인증, 소셜 로그인, 팔로우, 알림 설정 |
+| **toy-content** (이 레포) | 배틀, 피드, 제품, 보상 등 콘텐츠 도메인 |
+| [toy-chat](https://github.com/Minchae0322/toy-chat) | 실시간 채팅과 푸시 알림 발송 |
+
 | 웹 | 모바일 |
 |:---:|:---:|
 | ![웹 화면](docs/img_2.png) | ![모바일 화면](docs/img_1.png) |
