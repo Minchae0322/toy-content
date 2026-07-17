@@ -39,6 +39,13 @@
 - `app/common/` — 공통 애노테이션(`@CurrentUserId`, `@CurrentUserIsAdmin`, `@CheckAdmin`), 리졸버, 예외.
 - `external/user/` — 인증(user) 서비스 호출 클라이언트 + 캐시.
 
+## 코딩 컨벤션 (DTO · 설계 패턴)
+
+- **DTO 분리**: 요청/응답 DTO는 도메인별 `XxxRequest` / `XxxResponse` 클래스 안에 **오퍼레이션별 static 이너 클래스**로 정의한다. 예: `RewardRequest.CreateBadge`, `RewardResponse.BadgeInfo`, `ProductResponse.ProductList`. request와 response를 한 클래스에 섞지 않는다. 이너 DTO는 `record`(또는 불변) 권장.
+- **엔티티 비노출**: JPA 엔티티를 컨트롤러 응답이나 요청 바디로 직접 노출하지 않는다. 항상 위 DTO로 변환한다.
+- **팩토리 + 전략 패턴**: 타입에 따라 동작이 갈리고 **확장이 예상되는 영역**(예: 배틀 투표 방식 — 1인1표/1인3표/스와이프, 한입만 판매 유형 — 일반/공동구매/대리구매)은 `if/switch` 분기를 흩뿌리지 말고 **전략 인터페이스 + 팩토리**로 구현한다. 새 타입 추가가 전략 클래스 하나 추가로 끝나도록(OCP) 설계한다.
+- **Clean Code · DDD**: 비즈니스 규칙은 서비스에 흩지 말고 **엔티티/도메인 객체 안**에 둔다(리치 도메인 모델). 애그리거트 경계를 존중하고, 다른 애그리거트는 ID로 참조한다. 의미 있는 이름, 작은 메서드, 부수효과 최소화를 지킨다. 서비스 계층은 오케스트레이션(트랜잭션·조합) 위주로 얇게 유지한다.
+
 ## 인증 · 인가 규칙 (중요)
 
 - 인증은 `app/auth/filter/JwtFilter`(@Component 서블릿 필터)가 담당. `SecurityConfig`의 `JwtAuthenticationFilter`는 no-op이니 여기에 로직을 넣지 말 것.
