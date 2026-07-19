@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🧳 요거뜨 (Yogurtte) — Content Service
+# 요거뜨 (Yogurtte) — Content Service
 
-**요즘 뜨는 아이템의 순위, 유저들이 직접 만듭니다** — 실시간 아이템 랭킹 커뮤니티
+**요즘 뜨는 아이템의 순위, 유저들이 직접 만듭니다** - 실시간 아이템 랭킹 커뮤니티
 
 [yogurtte.com](https://yogurtte.com)
 
