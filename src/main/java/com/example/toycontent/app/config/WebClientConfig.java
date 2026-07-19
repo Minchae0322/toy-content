@@ -25,11 +25,15 @@ public class WebClientConfig {
   @Value("${external.user-service.api-key}")
   private String apiKey;
 
+  /**
+   * 자동 구성 {@link WebClient.Builder} 주입 — 정적 {@code WebClient.builder()}로 만들면
+   * client span 생성과 traceparent 전파가 빠져 user 서비스 호출에서 trace가 끊긴다.
+   */
   @Bean("userServiceWebClient")
-  public WebClient userServiceWebClient() {
+  public WebClient userServiceWebClient(WebClient.Builder builder) {
     log.info("UserService API Key: {}", apiKey);
 
-    return WebClient.builder()
+    return builder
         .baseUrl(UriComponentsBuilder.newInstance()
             .scheme(protocol)
             .host(host)

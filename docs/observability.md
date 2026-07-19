@@ -6,6 +6,62 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-07-20 — chat 컨슈머 trace 단절 원인 확정 + consume span 활성화
+
+### 왜 했나
+
+댓글 → 알림 경로의 trace 연결 검증(Step 0)에서 `notification-publish → publish user.notifications`까지는 한 트리로 확인됐는데(②③ producer 관문 통과), **chat 쪽 consume span이 워터폴에 나타나지 않았다**. 원인 후보는 둘: (A) chat 컨슈머 observation 미활성 — 계측 문제, (B) 컨슈머 span의 비동기 도착을 못 기다린 UI 타이밍 문제. Tempo 검색 대신 코드로 갈랐다.
+
+### 무엇을 했나
+
+| 영역 | 변경 / 확인 |
+|---|---|
+| **toy-chat `KafkaConsumerConfig.java` (진단)** | 리스너 팩토리 5개(chatMessage / dlq / notification / notificationSetting / fcmToken) 전부 `setObservationEnabled(true)` 미호출 확인. Spring Kafka 기본값이 false라 **consume span이 생성될 수 없는 상태 → 후보 A 확정** (B는 성립 불가 — 언제 조회해도 span은 없다) |
+| **toy-chat `KafkaConsumerConfig.java` (수리)** | 리스너 팩토리 5개 전부 `setObservationEnabled(true)`. producer가 헤더로 실어 보낸 trace 컨텍스트를 꺼내 consume span을 만들고 traceId를 잇는다 |
+
+toy-chat은 트레이싱 인프라 자체([[2026-05-21]] 표준 이식: brave 브릿지 + Tempo 엔드포인트 + 샘플링 1.0)는 정상이어서, producer/consumer의 observation 스위치가 따로라는 점만이 구멍이었다.
+
+### 추가 발견 — consume span 뒤가 전부 깜깜하다 → chat 전면 계측
+
+컨슈머 스위치만 켜면 consume span이 chat 쪽 리프(leaf)가 되는 문제가 남는다. chat의 알림 저장은 MySQL이 아니라 **MongoDB**(`@Document("user_notifications")`)인데 Spring Boot는 Mongo 커맨드 span을 자동 구성하지 않고, Redis(Lettuce)·chat 자신의 producer·`@Observed`도 전무했다. AI 기반 모니터링/RCA를 하려면 "리스너 처리 400ms" 덩어리로는 원인 분해가 안 되므로 전부 켰다:
+
+| 사각지대 | 조치 (전부 toy-chat) |
+|---|---|
+| MongoDB 커맨드 | `ObservabilityConfig`(신규) — `MongoClientSettingsBuilderCustomizer`로 `MongoObservationCommandListener` 등록. 알림 insert·채팅 메시지 저장이 span으로 분리 |
+| Redis(Lettuce) 커맨드 | 같은 파일 — `ClientResourcesBuilderCustomizer`에 `MicrometerTracing(registry, "redis")`. 온라인 디바이스 조회 등 connection 확인 경로가 보임 |
+| JDBC | `build.gradle`에 `datasource-micrometer-spring-boot:1.1.1` (content와 동일 버전). dev/prod에 MySQL datasource가 실제 설정돼 있어 유효 |
+| chat 자신의 Kafka produce | `KafkaConfig.kafkaTemplate`에 `setObservationEnabled(true)` — 채팅 메시지·DLQ 발행에 producer span + 헤더 전파 |
+| 서비스 구간 span | `ObservedAspect` 빈 + `starter-aop` 추가. 알림 경로에 `@Observed` 3개: `notification.process`(처리 전체) / `notification.ws.send`(WebSocket 발송) / `notification.push.dispatch`(FCM 디스패치) |
+
+### 핵심 의사결정
+
+- **컨슈머 observation을 5개 팩토리 전부 켬** — 처음엔 notification만 켜려 했으나(볼륨 우려), RCA 목적이면 채팅 메시지 경로도 필요. 샘플링 1.0에서 메시지당 span이 생기므로 트레이스 볼륨이 커지면 `TRACING_SAMPLING_RATE`로 낮추는 게 레버 (계측을 끄는 게 아니라).
+- **WebSocket "발송"은 `@Observed`로 span화** — STOMP 브로커 send 자체는 계측 불가라는 결론은 유지되지만, 발송 메서드(`sendNotification`)를 `@Observed`로 감싸면 "온라인 조회 → convertAndSend 완료"까지가 span으로 잡힌다. 남는 사각지대는 브로커→클라이언트 실제 전달뿐이며, 거기는 계속 메트릭 담당.
+- **`@Observed`는 알림 경로 3곳만** — 모든 서비스에 뿌리면 노이즈. Mongo/Redis/Kafka 자동 계측이 깔렸으니 서비스 span은 "의미 단위 경계"에만.
+
+### 2차 점검 — "trace로 수집 가능한 전부"에서 빠져 있던 2개
+
+"이 정도면 다 보이나" 점검에서 두 구멍 추가 발견·수리:
+
+| 사각지대 | 조치 |
+|---|---|
+| **서비스 간 HTTP** (content→user, chat→user) | 두 레포 `WebClientConfig` 모두 정적 `WebClient.builder()`로 생성 중 → 자동 구성 `WebClient.Builder` 주입으로 교체. 정적 빌더는 client span도, traceparent 전파도 없어 **user 서비스 호출에서 trace가 끊기는 상태**였다 — Kafka 경계와 같은 급의 단절 |
+| **content의 Redis(Lettuce)** | chat에는 붙였는데 content에 없었음. `TracingConfig`에 동일한 `ClientResourcesBuilderCustomizer` + `MicrometerTracing` 등록 — 캐시 조회·ShedLock 커맨드 span |
+
+이로써 백엔드에서 trace로 수집 가능한 경계는 전부 계측됨. 남는 비-trace 영역은 구조적 한계 3개뿐: STOMP 브로커→클라이언트 전달(메트릭 담당), FCM SDK 내부 HTTP(`notification.push.dispatch` span이 소요 시간 커버), 프론트엔드(추후 STOMP 헤더 traceparent 전파 + OTel JS로 확장 가능 — W3C 표준이라 Brave와 호환).
+
+### 검증 방법
+
+toy-chat 커밋·배포 후 댓글 1건 작성 → Tempo에서 해당 traceId 워터폴이 `POST → INSERT×N → notification-publish → publish user.notifications → chat consume → notification.process → mongo insert + notification.ws.send(→ redis 조회) / notification.push.dispatch`까지 한 트리로 분해돼 보이면 통과. Mongo span의 부모 연결(sync 드라이버 + context-propagation)은 문서상 동작이지만 실워터폴로 확인할 것.
+
+### 다음 단계
+
+- [x] toy-chat 변경 커밋 + 푸시 (`cab6741`, master) — 배포 파이프라인 트리거됨
+- [ ] 배포 후 위 검증 흘려서 Step 0 종결 — 통과한 워터폴 스크린샷을 after 포트폴리오 컷으로 보관
+- [ ] 트레이스 볼륨 모니터링 — chat.messages 컨슈머 계측이 켜졌으니 Tempo 사용량(50GB/월) 추이 확인, 초과 조짐이면 `TRACING_SAMPLING_RATE` 하향
+
+---
+
 ## 2026-05-22 — Saturation 패널 + Alert/Notification 시스템 구축
 
 ### 왜 했나
