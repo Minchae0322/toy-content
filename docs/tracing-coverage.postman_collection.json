@@ -1,0 +1,257 @@
+{
+  "info": {
+    "name": "Tracing 커버리지 검증 (경계 열거)",
+    "description": "docs/tracing-coverage.md의 경계 체크리스트를 실제 트래픽으로 흘리는 컬렉션.\n\n사용법:\n1. 변수 email / password 에 계정 입력 (운영 검증이면 authBaseUrl / contentBaseUrl 을 배포 도메인으로 교체)\n2. Run collection (순서 그대로) — 로그인이 accessToken 을 채우고 이후 요청에 Bearer 로 자동 주입\n3. 각 요청 실행 시각으로 Grafana Tempo 에서 traceId 검색 → tracing-coverage.md §6 워터폴과 대조\n\n요청 이름의 §번호는 tracing-coverage.md 의 경계 번호.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "authBaseUrl", "value": "http://localhost:8081/api", "type": "string" },
+    { "key": "contentBaseUrl", "value": "http://localhost:8082/api", "type": "string" },
+    { "key": "email", "value": "", "type": "string" },
+    { "key": "password", "value": "", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "feedId", "value": "", "type": "string" },
+    { "key": "commentId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0. 로그인 — accessToken 발급",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('200 + accessToken 발급', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(body.accessToken, 'accessToken').to.be.a('string').and.not.empty;",
+              "});",
+              "pm.collectionVariables.set('accessToken', body.accessToken);",
+              "console.log('accessToken 저장 완료 — 이후 요청에 Bearer 자동 주입');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{authBaseUrl}}/login",
+          "host": ["{{authBaseUrl}}"],
+          "path": ["login"]
+        },
+        "description": "auth-service 로그인. 응답의 accessToken 을 컬렉션 변수에 저장한다. refreshToken 은 HttpOnly 쿠키로 내려오며 이 컬렉션에서는 사용하지 않는다."
+      }
+    },
+    {
+      "name": "1. 피드 목록 조회 — feedId 채취 (§1-1, §1-2)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('200 + 피드 존재', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(body.data.content, 'data.content').to.be.an('array').and.not.empty;",
+              "});",
+              "const feedId = body.data.content[0].feedId;",
+              "pm.collectionVariables.set('feedId', String(feedId));",
+              "console.log('feedId =', feedId, '— 이후 댓글 요청 대상');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{contentBaseUrl}}/feeds/scroll?size=5",
+          "host": ["{{contentBaseUrl}}"],
+          "path": ["feeds", "scroll"],
+          "query": [
+            { "key": "size", "value": "5" }
+          ]
+        },
+        "description": "경계: HTTP 인입(server span) + JDBC(SELECT span). 첫 번째 피드의 feedId 를 변수로 저장해 뒤 요청들이 사용한다."
+      }
+    },
+    {
+      "name": "2. 댓글 작성 — E2E 최다 경계 통과 (§1-1~6, 핵심 채록 대상)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('200 + 댓글 생성', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(body.success).to.be.true;",
+              "});",
+              "const created = body.data || {};",
+              "const commentId = created.commentId ?? created.id;",
+              "if (commentId) {",
+              "  pm.collectionVariables.set('commentId', String(commentId));",
+              "}",
+              "console.log('=== Tempo 채록 힌트 ===');",
+              "console.log('이 시각(' + new Date().toISOString() + ') 전후로 content-service POST 트레이스 검색.');",
+              "console.log('기대 워터폴: POST → INSERT×N → notification-publish → publish user.notifications → chat consume → notification.process (tracing-coverage.md §6)');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"tracing 커버리지 검증용 댓글 ({{$timestamp}})\"\n}"
+        },
+        "url": {
+          "raw": "{{contentBaseUrl}}/feeds/{{feedId}}/comments",
+          "host": ["{{contentBaseUrl}}"],
+          "path": ["feeds", "{{feedId}}", "comments"]
+        },
+        "description": "대표 경로. 한 요청으로 HTTP 인입 → JDBC INSERT → AFTER_COMMIT 이벤트 + @Async 경계(notification-publish) → Kafka producer → chat consume 까지 최다 경계를 통과한다. 실행 후 Tempo 에서 이 시각의 traceId 워터폴 하나로 §1 의 1~6 (chat 배포 후엔 9까지) 을 일괄 대조."
+      }
+    },
+    {
+      "name": "3. 댓글 목록 조회 — user 캐시(Redis) + content→user HTTP (§1-7, §1-8)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "console.log('Tempo 대조: 이 트레이스에 redis 커맨드 span(§1-8), 캐시 미스면 user-service client span(§1-7)이 있어야 한다.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{contentBaseUrl}}/feeds/{{feedId}}/comments?size=10",
+          "host": ["{{contentBaseUrl}}"],
+          "path": ["feeds", "{{feedId}}", "comments"],
+          "query": [
+            { "key": "size", "value": "10" }
+          ]
+        },
+        "description": "댓글 작성자 정보를 UserCacheStore(Redis) 에서 조회하고, 캐시 미스면 ExternalUserApiClient 로 user-service 를 호출한다. §1-7(서비스 간 HTTP client span + traceparent 전파)과 §1-8(Redis 커맨드 span)의 확인 지점. 캐시 히트/미스 두 케이스를 보려면 두 번 실행 (첫 실행 미스 → 둘째 히트)."
+      }
+    },
+    {
+      "name": "4. 피드 단건 조회 — 조회 경로 워터폴 (§1-1, §1-2, §1-7)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{contentBaseUrl}}/feeds/{{feedId}}",
+          "host": ["{{contentBaseUrl}}"],
+          "path": ["feeds", "{{feedId}}"]
+        },
+        "description": "쓰기(댓글)와 다른 조회 계열 트레이스 표본. 작성자 userInfo 조합 시 §1-7 경계도 통과할 수 있다."
+      }
+    },
+    {
+      "name": "5. 에러 경로 — 존재하지 않는 피드 (§4-1 error 태그)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('에러 응답 (4xx/5xx)', function () {",
+              "  pm.expect(pm.response.code, 'status').to.be.above(399);",
+              "});",
+              "console.log('Tempo 대조: 이 시각의 4xx 트레이스가 남는지 확인. 단 핸들된 예외라 error 태그는 안 붙을 수 있음(outcome=CLIENT_ERROR) — error 태그 실측(§4-1)은 chaos 문항 2(미처리 예외/슬로우 쿼리) 소관.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{contentBaseUrl}}/feeds/999999999",
+          "host": ["{{contentBaseUrl}}"],
+          "path": ["feeds", "999999999"]
+        },
+        "description": "예외 경로에서도 트레이스가 남는지 확인하는 최소 프로브. 핸들된 4xx 라 error 태그는 안 붙을 수 있으며(outcome=CLIENT_ERROR), error 태그 실측(§4-1)은 chaos 문항 2(미처리 예외/슬로우 쿼리) 소관 — tracing-coverage.md §7 분담표 참조."
+      }
+    },
+    {
+      "name": "6. (정리) 생성한 댓글 삭제",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('commentId')) {",
+              "  console.warn('commentId 없음 — 요청 2의 응답에서 id 를 못 찾았으면 이 요청은 404 가 난다. 수동으로 변수에 넣고 재실행.');",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 (삭제 성공)', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{contentBaseUrl}}/feeds/{{feedId}}/comments/{{commentId}}",
+          "host": ["{{contentBaseUrl}}"],
+          "path": ["feeds", "{{feedId}}", "comments", "{{commentId}}"]
+        },
+        "description": "검증용 댓글을 지워 데이터를 원복한다. DELETE 트레이스도 부수 표본이 된다."
+      }
+    }
+  ]
+}

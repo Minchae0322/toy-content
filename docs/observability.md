@@ -59,6 +59,7 @@ toy-chat 커밋·배포 후 댓글 1건 작성 → Tempo에서 해당 traceId �
 - [x] toy-chat 변경 커밋 + 푸시 (`cab6741`, master) — 배포 파이프라인 트리거됨
 - [ ] 배포 후 위 검증 흘려서 Step 0 종결 — 통과한 워터폴 스크린샷을 after 포트폴리오 컷으로 보관
 - [ ] 트레이스 볼륨 모니터링 — chat.messages 컨슈머 계측이 켜졌으니 Tempo 사용량(50GB/월) 추이 확인, 초과 조짐이면 `TRACING_SAMPLING_RATE` 하향
+- [x] 커버리지 검증 체크리스트 문서화 — [tracing-coverage.md](tracing-coverage.md) 신규. "n=1 검증 아니냐"에 대한 경계 열거 프레임 + 경계 10종 상태표 + 미검증 3개의 chaos 문항 연동 계획. 작성 과정의 전수 열거에서 `FeedTrendingScheduler`·`ProductPopularityScheduler`에 `@Observed` 부재(root span 없이 실행) 발견 — 보강 항목으로 등록
 
 ---
 
