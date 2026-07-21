@@ -109,5 +109,76 @@ CM4SB는 추후 "임의 서비스 빈 예외" 같은 순수 앱 결함 문항을
 
 - 이 클러스터가 곧 실서비스다 — 저트래픽 시간대, 문항당 주입 시간 최소화(수 분), 복구 검증까지가 한 문항.
 - IN-2(Kafka)·CH-1(Mongo)은 **데이터 유실/지연을 동반** — 알림 유실 허용 범위를 먼저 결정.
-- kubectl 직접 변경(scale, patch)은 GitOps 매니페스트와 drift — 채록 끝나면 즉시 원복하고, 매니페스트 레포 기준 상태로 되돌아왔는지 확인.
+- kubectl 직접 변경(scale, patch)은 GitOps 매니페스트와 drift — 채록 끝나면 즉시 원복하고, 매니페스트 레포 기준 상태로 되돌아왔는지 확인. **단, §5의 레포 실사가 끝나기 전에는 이 수칙이 성립하지 않는다(레포 기준으로 원복하면 스켈레톤이 배포됨).**
 - AU-3(시크릿 드리프트)은 전 사용자 영향 — 가장 마지막에, 가장 짧게.
+
+## 5. 배포 매니페스트 실사 — 운영본 vs GitOps 레포 (2026-07-21)
+
+master 노드의 heredoc 매니페스트(운영 적용본)와 `yogurtte-k8s-manifests` 레포를 비교한 결과. **레포는 초기 스켈레톤에서 멈춰 있고, 실제 운영 설정은 master 노드 홈 디렉토리의 파일에만 존재한다.** chaos 채록을 시작하기 전에 이 drift를 닫아야 하는 이유: ① 안전 수칙의 "레포 기준 원복"이 현재는 서비스를 죽이는 명령이고, ② ArgoCD ApplicationSet(automated + selfHeal + prune)이 실제로 동작 중이라면 AU-1 같은 kubectl patch 주입을 selfHeal이 수 초 내 되돌려 문항 자체가 성립하지 않는다.
+
+### 서비스별 주요 차이
+
+| 항목 | 레포 (base) | 운영본 (heredoc) | 영향 |
+|---|---|---|---|
+| content 프로브 | **8082 `/api/actuator/...`** | 8090 `/actuator/...` | 관리 포트 분리(05-21) 이전 상태. 레포본이 배포되면 프로브 실패 → CrashLoop |
+| content replicas | 1 | 2 + podAntiAffinity + maxSurge 0 | 가용성 설계 전체가 레포에 없음 |
+| content JVM/리소스 | Xmx1280m, limits 1792Mi | Xmx1024m, limits 1536Mi | 어느 쪽이 의도인지 결정 필요 |
+| auth/user | `apps/auth`(image `auth:latest` — 존재하지 않는 이미지)와 `apps/user` **중복 존재**, 둘 다 8080 | `auth-service` 단일, 8081/8090, startupProbe | ApplicationSet이 둘 다 Application으로 생성 |
+| chat | 스켈레톤(8080, 프로브 없음) | 8084/8090, firebase-key 볼륨, scrape 어노테이션 | 레포본에는 운영 설정 전무 |
+| 공통 | scrape 어노테이션, TEMPO_ZIPKIN_ENDPOINT, imagePullSecrets(일부) 없음 | 전부 있음 | Alloy 수집·트레이싱이 레포본에는 없음 |
+| 이미지 전략 | kustomize SHA 고정 (CI가 갱신) | `:latest` + `imagePullPolicy: Always` + rollout restart | 롤백 워크플로(latest 재태깅)는 운영 방식 기준. 두 전략이 공존 중 |
+| content dev overlay | `images` 항목 2개(`content`→옛 SHA 고정, `ghcr.io/...`→CI 갱신) | — | 첫 항목이 옛 SHA로 얼어 있음. 어느 항목이 이기는지 kustomize 변환 순서에 의존 — 정리 필요 |
+
+운영본 내부에서도 서비스 간 비대칭이 있다: startupProbe는 auth만 도입(chat은 liveness initialDelay 200s로 버팀), JVM 옵션은 auth가 `JAVA_TOOL_OPTIONS`·content가 `JAVA_OPTS`(Dockerfile ENTRYPOINT가 `java ${JAVA_OPTS} -jar`로 참조하므로 **둘 다 동작함** — content 매니페스트 주석의 "JAVA_OPTS를 안 읽을 수 있다" 우려는 해소, 컨벤션만 통일하면 됨).
+
+### 정리 체크리스트
+
+**Step 0 — 사실 확인 (master에서, 변경 없이)**
+- [ ] `kubectl get pods -n argocd` — ArgoCD가 실제로 설치·동작 중인가
+- [ ] `kubectl get deploy -A` — 서비스가 어느 네임스페이스에 떠 있나 (수동 적용본 vs ApplicationSet의 dev/prod)
+- [ ] `kubectl get deploy content-service -o yaml`로 live 스펙 덤프 — heredoc 파일은 "의도"이고 live가 "사실". 셋(heredoc/live/레포)을 비교해 기준본 확정
+
+**Step 1 — 소스 오브 트루스 정리 (chaos 채록 전 필수)**
+- [ ] live 스펙을 `apps/*/base/deployment.yaml`로 역반영 (이름도 `content-service` 등 실제와 일치시킴)
+- [ ] `apps/auth` 삭제, ApplicationSet elements에서 `auth` 제거 (user와 중복)
+- [ ] content dev overlay의 이중 `images` 항목을 1개로 정리
+- [ ] 이미지 전략 하나로 통일 — 권장: kustomize SHA 고정으로 수렴 (CI가 이미 갱신 중), 롤백은 latest 재태깅 대신 매니페스트 revert로 단순화
+- [ ] prod overlay가 실체 없으면 ApplicationSet env 리스트를 dev만으로 축소
+- [ ] 반영 후 ArgoCD sync 상태가 Healthy인지, 운영 파드가 교체되지 않았는지 확인
+
+**Step 2 — 매니페스트 개선 (운영본 기준)**
+- [ ] chat·content에 startupProbe 도입, liveness/readiness의 initialDelay(200s/150s/120s/90s) 제거 — auth에 이미 검증된 패턴. 현재는 배포마다 프로브 대기로 수 분 낭비 + 부팅이 느려지면 restart 루프 위험
+- [ ] chat cpu limit 300m → 500m 검토 (auth와 같은 부팅 스로틀링 완화)
+- [ ] JVM 옵션 키를 `JAVA_TOOL_OPTIONS`로 통일 (Dockerfile 의존 제거)
+- [ ] auth 헤더 주석(limits 512Mi)과 실제 값(640Mi) 불일치 수정
+- [ ] hostPath logs/dumps는 노드 종속 — 힙덤프 수거 시 "어느 노드의 pod였나" 확인 절차를 runbook에 명시
+
+**Step 3 — chaos 주입과 GitOps의 공존**
+- [ ] AU-1(kubectl patch) 주입 전 해당 Application의 auto-sync 일시 해제, 원복 후 재활성 — 이 두 명령을 `chaos.sh <ID> on|off`에 포함시켜 selfHeal과의 충돌을 구조적으로 차단
+- [ ] `chaos.sh off`의 원복 기준을 "매니페스트 레포 상태"로 명시 (Step 1 완료가 전제)
+
+## 6. 포트폴리오 패키징 — 문항을 테스트케이스로
+
+### 구성
+
+문항 하나 = 테스트케이스 하나로 패키징한다. 형식은 Given / When / Then:
+
+```
+docs/chaos/
+  README.md              # 문항 카탈로그 표 + 결과 매트릭스 (아래 참조)
+  scripts/chaos.sh       # <문항ID> on|off — 주입·원복이 항상 쌍으로 존재
+  scenarios/AU-1/
+    runbook.md           # Given: 전제 작업·baseline 상태 / When: 주입 + 트리거 트래픽
+    answer.md            # Then: 정답지 1줄 + 근거 시그널 도달 경로 (어떤 순서로 보면 원인에 닿는가)
+    evidence/            # baseline·증상 대시보드 스크린샷, 대표 traceId, Loki 쿼리, 알람 발화 캡처
+```
+
+README의 결과 매트릭스가 포트폴리오의 얼굴이다: 문항 | 주입 | 사용자 증상 | 근거 시그널 | 탐지 수단(알람/대시보드/트레이스) | 채록 결과 발견된 계측 구멍 → 보강 커밋 링크. 대표 문항 1~2개(AU-1, IN-1 추천 — 에러율이 안 오르는 장애와 다중 서비스 복합)는 트레이스 워터폴 스크린샷과 함께 딥다이브로 쓴다.
+
+### 판단 근거
+
+1. **주입 충실도** — §2.5에서 이미 논증: 앱 레벨 흉내(sleep, 예외 assault)는 텔레메트리 모양이 실제 장애와 달라 문항이 무효. 인프라 레벨 주입만 쓴다. 테스트케이스 관점에서도 같은 결론 — Then(기대 시그널)이 검증 대상인데 When이 가짜면 Then도 가짜다.
+2. **재현 가능성이 테스트케이스의 자격** — 주입·원복·전제·트리거가 전부 코드/문서로 존재해야 "실험"이 아니라 "테스트"다. chaos.sh의 on/off 쌍, runbook의 Given이 그 역할. 같은 문항을 다시 돌리면 같은 시그널이 나와야 하고, 안 나오면 그게 회귀다.
+3. **Then의 실패가 곧 성과** — 기대 시그널이 관측되지 않으면 문항 실패가 아니라 **계측 구멍 발견**이다(IN-2의 sendSafely 케이스). "장애를 주입해 관측성 스택을 테스트하고, 실패한 assertion마다 보강 커밋이 나왔다"가 이 작업의 포트폴리오 서사 — 시나리오 수보다 이 피드백 루프의 증거(발견→커밋 링크)가 설득력의 핵심.
+4. **v1은 수동 채록** — 실서비스 클러스터라 자동 반복 실행은 위험 대비 이득이 없다. 자동화 여지는 Then 검증(PromQL/Tempo API로 기대 시그널 존재 확인하는 verify 스크립트)에만 남겨두고, 주입의 자동 스케줄링은 하지 않는다.
+5. **공개 레포 주의** — evidence 스크린샷에 사설 IP·내부 호스트명이 들어가지 않게 캡처 범위를 정한다(대시보드 변수 영역 제외). 레포 공개 방침(2026-07 시크릿 정리)과 충돌하지 않게.
