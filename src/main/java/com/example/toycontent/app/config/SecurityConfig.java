@@ -1,5 +1,6 @@
 package com.example.toycontent.app.config;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,6 +25,10 @@ import static com.example.toycontent.app.common.constants.GlobalConstants.*;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    // 도메인 외 임시 오리진(예: 개발 서버 IP)은 코드에 남기지 않고 환경변수로 주입
+    @Value("${app.cors.extra-origin:}")
+    private String extraCorsOrigin;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -56,7 +61,9 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.addAllowedOrigin(HTTP_HTTPS + "://localhost:5173");
         configuration.addAllowedOrigin("https://yogurtte.com");
-        configuration.addAllowedOrigin("http://54.180.81.71");
+        if (!extraCorsOrigin.isBlank()) {
+            configuration.addAllowedOrigin(extraCorsOrigin);
+        }
         configuration.addAllowedOrigin(HTTP_HTTPS + "://" + SERVER_URL);
         configuration.addAllowedOrigin(HTTP_HTTPS +"://localhost:8080");
         configuration.addAllowedHeader("*");
