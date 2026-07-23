@@ -46,3 +46,6 @@ src/main/resources/application-local.yml
 
 # macOS
 .DS_Store
+
+# chaos 실행 설정 (시크릿·사설 IP 포함 — 절대 커밋 금지)
+docs/chaos/scripts/chaos.env
