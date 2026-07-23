@@ -103,6 +103,16 @@ t1() {
   echo "  T1 댓글: HTTP $code $(jq -r '.message // empty' "$out" 2>/dev/null)"
 }
 
+# t6 — 배틀 투표 1건 (쓰기 경로 커버 — T1 편중 방지). 재투표 정책상 4xx 가능, 코드·시간·메시지 그대로 채록
+t6() {
+  local out="$EV/t6-vote.json" meta
+  meta=$(curl -s -o "$out" -w '%{http_code} %{time_total}s' \
+    -X POST "$BASE/content/battles/$BATTLE_ID/items/vote" \
+    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+    -d '{"votes":[{"itemId":'"$ITEM_ID"',"rank":1}]}')
+  echo "  T6 투표: HTTP $meta $(jq -r '.message // empty' "$out" 2>/dev/null)"
+}
+
 # fc <태그> <내용> — 피드 댓글 1건 (AP 계열). FC_CODE 설정, 본문은 $EV 저장. 내용은 jq로 안전 인코딩(이모지 포함)
 fc() {
   local tag="$1" body out="$EV/fc-$tag.json"
@@ -271,6 +281,8 @@ revert_AU_3() {
 
 measure_IN_1() {
   t2
+  token && t6
+  note "T6(쓰기 경로)가 Redis 다운에도 정상인지 자체가 채록 대상 — 아픈 경로/멀쩡한 경로의 대비가 변별"
   loki_count chat_redis    '{application="chat-service"} |= "Redis"'
   loki_count content_redis '{application="content-service"} |= "Redis"'
   tempo_search content '{resource.service.name="content-service"}'
@@ -306,6 +318,8 @@ revert_IN_2() {
 measure_IN_3() {
   prom 1 hikari_pending 'hikaricp_connections_pending{application="content-service"}'
   prom 0 content_p99 'histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{application="content-service"}[5m])))'
+  token && t6
+  note "T6 응답 시간 — 부하와 무관한 쓰기 경로까지 지연되는지('전면'의 실증)"
   manual "Grafana Alerting에서 P0 룰 존재 + 평시 미발화 확인 (§10 전제)"
   manual "symptom: JDBC span 앞단의 공백 구간(트레이스에 없는 대기) 판독"
 }
