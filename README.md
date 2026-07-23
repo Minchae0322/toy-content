@@ -36,7 +36,7 @@
 
 | 웹 | 모바일 |
 |:---:|:---:|
-| ![웹 화면](docs/img_2.png) | ![모바일 화면](docs/img_1.png) |
+| ![웹 화면](docs/assets/screen-web.png) | ![모바일 화면](docs/assets/screen-mobile.png) |
 
 ---
 
@@ -69,7 +69,7 @@
 
 AWS VPC 안의 **K3s 클러스터**(EC2 3대) 위에서 auth / content / chat 3개의 Spring Boot 서비스가 동작합니다. 프론트엔드(Vue.js)는 S3 + CloudFront로 서빙되고, API 트래픽은 NGINX Ingress를 거쳐 각 서비스로 라우팅됩니다.
 
-![시스템 아키텍처](docs/img.png)
+![시스템 아키텍처](docs/assets/architecture-system.png)
 
 - **Frontend** — Vue.js 정적 빌드를 S3에 올리고 CloudFront로 서빙합니다.
 - **Backend** — K3s 클러스터(master 1, worker 2)에서 auth, content, chat 파드가 동작하며 content는 2 replica로 운영합니다.
@@ -90,14 +90,14 @@ AWS VPC 안의 **K3s 클러스터**(EC2 3대) 위에서 auth / content / chat 3�
 
 Alloy 수집기 하나로 3개 서비스의 메트릭, 로그, 트레이스를 모두 모아 Grafana Cloud로 보냅니다.
 
-![관측성 아키텍처](docs/img_3.png)
+![관측성 아키텍처](docs/assets/architecture-observability.png)
 
 - **Metrics** — Micrometer로 수집한 지표를 Prometheus에 적재합니다. 응답 시간은 p50/p95/p99 히스토그램으로 남기고, Four Golden Signals 기준의 대시보드와 이메일 알림을 운영합니다.
 - **Traces** — 요청 흐름을 Tempo에서 추적합니다. `@Observed`로 서비스와 스케줄러 메서드를 span 단위로 나누고, SQL 실행까지 자동 계측해 느린 쿼리를 트레이스에서 바로 찾을 수 있습니다.
 - **Logs** — 모든 로그에 traceId와 userId를 심어, Loki의 로그에서 Tempo의 트레이스로(또는 반대로) 바로 넘어갈 수 있습니다.
 - actuator는 관리 포트 8090으로 분리해 외부에 노출하지 않습니다.
 
-> 구축 과정의 삽질과 의사결정 전체 기록: [docs/observability.md](docs/observability.md)
+> 구축 과정의 삽질과 의사결정 전체 기록: [docs/observability/observability.md](docs/observability/observability.md)
 
 ---
 

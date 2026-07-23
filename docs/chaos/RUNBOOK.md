@@ -526,14 +526,19 @@ k6 run k6/single-test.js -e BASE_URL=$BASE/content -e TOKEN=$TOKEN
 
 ```
 docs/chaos/
-  README.md              # 문항 카탈로그 + 결과 매트릭스 (아래)
-  scripts/chaos.sh       # <ID> baseline|on|trigger|symptom|off|run — §3.3 사이클 실행기 (설정은 chaos.env, gitignore)
-  scenarios/<ID>/
-    runbook.md           # Given: 전제·baseline / When: 주입 + 트리거
-    answer.md            # Then: 원인 1줄 + 근거 시그널 도달 경로
-    evidence/
-      baseline/          # ①·② 정상 측정 — 정상값, 정상 traceId, 대시보드 캡처
-      symptom/           # ④ 증상 — 캡처, 에러 traceId, Loki 쿼리, 알람 발화
+  README.md              # 인덱스 — 파일 지도 + 문항 카탈로그 + 빠른 시작
+  COMMANDS.md            # 복붙용 실행 명령 — 문항별 baseline→on→(trigger)→symptom→off
+  RUNBOOK.md             # 이 문서 — 설계 원칙·실행 위치·문항별 런북(§6)·채점(§8)·전제(§10)
+  scripts/
+    chaos.sh             # <ID> baseline|on|trigger|symptom|off|run — §3.3 사이클 실행기
+    chaos.env.example    # 설정 템플릿 (복사해서 chaos.env로)
+    chaos.env            # 실제 값 (gitignore — 시크릿·사설 IP)
+  scenarios/<ID>/        # 문항 하나 = 테스트케이스 하나 (Given/When은 RUNBOOK.md §6)
+    answer.md            # Then: 원인 1줄(정답지) + 근거 시그널 경로 + RCA 채점 결과
+    evidence/            # chaos.sh가 자동 생성
+      baseline/<ts>/     # ①·② 정상 측정 — 정상값·정상 traceId·대시보드 캡처
+      symptom/<ts>/      # ④ 증상 — 캡처·에러 traceId·Loki 쿼리·알람 발화
+      timeline.log       # 주입/원복 시각(UTC) — §8 블라인드 채점 입력
 ```
 
 결과 매트릭스가 포트폴리오의 얼굴이다:

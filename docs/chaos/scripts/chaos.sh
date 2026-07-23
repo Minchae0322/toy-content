@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# chaos.sh — docs/chaos-scenarios.md §3.3 사이클 실행기 (master 노드 전용)
+# chaos.sh — docs/chaos/RUNBOOK.md §3.3 사이클 실행기 (master 노드 전용)
 #
 # 사용법:
 #   ./chaos.sh <문항ID> baseline   # ① 정상 측정 + ② 기록 — 게이트 실패(쿼리 빈 값) 시 exit 1 = 주입 금지

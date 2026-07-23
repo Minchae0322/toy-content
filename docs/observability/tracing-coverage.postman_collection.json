@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Tracing 커버리지 검증 (경계 열거)",
-    "description": "docs/tracing-coverage.md의 경계 체크리스트를 실제 트래픽으로 흘리는 컬렉션.\n\n사용법:\n1. 변수 email / password 에 계정 입력 (운영 검증이면 authBaseUrl / contentBaseUrl 을 배포 도메인으로 교체)\n2. Run collection (순서 그대로) — 로그인이 accessToken 을 채우고 이후 요청에 Bearer 로 자동 주입\n3. 각 요청 실행 시각으로 Grafana Tempo 에서 traceId 검색 → tracing-coverage.md §6 워터폴과 대조\n\n요청 이름의 §번호는 tracing-coverage.md 의 경계 번호.",
+    "description": "docs/observability/tracing-coverage.md의 경계 체크리스트를 실제 트래픽으로 흘리는 컬렉션.\n\n사용법:\n1. 변수 email / password 에 계정 입력 (운영 검증이면 authBaseUrl / contentBaseUrl 을 배포 도메인으로 교체)\n2. Run collection (순서 그대로) — 로그인이 accessToken 을 채우고 이후 요청에 Bearer 로 자동 주입\n3. 각 요청 실행 시각으로 Grafana Tempo 에서 traceId 검색 → tracing-coverage.md §6 워터폴과 대조\n\n요청 이름의 §번호는 tracing-coverage.md 의 경계 번호.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

@@ -16,7 +16,7 @@ AWS VPC 안 **K3s 클러스터**(EC2 3대: master 1 + worker 2) 위에서 세 �
 - **Backend** — `auth` / `content`(이 레포, **2 replica**) / `chat` 파드
 - **Data** — MySQL(Amazon RDS), Redis, Kafka. MongoDB는 chat 전용.
 
-시각 자료: `docs/img.png`(시스템), `docs/img_3.png`(관측성).
+시각 자료: `docs/assets/architecture-system.png`(시스템), `docs/assets/architecture-observability.png`(관측성).
 
 ## 서비스 경계
 
@@ -50,7 +50,7 @@ Alloy 수집기 하나로 3개 서비스의 메트릭·로그·트레이스를 �
 - **Metrics** — Micrometer → Prometheus. 응답시간 p50/p95/p99 히스토그램, Four Golden Signals 대시보드 + 이메일 알림.
 - **Traces** — Tempo. `@Observed`로 서비스/스케줄러 메서드 span, JDBC 자동 계측으로 SQL span까지.
 - **Logs** — 모든 로그에 traceId·userId를 심어 Loki ↔ Tempo 상호 이동.
-- 관측성 작업은 `docs/observability.md`에 누적 기록한다.
+- 관측성 작업은 `docs/observability/observability.md`에 누적 기록한다.
 
 ## 관련 레포
 

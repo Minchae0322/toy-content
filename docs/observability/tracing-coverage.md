@@ -33,6 +33,10 @@ POST /comments (HTTP 인입)
 
 **한 줄 요약**: trace로 수집 가능한 경계 10종을 열거했고, content 쪽 1~5는 댓글 E2E 워터폴로 실측 완료. 6~9는 코드는 닫혔고 toy-chat 배포 후 같은 워터폴 1회로 일괄 실측된다.
 
+실측 워터폴 예시 — 인증 요청 하나가 HTTP server(#1) → content JDBC query/result-set(#2) → Redis GET(#8) 경계를 통과하는 모습:
+
+![인증 요청 트레이스 워터폴](../assets/trace-secured-request.png)
+
 ## 2. `@Async` 전수 열거 — grep으로 닫음
 
 `grep -rn "@Async" src/main/java` 결과 **content의 `@Async`는 `NotificationEventListener.handle` 1곳**이 전부다. `NotificationService.sendSafely` 12곳은 전부 이 리스너 경유(동기 호출)이며 별도 executor를 타지 않는다. 즉 "@Async fan-out 다른 데는요?"의 답: **다른 데가 없다**(열거 근거가 grep 전수 검색). 이 1곳은 TaskDecorator 전파 + 실측으로 검증 완료.

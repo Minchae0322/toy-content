@@ -64,7 +64,7 @@
 
 ## 관측성 작업 규칙
 
-- 관측성(observability) 관련 작업은 **`docs/observability.md`에 누적 기록**한다.
+- 관측성(observability) 관련 작업은 **`docs/observability/observability.md`에 누적 기록**한다.
 - 서비스/스케줄러 메서드 span은 `@Observed`, SQL span은 JDBC 자동 계측으로 생성된다. 예외를 삼키는 지점은 span에 error 태그를 남긴다.
 
 ## 커밋 · 배포
@@ -74,6 +74,8 @@
 
 ## 참고 문서
 
-- `docs/observability.md` — 관측성 작업 로그
-- `docs/reward-domain.md`, `docs/report-api.md`, `docs/feedback-api.md`, `docs/battle-vote-guest.md`, `docs/badge-design.md` — 도메인별 설계
+- `docs/README.md` — docs 전체 인덱스 (아래 문서들의 지도)
+- `docs/observability/` — 관측성 작업 로그(`observability.md`) + 트레이싱 커버리지(`tracing-coverage.md`)
+- `docs/domain/` — 도메인별 설계 (`reward-domain`, `report-api`, `feedback-api`, `battle-vote-guest`, `badge-design`, `swipe-battle-frontend`)
+- `docs/chaos/` — 장애 주입 & RCA 런북 (`README.md`부터)
 - `k6/` — 부하/스모크 테스트 스크립트
