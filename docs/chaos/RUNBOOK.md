@@ -4,7 +4,7 @@
 > 그래서 각 문항은 실제 인프라 레벨 주입 + 정답지(원인 1줄) + 근거 시그널 + 복구 절차로 구성하고,
 > 채점은 블라인드로 한다(§8). "실제로 해봤는가 / 어떻게 평가하는가"에 대한 답이 이 문서 전체다.
 > 모든 문항은 **정상 측정 → 기록 → 주입 → 증상 대조 → 원복 → RCA 채점** 사이클(§3.3)로 실행한다 — 정상이 측정되지 않으면 장애도 판정할 수 없다.
-> 이 문서만 보고 처음부터 끝까지 실행할 수 있게 작성한다. 마지막 갱신: 2026-07-23.
+> 이 문서만 보고 처음부터 끝까지 실행할 수 있게 작성한다. 마지막 갱신: 2026-07-24.
 
 ## 설계 원칙
 
@@ -50,6 +50,7 @@ PASSWORD=<비밀번호>
 # ── 대상 콘텐츠 (§3에서 선정)
 BATTLE_ID=
 ITEM_ID=
+FEED_ID=                          # AP-1·AP-3 댓글 대상 (내가 만든 테스트 피드 권장)
 ```
 
 ## 2. 실행 위치 · 측정 지점 · 원복 원칙
@@ -120,7 +121,8 @@ echo ${TOKEN:0:20}...   # 비어 있으면 로그인 실패
 ```bash
 curl -s "$BASE/content/battles/hot" -H "Authorization: Bearer $TOKEN" | jq '.data'   # 배틀 목록에서 BATTLE_ID 선정
 curl -s "$BASE/content/battles/$BATTLE_ID" -H "Authorization: Bearer $TOKEN" | jq '.data'   # 아이템 목록에서 ITEM_ID 선정
-BATTLE_ID=<선정값>; ITEM_ID=<선정값>
+curl -s "$BASE/content/feeds/scroll" | jq '.data.content[0].feedId'                          # AP 계열용 FEED_ID 선정
+BATTLE_ID=<선정값>; ITEM_ID=<선정값>; FEED_ID=<선정값>
 ```
 
 주의: 댓글 알림은 **아이템/배틀 작성자에게** 발송된다. 알림 도착까지 검증하려면 작성자 계정에 접근 가능한 배틀(내가 만든 테스트 배틀)을 쓴다.
@@ -193,6 +195,9 @@ curl -s -X POST "$BASE/content/battles/$BATTLE_ID/items/$ITEM_ID/comments" \
 | IN-2 | Kafka 다운 → 댓글 성공, 알림 조용히 유실 | `docker stop $KAFKA_CT` | 2 | 없음 |
 | IN-3 | 커넥션 풀 고갈 → pending 적체 → 전면 지연 | k6 + 슬로우 쿼리 | 2 | Alert P0 룰 실구현 |
 | IN-4 | Pod OOMKilled (보류) | heap 부하 | 2 | kube-state-metrics 활성화 전까지 보류 |
+| AP-1 | 댓글 DTO @Size 부재 → 201자가 varchar(200) 위반 → 500 | 250자 실요청 | 1 | FEED_ID(§3.2) |
+| AP-2 | 대용량 업로드 실패 — 계층 판별(ingress / multipart / 앱 미매핑) | 대용량 실요청 | 1~2 | 없음 |
+| AP-3 | 4바이트 이모지 → charset 불일치 시 Incorrect string value | 이모지 실요청 | 1 | FEED_ID — 조건부(불성립 가능) |
 
 ## 6. 문항별 실행 런북
 
@@ -463,20 +468,122 @@ k6 run k6/single-test.js -e BASE_URL=$BASE/content -e TOKEN=$TOKEN
 
 정답지: "커넥션 풀 고갈. 슬로우 쿼리가 커넥션을 점유해 무관한 API까지 전면 지연 — DB가 아니라 커넥션 대기가 원인."
 
+### AP 계열 공통 — 코드 결함 문항 (인프라 무접촉)
+
+AP 문항의 주입은 docker stop이 아니라 **경계값 실요청 1건**이다. 결함(검증 구멍·예외 매핑 구멍·한도 설정)은 코드에 이미 잠복해 있고, 실제 사용자가 보낼 수 있는 요청으로 그것을 발화시킨다. §11이 배제하는 앱 레벨 카오스는 "코드를 고쳐 장애를 흉내 내는 것"이고 AP는 코드를 건드리지 않는다 — 남는 텔레메트리가 실사용자가 겪을 모양 그대로라 §11 원칙과 충돌하지 않는다.
+
+인프라 문항과 질문이 다르다: "무엇이 죽었나"가 아니라 **"인프라가 전부 정상인데 왜 이 요청만 실패하나"**. 그래서 판정에 "정상 요청은 여전히 200"이 포함된다 — 전면 장애가 아님을 확인해야 요청 내용으로 시선이 간다.
+
+- 원복이 없다 — 실패 요청은 트랜잭션 롤백으로 상태 무변화. `off`는 정상 요청 복귀 확인(+테스트 데이터 정리 메모)만 한다.
+- **채록 → 블라인드 채점 → 보강 커밋 순서 엄수.** 결함을 먼저 고치면 문항이 소멸한다. 보강 커밋(@Size 추가·예외 매핑·업로드 검증)이 이 계열의 최종 산출물 — §9 "Then의 실패가 곧 성과"와 같은 서사.
+- 전제: §3.2에서 `FEED_ID` 선정(AP-1·AP-3 댓글 대상 — 내가 만든 테스트 피드 권장).
+
+### AP-1 — 댓글 201자: DTO 검증 구멍 → varchar(200) 위반 → 500
+
+결함 위치(정답지의 근거): `FeedCommentRequest.CommentCreate`는 `@NotBlank`만 있고 `@Size`가 없다. 엔티티 `FeedComment.content`는 `length=200`. 201자 요청이 컨트롤러 검증을 통과해 INSERT에서 `DataIntegrityViolationException`(Data too long) → `GlobalExceptionHandler`에 미매핑이라 `handleAllException` → **500**.
+
+① 정상 측정 (주입 전, ④와 같은 쿼리):
+
+- [ ] 200자 이내 정상 댓글 → 200 (게이트: 실패하면 FEED_ID/토큰/서비스부터 규명, 주입 금지).
+- [ ] Loki `{application="content-service"} |= "Data too long"` 최근 1h = 0건.
+- [ ] ④의 500 rate PromQL 현재값 기록.
+
+② 기록: `evidence/AP-1/baseline/`.
+
+③ 주입 — 250자 댓글 1건 (아무 셸, 공개 ingress):
+
+```bash
+LONG=$(printf 'a%.0s' $(seq 1 250))
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/content/feeds/$FEED_ID/comments" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"content":"'$LONG'"}'          # 기대: 500
+# 원복 없음 — 실패 INSERT는 롤백되어 상태 무변화
+```
+
+④ 증상 관측 (①과 같은 쿼리):
+
+- 경계값 요청만 500, **정상 댓글은 여전히 200** — 전면 장애가 아니라는 것이 변별 포인트.
+- Loki: `Data too long` / `DataIntegrityViolationException`.
+- Tempo: content-service error 트레이스 — INSERT JDBC span에 error 태그.
+- 500 rate: 단발 요청이라 rate에는 거의 안 잡힘 — **rate 기반 알람이 못 보는 유형의 장애**라는 사실 자체를 기록.
+
+판정 (① 대비): [ ] 정상 댓글 200 유지 + 250자만 500 [ ] Loki 0건(①) → 발생 [ ] INSERT span error [ ] ⑤ 정상 댓글 200 재확인
+
+정답지: "댓글 DTO에 @Size 부재 — 201자가 검증을 통과해 varchar(200) 제약 위반. DB가 아니라 앱 검증 구멍이 원인(+DataIntegrityViolation 미매핑으로 400 아닌 500)."
+
+오귀인 함정: 로그의 SQL 예외만 보고 "DB 장애"로 지목하면 감점 — DB는 제약을 정확히 지켰다.
+
+### AP-2 — 첨부 대용량 업로드: 실패 계층 판별 (ingress vs multipart vs 앱)
+
+결함 위치: `spring.servlet.multipart.max-file-size: 1GB`(사실상 무제한) + 앱 레벨 크기·MIME 검증 전무 + `MaxUploadSizeExceededException` 미매핑(413이 아니라 500). 별도 잠복 버그: `FileService.uploadFile`이 경로 구분자 `"\\"`를 하드코딩 — Linux에서 업로드 자체가 깨질 수 있고, 이는 ① 게이트에서 실증된다.
+
+① 정상 측정 (주입 전, ④와 같은 쿼리):
+
+- [ ] 1KB 파일 업로드 → 200 + fileId. **500이면 잠복 버그(경로 구분자) 실증 — 문항 이전에 실버그 발견. answer.md에 기록하고 중단.**
+- [ ] Loki `{application="content-service"} |= "MaxUploadSizeExceededException"` 최근 1h = 0건.
+
+② 기록: `evidence/AP-2/baseline/`.
+
+③ 주입 — 크기를 단계적으로 올리며 업로드 (2MB → 통과 시 1100MB. 대용량은 대역폭 부하 — 저트래픽·1회만):
+
+```bash
+dd if=/dev/zero of=/tmp/chaos-ap2.bin bs=1M count=2      # 통과(200)하면 count를 올려 재시도
+curl -s -o /tmp/chaos-ap2-resp.txt -w '%{http_code}\n' -X POST "$BASE/content/attachment-file/upload" \
+  -H "Authorization: Bearer $TOKEN" -F "file=@/tmp/chaos-ap2.bin"
+cat /tmp/chaos-ap2-resp.txt      # 응답 본문이 nginx HTML인지 앱 JSON인지 = 계층 판별
+rm /tmp/chaos-ap2.bin
+```
+
+④ 증상 관측 — **어느 계층이 거부했는지가 문항의 전부**:
+
+| 관측 | 판정 |
+|---|---|
+| 413 + nginx HTML 본문 + 앱 로그·트레이스 **없음** | ingress body limit — 요청이 앱에 도달하지 않음 |
+| 500 + 앱 JSON + Loki에 MaxUploadSizeExceededException | Spring multipart 한도 + 예외 미매핑 |
+| 200 | 한도까지 전부 통과 — "1GB 무제한"이 실측으로 확인된 것. 그 자체를 기록 |
+
+판정 (① 대비): [ ] 1KB는 200 유지 [ ] 실패 계층 판별 근거(응답 본문 + 앱 시그널 유무) 채록 [ ] ⑤ 성공 업로드분(200) fileId·서버 파일 수동 정리
+
+정답지: "업로드 실패는 계층 문제 — 앱 시그널이 없으면 ingress body limit, 있으면 multipart 한도 + 미매핑 500. 근본 원인은 앱 레벨 크기·타입 검증 부재."
+
+### AP-3 — 이모지 댓글: charset 불일치 (조건부 — 불성립 판정도 산출물)
+
+결함 후보: `ddl-auto: update`로 테이블 charset이 DB 서버 기본값에 의존한다. utf8(3byte)로 생성됐다면 4바이트 이모지 저장 시 `Incorrect string value` → 500. utf8mb4라면 정상 저장 — **문항 불성립이고, charset이 검증됐다는 그 기록이 산출물**이다.
+
+① 정상 측정: [ ] ASCII 댓글 → 200 (게이트) [ ] Loki `{application="content-service"} |= "Incorrect string value"` 1h = 0건. ② `evidence/AP-3/baseline/`.
+
+③ 주입 — 이모지 댓글 1건:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/content/feeds/$FEED_ID/comments" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"content":"chaos-AP3-😀🎉"}'
+# 200 → utf8mb4 확인, 문항 불성립 종료 (answer.md에 기록)
+# 500 → 증상 채록 진행
+```
+
+④ 증상 관측 (500인 경우, ①과 같은 쿼리): Loki `Incorrect string value` — **AP-1과 같은 API·같은 500이지만 로그 지문이 다르다**(길이 vs 인코딩). 이 구별이 채점 포인트.
+
+판정: [ ] ASCII 200 유지 [ ] 이모지 200(불성립 기록) 또는 500 + Incorrect string value 채록 [ ] ⑤ 테스트 댓글 정리 메모
+
+정답지: "테이블 charset이 utf8(3byte)라 4바이트 문자 저장 불가 — 길이가 아니라 인코딩 문제. 조치는 utf8mb4 마이그레이션."
+
 ## 7. 실행 순서와 안전
 
 ### 7.1 권장 순서
 
 증상→원인 거리(hop)가 짧고 주입이 단순한 것부터. 데이터 유실·전 사용자 영향 문항은 마지막에. 문항당 §3.3 사이클을 완주(⑤ 복귀 확인)한 뒤에만 다음으로 — 이전 문항의 잔여 증상이 다음 문항의 ① baseline을 오염시키면 안 된다.
 
-1. **AU-2** (auth scale 0) — 주입/원복이 가장 단순. 런북·토큰 점검 겸용.
-2. **AU-1** (auth cpu 50m) — AU-2와 트레이스 구별(즉시 실패 vs 3s 잘림)을 연달아 채록.
-3. **CH-1** (mongo 다운) — DLQ 경로.
-4. **IN-2** (kafka 다운) — 조용한 유실. 유실 허용 범위 사전 결정.
-5. **IN-1** (redis 다운) — 다중 서비스 복합, 최고 난도.
-6. **IN-3** (커넥션 풀) — 부하 필요.
-7. **AU-3** (JWT 드리프트) — 전 사용자 영향, **가장 마지막·가장 짧게**.
-8. CH-2는 §10의 lag 메트릭 작업 완료 후에만.
+1. **AP-1 → AP-3** (코드 결함 경계값) — 인프라 무접촉·원복 없음. 런북·토큰·FEED_ID 점검 겸 워밍업.
+2. **AU-2** (auth scale 0) — 인프라 문항 중 주입/원복이 가장 단순.
+3. **AU-1** (auth cpu 50m) — AU-2와 트레이스 구별(즉시 실패 vs 3s 잘림)을 연달아 채록.
+4. **CH-1** (mongo 다운) — DLQ 경로.
+5. **IN-2** (kafka 다운) — 조용한 유실. 유실 허용 범위 사전 결정.
+6. **IN-1** (redis 다운) — 다중 서비스 복합, 최고 난도.
+7. **IN-3** (커넥션 풀) — 부하 필요.
+8. **AP-2** (대용량 업로드) — 대역폭 부하가 있어 부하 문항 옆에. 저트래픽·1회.
+9. **AU-3** (JWT 드리프트) — 전 사용자 영향, **가장 마지막·가장 짧게**.
+10. CH-2는 §10의 lag 메트릭 작업 완료 후에만.
 
 ### 7.2 안전 수칙 (문항 실행 전 반드시 확인)
 
@@ -588,3 +695,5 @@ exporter(redis/kafka/mongodb-exporter)는 v1에서 불요 — 앱 쪽 시그널�
 앱 레벨 옵션(프로필/플래그, chaos-monkey-spring-boot)은 배제한다. 주입 방식이 텔레메트리 모양을 바꾸기 때문. 예: CM4SB latency assault를 `ExternalUserApiClient`에 걸면 sleep이 메서드 앞에 끼므로 HTTP client span은 여전히 빠르고 server span에 원인 불명 공백만 생긴다 — AU-1 정답지(3s에서 잘리는 client span)와 다른 트레이스가 된다. RCA 문항은 정답 근거가 텔레메트리 모양 그 자체라, 흉내 낸 장애는 모양이 다르면 무효다. Kafka 다운을 예외 assault로 흉내 내도 connection refused 스택·타 서비스 동시 증상·복구 후 lag 해소 같은 진짜 장애의 지문이 안 생긴다.
 
 대신 토글은 운영 계층에서 만든다 — `scripts/chaos.sh <ID> baseline|on|trigger|symptom|off|run`(구현됨, §3.3). 각 문항의 주입이 3~4줄 kubectl/docker이므로 래핑만 하면 되고, `off`(복구)가 항상 코드로 존재하며 `run`은 중단(trap) 시 자동 원복까지 보장해 안전 수칙이 구조적으로 충족된다.
+
+단, **AP 계열(§6)은 이 배제에 해당하지 않는다** — 코드를 바꿔 장애를 흉내 내는 게 아니라 코드에 이미 있는 결함을 경계값 실요청으로 발화시키는 것이라, 텔레메트리가 흉내가 아니라 실제 그 자체다.

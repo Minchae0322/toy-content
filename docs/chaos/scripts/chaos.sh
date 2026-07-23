@@ -9,7 +9,8 @@
 #   ./chaos.sh <문항ID> off        # ⑤ 원복 + 복귀 확인 폴링
 #   ./chaos.sh <문항ID> run        # ①~⑤ 전체 사이클 — 단계마다 확인 프롬프트, Ctrl-C 시 자동 원복(trap)
 #
-# 문항ID: CH-1 CH-2 AU-1 AU-2 AU-3 IN-1 IN-2 IN-3
+# 문항ID: CH-1 CH-2 AU-1 AU-2 AU-3 IN-1 IN-2 IN-3 AP-1 AP-2 AP-3
+#   AP 계열: 주입 = 경계값 실요청 1건 (인프라 무접촉, 원복 없음 — RUNBOOK §6 AP 공통)
 # 전제: 같은 디렉토리의 chaos.env (chaos.env.example 참고), jq, kubectl, curl, (argocd), (k6)
 # 수동으로 남는 것: Tempo 트레이스 모양 판독, 알림 실제 도착 확인, 판정 체크박스, 블라인드 RCA(§8)
 
@@ -100,6 +101,17 @@ t1() {
     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
     -d '{"content":"chaos-'"$tag"'-'"$(date -u +%H%M%S)"'"}')
   echo "  T1 댓글: HTTP $code $(jq -r '.message // empty' "$out" 2>/dev/null)"
+}
+
+# fc <태그> <내용> — 피드 댓글 1건 (AP 계열). FC_CODE 설정, 본문은 $EV 저장. 내용은 jq로 안전 인코딩(이모지 포함)
+fc() {
+  local tag="$1" body out="$EV/fc-$tag.json"
+  body=$(jq -cn --arg c "$2" '{content:$c}')
+  FC_CODE=$(curl -s -o "$out" -w '%{http_code}' \
+    -X POST "$BASE/content/feeds/${FEED_ID:-}/comments" \
+    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+    -d "$body")
+  echo "  피드 댓글($tag): HTTP $FC_CODE $(jq -r '.message // empty' "$out" 2>/dev/null)"
 }
 
 # t2 — 피드 스크롤. time_total 출력, 첫 페이지 본문 저장 (작성자 실명/익명 육안 확인용)
@@ -307,6 +319,105 @@ revert_IN_3() {
   poll "hikaricp pending 0 복귀" 24 5 pending_zero
 }
 
+# ── AP 계열 공통: 주입 = 경계값 실요청, 원복 없음 (RUNBOOK §6 AP 공통) ────
+
+feed_id_set() {
+  if [ -z "${FEED_ID:-}" ]; then
+    echo "  [GATE] FEED_ID 미설정 (chaos.env) — §3.2에서 선정 후 기입"; GATE_FAIL=1; return 1
+  fi
+}
+
+# ── AP-1: 댓글 201자 → varchar(200) 위반 → 500 ──────────────────────────
+
+measure_AP_1() {
+  feed_id_set || return
+  token || { GATE_FAIL=1; return; }
+  fc "AP1-$PHASE-ok" "chaos-AP1-ok-$(date -u +%H%M%S)"
+  if [ "$PHASE" = baseline ] && [ "$FC_CODE" != 200 ]; then
+    echo "  [GATE] 정상 댓글이 HTTP $FC_CODE — FEED_ID/토큰/서비스부터 규명 → 주입 금지(§3.3)"; GATE_FAIL=1
+  fi
+  loki_count datatoolong '{application="content-service"} |= "Data too long"'
+  loki_count integrity   '{application="content-service"} |= "DataIntegrityViolationException"'
+  prom 0 rate500 'sum(rate(http_server_requests_seconds_count{application="content-service", status="500"}[5m]))'
+  tempo_search content-error '{resource.service.name="content-service" && status=error}'
+  manual "symptom: INSERT JDBC span error 태그 — Tempo에서 모양 판독"
+  manual "symptom: 정상 댓글이 여전히 200인 것 = 전면 장애 아님 — 판정의 일부"
+}
+inject_AP_1() {
+  token || return 1
+  local long; long=$(printf 'a%.0s' $(seq 1 250))
+  fc "AP1-over250" "$long"
+  note "기대: 500 (Data too long) — 200이면 검증이 이미 보강된 것, 문항 불성립으로 answer.md에 기록"
+}
+revert_AP_1() {
+  log "원복 없음 — 실패 INSERT는 롤백되어 상태 무변화"
+  token && fc "AP1-recover" "chaos-AP1-recover-$(date -u +%H%M%S)"
+  manual "테스트 댓글(chaos-AP1-*) 정리 여부 결정"
+}
+
+# ── AP-2: 대용량 업로드 → 실패 계층 판별 ─────────────────────────────────
+
+AP2_FILE=/tmp/chaos-ap2.bin
+
+measure_AP_2() {
+  token || { GATE_FAIL=1; return; }
+  head -c 1024 /dev/urandom > /tmp/chaos-ap2-small.bin
+  local out="$EV/upload-small.json" code
+  code=$(curl -s -o "$out" -w '%{http_code}' -X POST "$BASE/content/attachment-file/upload" \
+    -H "Authorization: Bearer $TOKEN" -F "file=@/tmp/chaos-ap2-small.bin")
+  echo "  1KB 업로드: HTTP $code → $out"
+  rm -f /tmp/chaos-ap2-small.bin
+  if [ "$PHASE" = baseline ] && [ "$code" != 200 ]; then
+    echo "  [GATE] 정상 업로드가 HTTP $code — 잠복 버그(FileService 경로 구분자 하드코딩) 실증 가능성. 실버그로 기록 후 중단(§3.3)"; GATE_FAIL=1
+  fi
+  loki_count maxupload '{application="content-service"} |= "MaxUploadSizeExceededException"'
+  prom 0 rate500 'sum(rate(http_server_requests_seconds_count{application="content-service", status="500"}[5m]))'
+  manual "성공 업로드분(200)의 fileId 기록 — 서버 저장 파일이 정리 대상"
+}
+inject_AP_2() {
+  token || return 1
+  local mb="${AP2_MB:-2}" out="$EV/upload-big.txt" code
+  log "${mb}MB 파일 생성 → 업로드 (AP2_MB로 조절: 통과하면 올려서 재시도)"
+  dd if=/dev/zero of="$AP2_FILE" bs=1M count="$mb" status=none
+  code=$(curl -s -o "$out" -w '%{http_code}' -X POST "$BASE/content/attachment-file/upload" \
+    -H "Authorization: Bearer $TOKEN" -F "file=@$AP2_FILE")
+  echo "  ${mb}MB 업로드: HTTP $code — 응답 본문: $out"
+  rm -f "$AP2_FILE"
+  note "판별: 413+HTML+앱시그널 없음=ingress / 500+JSON=multipart 미매핑 / 200=한도까지 통과(AP2_MB 올려 재시도)"
+}
+revert_AP_2() {
+  rm -f "$AP2_FILE" /tmp/chaos-ap2-small.bin
+  log "원복: 로컬 임시 파일 삭제 — 서버에 200으로 올라간 파일은 수동 정리(answer.md 기록)"
+}
+
+# ── AP-3: 이모지 댓글 → charset 불일치 (조건부) ──────────────────────────
+
+EMOJI4=$'\U0001F600\U0001F389'   # 4바이트 문자 2개 (😀🎉)
+
+measure_AP_3() {
+  feed_id_set || return
+  token || { GATE_FAIL=1; return; }
+  fc "AP3-$PHASE-ascii" "chaos-AP3-ok-$(date -u +%H%M%S)"
+  if [ "$PHASE" = baseline ] && [ "$FC_CODE" != 200 ]; then
+    echo "  [GATE] ASCII 댓글이 HTTP $FC_CODE — 주입 금지(§3.3)"; GATE_FAIL=1
+  fi
+  loki_count charset '{application="content-service"} |= "Incorrect string value"'
+  tempo_search content-error '{resource.service.name="content-service" && status=error}'
+}
+inject_AP_3() {
+  token || return 1
+  fc "AP3-emoji" "chaos-AP3-$(date -u +%H%M%S)-$EMOJI4"
+  if [ "$FC_CODE" = 200 ]; then
+    log "200 — 테이블 charset utf8mb4 확인: 문항 불성립. 그 자체를 answer.md에 기록하고 종료"
+  else
+    note "HTTP $FC_CODE — 증상 채록 진행 (기대 로그: Incorrect string value)"
+  fi
+}
+revert_AP_3() {
+  log "원복 없음 — 실패 시 롤백, 성공(불성립) 시 테스트 댓글만 남음"
+  manual "테스트 댓글(chaos-AP3-*) 정리 여부 결정"
+}
+
 # ── run: ①~⑤ 전체 사이클 ────────────────────────────────────────────────
 
 do_run() {
@@ -350,7 +461,7 @@ do_run() {
 usage() { sed -n '2,14p' "$0"; }
 
 case "$ID" in
-  CH-1|CH-2|AU-1|AU-2|AU-3|IN-1|IN-2|IN-3) ;;
+  CH-1|CH-2|AU-1|AU-2|AU-3|IN-1|IN-2|IN-3|AP-1|AP-2|AP-3) ;;
   *) usage; exit 1 ;;
 esac
 

@@ -33,7 +33,30 @@ curl -s -u "$PROM_USER:$GRAFANA_TOKEN" -G "$PROM_URL/api/v1/query" --data-urlenc
 
 ---
 
-## AU-2 — auth 완전 다운 (가장 단순, 여기서 시작)
+## AP-1 — 댓글 201자 (코드 결함 — 인프라 무접촉, 여기서 워밍업)
+
+AP 계열의 `on`은 인프라 조작이 아니라 **경계값 실요청 1건**(즉발)이다. sleep은 로그 전송 대기용. 원복할 인프라가 없어 `off`는 정상 요청 복귀 확인만 한다. 전제: `chaos.env`에 `FEED_ID`.
+
+```bash
+cd docs/chaos/scripts
+./chaos.sh AP-1 baseline    # 정상 댓글 200 + "Data too long" 0건
+./chaos.sh AP-1 on          # 250자 댓글 전송 → 기대 500
+sleep 60
+./chaos.sh AP-1 symptom     # 정상 댓글은 여전히 200 / Loki Data too long / INSERT span error
+./chaos.sh AP-1 off         # 원복 없음 — 정상 댓글 200 재확인 + 테스트 댓글 정리 메모
+```
+
+## AP-3 — 이모지 댓글 (조건부 — 200이면 불성립, 그 기록도 산출물)
+
+```bash
+./chaos.sh AP-3 baseline    # ASCII 댓글 200 + "Incorrect string value" 0건
+./chaos.sh AP-3 on          # 이모지 댓글 — 200: utf8mb4 확인(불성립 종료) / 500: 증상 채록 진행
+sleep 60
+./chaos.sh AP-3 symptom
+./chaos.sh AP-3 off
+```
+
+## AU-2 — auth 완전 다운 (인프라 문항 중 가장 단순, 인프라 계열은 여기서 시작)
 
 ```bash
 cd docs/chaos/scripts
@@ -103,6 +126,16 @@ cd docs/chaos/scripts
 ./chaos.sh IN-3 off         # pending 0 복귀까지 폴링
 ```
 
+## AP-2 — 첨부 대용량 업로드 (계층 판별 — 대역폭 부하, 저트래픽·1회만)
+
+```bash
+./chaos.sh AP-2 baseline    # 1KB 업로드 200 — 500이면 잠복 버그(경로 구분자) 실증, 기록 후 중단
+AP2_MB=2 ./chaos.sh AP-2 on # 2MB 업로드 — 통과(200)하면 AP2_MB=1100으로 재시도
+sleep 60
+./chaos.sh AP-2 symptom     # 413+HTML+앱로그 없음=ingress / 500+JSON=multipart 미매핑 / 200=무제한 실측
+./chaos.sh AP-2 off         # 임시 파일 삭제 — 서버에 올라간 성공분은 수동 정리
+```
+
 ## AU-3 — JWT 시크릿 드리프트 (전 사용자 영향 — 가장 마지막·가장 짧게)
 
 ```bash
@@ -129,10 +162,10 @@ sleep 60
 
 ## 권장 순서 (RUNBOOK §7.1)
 
-hop이 짧고 주입이 단순한 것부터, 전 사용자 영향은 마지막.
+hop이 짧고 주입이 단순한 것부터, 전 사용자 영향은 마지막. AP 계열(인프라 무접촉)은 워밍업으로 맨 앞 — 단 AP-2는 대역폭 부하가 있어 부하 문항 옆.
 
 ```
-AU-2 → AU-1 → CH-1 → IN-2 → IN-1 → IN-3 → AU-3    (CH-2는 §10 lag 작업 완료 후)
+AP-1 → AP-3 → AU-2 → AU-1 → CH-1 → IN-2 → IN-1 → IN-3 → AP-2 → AU-3    (CH-2는 §10 lag 작업 완료 후)
 ```
 
 각 문항 완료 후 채점 결과는 `scenarios/<ID>/answer.md`에, evidence는 `scenarios/<ID>/evidence/`에 자동 저장된다.

@@ -42,8 +42,12 @@ sleep 60
 | IN-1 | Redis 다운 → 3개 서비스 동시 이상 | `docker stop $REDIS_CT` | 다중 | 스케줄러 @Observed |
 | IN-2 | Kafka 다운 → 알림 조용히 유실 | `docker stop $KAFKA_CT` | 2 | 없음 |
 | IN-3 | 커넥션 풀 고갈 → 전면 지연 | k6 부하 | 2 | Alert P0 룰 |
+| AP-1 | 댓글 201자 — 검증 구멍 → varchar(200) 위반 → 500 | 경계값 실요청 | 1 | FEED_ID |
+| AP-2 | 대용량 업로드 — 실패 계층 판별(ingress/앱) | 대용량 실요청 | 1~2 | 없음 |
+| AP-3 | 이모지 댓글 — charset 불일치(조건부) | 이모지 실요청 | 1 | FEED_ID |
 
-권장 실행 순서: `AU-2 → AU-1 → CH-1 → IN-2 → IN-1 → IN-3 → AU-3` (CH-2 최후).
+권장 실행 순서: `AP-1 → AP-3 → AU-2 → AU-1 → CH-1 → IN-2 → IN-1 → IN-3 → AP-2 → AU-3` (CH-2 최후).
+AP 계열은 인프라 무접촉(주입 = 경계값 실요청 1건, 원복 없음) — 코드에 잠복한 결함을 실요청으로 발화시키는 문항이다(RUNBOOK §6 AP 공통).
 
 ## 결과 매트릭스 (채록하며 채운다)
 
