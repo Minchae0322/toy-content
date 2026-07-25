@@ -6,6 +6,57 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-07-26 — chat 계측 마감: contextProvider 누락·중복 빈·하트비트 노이즈 3종 정리
+
+### 왜 했나
+
+`cab6741`로 chat의 트레이스 사각지대 계측(Mongo/Redis/JDBC/@Observed)을 켰지만, 마감
+이슈 3개가 남아 있었다. (1) Mongo 리스너에 **contextProvider가 빠져** span이 생겨도
+부모 트레이스에 붙지 않는(고아) 상태, (2) 병행 작업에서 같은 이름의
+`mongoObservationCustomizer` 빈이 두 @Configuration에 정의되어 **기동 실패 위험 +
+리스너 이중 등록**, (3) 배포 직후 실측에서 드라이버 하트비트(Mongo `hello`, Redis
+`INFO`)가 10초마다 **고아 루트 트레이스를 생성**(시간당 ~360건) — Tempo 검색 오염과
+ingest 낭비.
+
+### 무엇을 했나 (전부 toy-chat)
+
+| 커밋 | 변경 |
+|---|---|
+| `cdca2a5` | `KafkaConsumerConfig` — 리스너 팩토리 4개에 RetryListener 부착: 재시도 시도마다 `[KAFKA-RETRY]` WARN, 소진·recoverer 실패 ERROR, DLQ 발행 `[KAFKA-DLQ]` ERROR. 재시도 과정이 Loki에서 판독 가능해짐 |
+| `5eecb0a` | `UserNotificationConsumer` 예외 삼킴 제거 + DLQ 전용 팩토리(1분×무한) — 상세 분석은 [chaos/scenarios/CH-1/findings.md](../chaos/scenarios/CH-1/findings.md) |
+| `a050e45` | `MongoTracingConfig` 삭제(중복 빈 해소), `ObservabilityConfig`에 `ContextProviderFactory` 등록 — 이것이 없으면 Mongo span이 고아가 된다 |
+| `0ba282b` | 하트비트 span 필터 — Brave `SpanHandler`에서 `hello`/`INFO`/`PING` 이름 span drop |
+
+### 핵심 의사결정
+
+- **하트비트 필터는 export 단계에서, 이름 기반으로**: 계측 자체를 끄면 실제 명령
+  가시성도 잃는다. span 생성은 유지하고 Zipkin export만 차단 — 애플리케이션
+  명령(insert/find, GET/SET)은 이름이 달라 영향 0.
+- **`SpanExportingPredicate`가 아니라 Brave `SpanHandler`**: 전자는 Boot 3.5.3
+  classpath에 없다(컴파일로 확인). SpanHandler는 `@Order(HIGHEST_PRECEDENCE)` 필수 —
+  Zipkin reporter 핸들러보다 뒤면 drop이 무력화된다.
+- **계측 등록은 `ObservabilityConfig` 단일 지점**: 같은 관심사의 빈이 파일 두 곳에
+  흩어지며 생긴 충돌이라, 파일 단위로 단일화했다.
+
+### 검증 방법
+
+- Tempo TraceQL `{span.db.system="mongodb"}` — 배포 시점(07-25 15:03Z)부터 `hello`
+  span 생성 실측 → **Mongo 계측 동작 확인** (역설적으로 이 하트비트 관측이 노이즈
+  필터의 계기)
+- 남은 검증 2건: (a) 필터 배포 후 `hello`/`INFO` 루트 트레이스 소멸, (b) 댓글 1건으로
+  `insert user_notifications`가 댓글 트레이스의 자식으로 붙는지(contextProvider 검증)
+
+### 다음 단계
+
+- [ ] 댓글 흐름으로 Mongo span 부모 연결 확인 (배포 후 댓글이 아직 없음)
+- [ ] 하트비트 필터 효과 실측 (필터 배포 후 고아 루트 트레이스 카운트)
+- [ ] CH-1 재실행 — 주입 ≥3분, 이번엔 Mongo error span + `[KAFKA-RETRY]` 로그 + DLQ
+      오프셋 3중 관측 예상
+- [ ] rca-agent 수집 목록에 `up{job=~"kafka|redis|mongodb"}` 추가 (CH-1에서 원인
+      신호가 에이전트 수집 범위 밖이었음)
+
+---
+
 ## 2026-07-25 — 시그널별 라벨 스키마 확정: Loki는 service_name, Prometheus는 application
 
 ### 왜 했나

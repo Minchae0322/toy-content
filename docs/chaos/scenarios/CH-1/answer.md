@@ -45,4 +45,8 @@ chat 트레이스의 FixedBackOff(1000ms × 3) 재시도 → DLQ producer span +
 - baseline: `evidence/baseline/<ts>/`
 - symptom: `evidence/symptom/<ts>/`
 - 복구 후: DLQ 적재분 처리 방침 (재발행 수단 유무) —
-- 발견된 계측 구멍 → 보강 커밋:
+- 발견된 계측 구멍 → 보강 커밋 (1차 실행, 2026-07-25 발견 → toy-chat 반영):
+  - **예외 삼킴으로 재시도/DLQ 데드코드** (근본, [findings.md](findings.md)) → `5eecb0a`
+  - 재시도 과정 로그 부재 → `[KAFKA-RETRY]`/`[KAFKA-DLQ]` 관측 로그 → `cdca2a5`
+  - Mongo 계측 contextProvider 누락 + 중복 빈 → `a050e45`
+  - (부산물) 하트비트 고아 트레이스 노이즈 → SpanHandler 필터 → `0ba282b`

@@ -282,6 +282,9 @@ public ReplayResult replayDlq(@RequestParam int maxMessages) {
 
 ## Fix 실행 결과 (2026-07-25)
 
+> 커밋: `5eecb0a` (예외 삼킴 제거 + DLQ 팩토리), `cdca2a5` (재시도/DLQ 관측 로그),
+> `a050e45` (Mongo 계측 contextProvider·중복 빈 정리) — 모두 toy-chat master, CI 배포됨.
+
 ### 변경된 파일
 
 1. **`toy-chat/KafkaConsumerConfig.java`** — `notificationDlqListenerFactory` bean 신설 (line 275-297)
@@ -380,6 +383,6 @@ CH-1 `answer.md` 의 채점 앵커에 다음 조항 추가 검토 (§8.2 앵커 
 - [x] `notificationDlqListenerFactory` bean 신설 (`FixedBackOff 1min × 무한`)
 - [ ] fix 커밋 후 CH-1 재실행 → 위 예상 로그 시퀀스 확인
 - [ ] DLQ 재처리 성공/실패 지표를 Grafana 대시보드에 추가 (`observeRetries` 가 남기는 `[KAFKA-RETRY]` 로그 기준)
-- [ ] `answer.md` 의 "발견된 계측 구멍 → 보강 커밋" 라인에 fix 커밋 SHA 기록
+- [x] `answer.md` 의 "발견된 계측 구멍 → 보강 커밋" 라인에 fix 커밋 SHA 기록 (2026-07-26)
 - [ ] `ChatStorageConsumer` / `ChatNotificationConsumer` 도 실패 시맨틱 재점검 (`fca421f` 이후 finally ack 패턴이 재시도/DLQ 를 마찬가지로 무력화하는지 확인 — 별도 finding)
 - [ ] 결제/포인트 등 신중한 도메인 컨슈머가 향후 생기면 자동 재처리 대신 관리 API 로 수동 재처리 검토
