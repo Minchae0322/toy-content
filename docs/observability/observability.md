@@ -6,6 +6,43 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-07-25 — 시그널별 라벨 스키마 확정: Loki는 service_name, Prometheus는 application
+
+### 왜 했나
+
+CH-1(Mongo 다운) 첫 실행에서 baseline과 symptom의 Loki 카운트가 전부 0건으로 동일했다 — 대조가 성립하지 않는 결과. 원인을 파보니 측정 도구 자체가 틀려 있었다: **Loki에는 `application` 라벨이 존재하지 않는다**. k8s-monitoring Helm(Alloy) 로그 수집은 `service_name` / `container` / `job` 라벨을 붙이고, Micrometer common tag로 붙는 `application`은 Prometheus 메트릭에만 존재한다. 같은 서비스가 시그널 종류에 따라 다른 라벨 체계를 갖는데, 런북과 chaos.sh가 전부 `{application=...}` LogQL로 작성되어 있었다.
+
+### 무엇을 했나
+
+| 영역 | 변경 |
+|---|---|
+| `docs/chaos/scripts/chaos.sh` | `loki_count` 셀렉터 전부(11곳) `{application=` → `{service_name=`. PromQL의 `application=`은 정상이므로 유지 |
+| `docs/chaos/scripts/chaos.sh` (CH-1) | `\|= "Retry"` 필터 → `\|= "알림 처리 실패"` — Spring Kafka는 재시도를 "Retry" 문구로 로깅하지 않고, 이 경로의 실제 실패 로그는 `UserNotificationConsumer`의 catch 블록 문구다 |
+| `docs/chaos/RUNBOOK.md` | Loki LogQL 예시 전부 `service_name`으로 정정 (PromQL은 그대로) |
+| master `~/chaos/` | 수정본 동기화 |
+
+### 추가 발견 — CH-1 주입 창 재조회에서 나온 것들
+
+주입 창(13:59:31~47Z)을 올바른 라벨로 재조회하니 chat-service에 `MongoNodeIsRecoveringException` / `MongoSocketOpenException`이 실제로 찍혀 있었다 — 신호는 있었고 조회만 틀렸던 것. 그 과정에서 문항 전제를 흔드는 사실 둘:
+
+1. **T1 트리거가 백엔드에 도달한 적이 없었다.** (첫 진단은 "self-skip으로 미발행"이었으나 후속 검증에서 정정) `BATTLE_ID=145`는 미실존 ID였고, 그런데도 t1이 "HTTP 200"으로 보인 이유는 공인 경로 앞단이 **API 404를 SPA index.html 200으로 마스킹**하기 때문이다 — nginx 직행은 404 JSON, 공인 경로는 200 HTML로 실증했고, 해당 창 Tempo에 content POST trace가 0건이다. 상태코드 기반 게이트가 전부 뚫리는 실버그라 chaos.sh의 모든 트리거에 JSON 응답 검사(`json_or_gate`)를 baseline 게이트로 추가했다. 부수 확인: `notifyBattleItemComment`는 아이템 소유자 == 행위자면 발행을 스킵하므로 트리거 대상은 타 계정 소유 아이템이어야 한다 — 실존+타계정 소유(registerId=7)로 확인된 `BATTLE_ID=22`/`ITEM_ID=125`로 교체했다.
+2. **재시도→DLQ는 이 경로에서 구조적으로 불가능하다.** `UserNotificationConsumer.handleNotification`이 모든 예외를 catch하고 `ack.acknowledge()`까지 해버려서 `DefaultErrorHandler`(FixedBackOff 1s×3 + DeadLetterPublishingRecoverer)에 예외가 도달하지 않는다. Mongo 다운 시 실제 증상은 "재시도 후 DLQ"가 아니라 **에러 로그 1줄 남기고 조용한 유실**. DLQ 재처리 리스너는 데드코드다.
+
+### 검증 방법
+
+- Loki `/loki/api/v1/labels` · label values API로 라벨 스키마 직접 확인, Prometheus는 `count by (application)`으로 3개 서비스 확인.
+- 주입 창을 `{service_name="chat-service"}`로 재조회해 Mongo 예외 로그 실존 확인.
+- 수정된 셀렉터로 RUNBOOK의 남은 `{application=`이 PromQL 4곳뿐임을 grep으로 확인.
+
+### 다음 단계
+
+- [ ] CH-1 재실행 — BATTLE_ID=22/ITEM_ID=125로 교체 완료, 주입 후 증상 채록까지 2분 이상 대기(Loki 적재 ~1분 포함). baseline에서 `publish`(알림 발행)·수신자 알림함 도착부터 확인
+- [ ] `UserNotificationConsumer` 예외 삼킴 방침 결정 — rethrow로 DefaultErrorHandler 재시도/DLQ를 살릴지, 현행 유지(유실 감수)를 문서화할지. 결정 전까지 CH-1 기대 증상은 "에러 로그 + 조용한 유실"로 채점
+- [ ] CH-1 answer.md에 이번 발견(문항 전제 오류 2건) 기록
+- [ ] **CDN의 API 404 → SPA 200 마스킹 해결** — /api/* 경로는 SPA 폴백에서 제외해야 함. 모바일/웹 클라이언트의 404 오류 처리 전반이 깨지는 실버그(클라이언트는 HTML을 200으로 받음)
+
+---
+
 ## 2026-07-20 — chat 컨슈머 trace 단절 원인 확정 + consume span 활성화
 
 ### 왜 했나
