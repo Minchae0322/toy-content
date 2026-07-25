@@ -18,7 +18,7 @@
 실행 전에 반드시 완료되어 있어야 하는 것.
 
 - [ ] §10 사전 작업 Step 0 완료 — 완료 전에는 "레포 기준 원복" 수칙이 성립하지 않는다(레포본이 배포되면 서비스가 죽는 상태였음).
-- [ ] ArgoCD auto-sync 동작 여부 확인 — 동작 중이면 kubectl patch류 주입(AU-1, AU-3)이 selfHeal에 수 초 내 원복되어 문항이 성립하지 않는다. 해당 문항 실행 블록에 sync 일시 해제가 포함되어 있다.
+- [x] 배포 방식 확인(2026-07-24): ArgoCD 미사용 — GHCR 이미지 pull 방식이라 kubectl patch류 주입이 selfHeal로 자동 원복되지 않는다. 뒤집어 말하면 원복도 아무도 대신해 주지 않으니, 원복 책임은 전부 런북 원복 줄에 있다(§2.3).
 - [ ] 저트래픽 시간대인지 확인. 한 번에 한 문항만 — 문항당 §3.3 사이클(① 정상 측정 ~ ⑤ 복귀 확인)을 완주한다.
 - [ ] 세션 공통 baseline 채록(§3.3 하단) — 첫 문항 시작 전 1회.
 - [ ] 로컬에 `jq`, `k6` 설치.
@@ -63,7 +63,6 @@ FEED_ID=                          # AP-1·AP-3 댓글 대상 (내가 만든 테�
 |---|---|---|---|
 | kubectl (scale/patch/rollout/get) | `kubectl scale deploy/$AUTH_DEPLOY --replicas=0` | **master 노드** | kubeconfig가 master에 있음 |
 | `$INFRA_SSH "docker ..."` | `$INFRA_SSH "docker stop $MONGO_CT"` | **master에서 타이핑** → SSH로 인프라 노드에 들어가 docker 실행 | 인프라 노드는 사설 IP라 VPC 안(master)에서만 닿음 |
-| argocd app set | auto-sync 토글 | **master 노드** | `argocd login` 필요 |
 | curl API | `curl $BASE/...` | **아무데서나**(로컬 Mac 포함) | 공개 ingress(`yogurtte.com`) |
 | k6 부하 | `k6 run ...` | 로컬 또는 master | 공개 ingress 대상 |
 
@@ -81,7 +80,7 @@ FEED_ID=                          # AP-1·AP-3 댓글 대상 (내가 만든 테�
 |---|---|---|
 | 메트릭 (P99, 5xx, HikariCP pending, consumer lag, active_users) | Grafana > Explore > Prometheus | 각 문항의 PromQL 복붙 |
 | 트레이스 (span 잘림, DLQ 발행, 공백 구간) | Grafana > Explore > Tempo | `service.name` + `error=true` 필터, 주입 시각 이후 |
-| 로그 (fallback, JwtFilter, DLQ, Retry) | Grafana > Explore > Loki | 각 문항의 `{application="..."}` LogQL |
+| 로그 (fallback, JwtFilter, DLQ, Retry) | Grafana > Explore > Loki | 각 문항의 `{service_name="..."}` LogQL |
 | 대시보드 (Four Golden Signals, Saturation) | Grafana > Dashboards | baseline·증상 스크린샷 채록 |
 | 파드 상태 (재시작, readiness) | **master**: `kubectl get pods -n $NS`, `kubectl describe pod` | 주입 반영·복구 확인 |
 | 원시 actuator (디버그용) | master에서 port-forward 후 curl | 급할 때만 (아래) |
@@ -100,7 +99,6 @@ curl -s localhost:8090/actuator/prometheus | grep hikaricp_connections_pending
 - **원복 명령은 주입 전에 준비한다.** 각 §6 런북은 주입·트리거·원복을 한 블록에 담았으니, 주입 줄을 실행하기 전에 원복 줄을 먼저 셸에 붙여둔다.
 - 주입 유형별 원복: `docker stop` → `docker start` / `scale --replicas=0` → `--replicas=1` + `rollout status` / `patch`(리소스) → 원래 값으로 재 patch / `secret` 변경 → 백업 `apply` + `rollout restart`.
 - **복구는 "명령 실행"이 아니라 "정상화 확인"까지다.** `kubectl get pods -n $NS`에서 Running/Ready, readiness UP(§2.2 터널), 대표 트리거(T1 또는 T4) 200 복귀, 그리고 **그 문항 ①의 baseline 쿼리가 정상값으로 돌아온 것**(§3.3 ⑤)까지 본 뒤 다음 문항으로 넘어간다.
-- ArgoCD selfHeal을 껐으면 원복 후 **반드시 다시 켠다**(§7.2).
 - kubectl로 직접 바꾼 것은 매니페스트 레포와 drift가 난다. 채록 후 `kubectl diff -k apps/<svc>/overlays/<env>`로 레포 기준과 일치하는지 확인한다(§10 Step 0 완료가 전제).
 
 ## 3. 공통 준비
@@ -148,7 +146,7 @@ BATTLE_ID=<선정값>; ITEM_ID=<선정값>; FEED_ID=<선정값>
 
 ```bash
 ./chaos.sh <ID> baseline   # ①+② — 쿼리 실행·evidence 저장. 게이트 실패(빈 값) 시 exit 1 = 주입 금지
-./chaos.sh <ID> on         # ③ 주입 (argocd sync 해제 포함, 주입 시각 timeline.log 기록)
+./chaos.sh <ID> on         # ③ 주입 (주입 시각 timeline.log 기록)
 ./chaos.sh <ID> trigger    # ③ 트리거 루프 (CH-2, AU-1만 — 나머지는 symptom에 T1/T2 포함)
 ./chaos.sh <ID> symptom    # ④ — baseline과 같은 함수 재실행 (①=④ 동일 쿼리가 구조적으로 보장)
 ./chaos.sh <ID> off        # ⑤ 원복 + 복귀 확인 폴링
@@ -219,7 +217,7 @@ curl -s -X POST "$BASE/content/battles/$BATTLE_ID/items/vote" \
 ① 정상 측정 (주입 전, ④와 같은 쿼리):
 
 - [ ] T1 1건 → 200 + 알림 도착. Tempo에서 content 발행 → chat consume → Mongo insert가 한 트레이스로 이어지는 **정상 traceId** 기록 — 증상 트레이스(재시도→DLQ)와 대조할 기준.
-- [ ] Loki `{application="chat-service"} |= "DLQ"` 최근 1h = 0건 (이미 찍히고 있으면 그 원인부터 규명, 주입 보류).
+- [ ] Loki `{service_name="chat-service"} |= "DLQ"` 최근 1h = 0건 (이미 찍히고 있으면 그 원인부터 규명, 주입 보류).
 
 ② 기록: 위 결과를 `evidence/CH-1/baseline/`에 저장.
 
@@ -237,7 +235,7 @@ $INFRA_SSH "docker start $MONGO_CT" && date -u
 
 - 댓글 API 응답: **200이어야 함** (발행은 AFTER_COMMIT 뒤, 실패는 컨슈머 쪽).
 - Tempo: `service.name = chat-service`, `error = true`, 주입 시각 이후 — consume span 하위에서 Mongo insert 예외 → 재시도 → DLQ producer span까지 한 트레이스에 보이는지.
-- Loki: `{application="chat-service"} |= "DLQ"` 및 `|= "Retry"` (라벨 값은 Grafana 라벨 브라우저에서 확인).
+- Loki: `{service_name="chat-service"} |= "DLQ"` 및 `|= "Retry"` (라벨 값은 Grafana 라벨 브라우저에서 확인).
 - 부수 증상: 채팅 메시지 전송/저장 실패 (Mongo 공유).
 
 판정 (① 대비):
@@ -294,7 +292,7 @@ kubectl -n $NS scale deploy/$CHAT_DEPLOY --replicas=1 && kubectl -n $NS rollout 
 
 - [ ] ④의 로그인 P99 PromQL 정상값 기록 + 로그인 1회 `%{time_total}` 기록.
 - [ ] Tempo: content 트레이스에서 `GET user-service` client span의 정상 duration(수십 ms대) 기록 — "3s에서 잘림"의 대조 기준. 캐시 히트면 이 span이 아예 없으니 TTL 경과 후 요청에서 잡는다.
-- [ ] Loki `{application="content-service"} |= "fallback"` 최근 1h = 0건.
+- [ ] Loki `{service_name="content-service"} |= "fallback"` 최근 1h = 0건.
 - [ ] T2 응답의 작성자 이름이 실명인지 확인 ("사용자{id}" 아님).
 
 ② 기록: 위 결과를 `evidence/AU-1/baseline/`에 저장.
@@ -302,8 +300,6 @@ kubectl -n $NS scale deploy/$CHAT_DEPLOY --replicas=1 && kubectl -n $NS rollout 
 ③ 주입 → 트리거 → ⑤ 원복:
 
 ```bash
-# (ArgoCD auto-sync 동작 시) 주입 전 sync 일시 해제 — master 셸
-argocd app set user-dev --sync-policy none        # 완료 후: --sync-policy automated
 # 주입 — master 셸
 date -u && kubectl -n $NS patch deploy/$AUTH_DEPLOY --type=json \
   -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/cpu","value":"50m"}]'
@@ -318,14 +314,13 @@ for i in $(seq 1 20); do curl -s -o /dev/null -w '%{time_total}s\n' -X POST $BAS
 kubectl -n $NS patch deploy/$AUTH_DEPLOY --type=json \
   -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/cpu","value":"500m"}]'
 kubectl -n $NS rollout status deploy/$AUTH_DEPLOY && date -u
-# 원복 후: argocd app set user-dev --sync-policy automated
 ```
 
 ④ 증상 관측 (①과 같은 쿼리):
 
 - PromQL (로그인 P99): `histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{application="auth-service", uri="/login"}[5m])))` — 급등.
 - Tempo: `service.name = content-service`, duration > 3s — `GET user-service` client span이 정확히 3s에서 잘리는 트레이스.
-- Loki: `{application="content-service"} |= "fallback"` — ExternalUserApiClient의 fallback 로그.
+- Loki: `{service_name="content-service"} |= "fallback"` — ExternalUserApiClient의 fallback 로그.
 - 사용자 가시 증상: 피드 작성자가 "사용자{id}"(익명)로 표시.
 - **에러율(5xx)은 오르지 않아야 한다** — 이 문항의 변별 포인트.
 
@@ -368,7 +363,6 @@ kubectl -n $NS scale deploy/$AUTH_DEPLOY --replicas=1 && kubectl -n $NS rollout 
 ```bash
 # 백업 (평문 시크릿 포함 — 채록 후 즉시 삭제) — master 셸
 kubectl -n $NS get secret content-secret -o yaml > /tmp/content-secret.backup.yaml
-# (ArgoCD auto-sync 동작 시) content 앱 sync 일시 해제
 # 주입 — master 셸
 date -u && kubectl -n $NS patch secret content-secret \
   -p '{"stringData":{"JWT_SECRET":"chaos-au3-drift-value-not-a-real-secret-0000000000"}}'
@@ -387,7 +381,7 @@ rm /tmp/content-secret.backup.yaml && date -u
 ④ 증상 관측 (①과 같은 쿼리):
 
 - PromQL (4xx 비율): `sum(rate(http_server_requests_seconds_count{application="content-service", status="401"}[5m]))` — 인증 API 전반 급증.
-- **401은 4xx라 span error 태그가 안 붙는다** — trace로는 못 찾는 문항. 메트릭(401 rate)과 `{application="content-service"} |= "JwtFilter"` 로그로 도달해야 한다. trace 의존도가 낮은 문항을 섞는 목적.
+- **401은 4xx라 span error 태그가 안 붙는다** — trace로는 못 찾는 문항. 메트릭(401 rate)과 `{service_name="content-service"} |= "JwtFilter"` 로그로 도달해야 한다. trace 의존도가 낮은 문항을 섞는 목적.
 
 판정 (① 대비): [ ] 로그인 성공 + content 전 인증 API 401 (T4 200 → 401) [ ] 401 rate ① 기준선 대비 급증 채록 [ ] JwtFilter 로그 채록 [ ] ⑤ 원복 후 T4 200 복귀 (런북 마지막 줄)
 
@@ -401,7 +395,7 @@ rm /tmp/content-secret.backup.yaml && date -u
 - [ ] T6 투표 1건 → 응답 코드·시간 기록 — 쓰기 경로의 정상 기준. Redis 다운 시 이 경로가 아픈지 자체가 채록 대상이다.
 - [ ] Tempo: content 트레이스에서 `GET user-service` client span **빈도**가 낮은 것 확인(캐시 히트 상태) — 주입 후 "직행 호출 급증"의 대조 기준.
 - [ ] 스케줄러 @Observed span이 주기대로 찍히는지 + 최근 핫스코어 갱신 시각 기록 — 안 보이면 §10 전제 미충족, 주입 금지(§3.3 게이트).
-- [ ] Loki `{application="chat-service"} |= "Redis"` 최근 1h = 0건.
+- [ ] Loki `{service_name="chat-service"} |= "Redis"` 최근 1h = 0건.
 
 ② 기록: 위 결과를 `evidence/IN-1/baseline/`에 저장.
 
@@ -419,7 +413,7 @@ $INFRA_SSH "docker start $REDIS_CT" && date -u
 
 - content: user 캐시 실패 → auth 직행 호출 급증(Tempo에서 `GET user-service` client span 빈도), latency 상승. ShedLock 획득 실패 → 스케줄러 skip → **수 분 뒤 핫스코어 갱신 정체** (2차 지연 증상 — 스케줄러 @Observed 필요, §10).
 - 쓰기 경로(T6 투표): Redis 다운에도 정상인지, 실패한다면 어느 지점인지 — 어느 경로가 아프고 어느 경로가 멀쩡한지의 **대비 자체가 이 문항의 변별**이다.
-- chat: 온라인 디바이스 조회 실패 → WS/FCM 발송 이상. Loki `{application="chat-service"} |= "Redis"`.
+- chat: 온라인 디바이스 조회 실패 → WS/FCM 발송 이상. Loki `{service_name="chat-service"} |= "Redis"`.
 - auth: 이메일 인증·위치 검색 실패.
 - 채록 전 확인: content `UserCacheStore`가 Redis 예외를 삼키고 API 직행하는지, 요청까지 깨지는지 — **실동작이 정답지의 일부.**
 
@@ -499,7 +493,7 @@ AP 문항의 주입은 docker stop이 아니라 **경계값 실요청 1건**이�
 ① 정상 측정 (주입 전, ④와 같은 쿼리):
 
 - [ ] 200자 이내 정상 댓글 → 200 (게이트: 실패하면 FEED_ID/토큰/서비스부터 규명, 주입 금지).
-- [ ] Loki `{application="content-service"} |= "Data too long"` 최근 1h = 0건.
+- [ ] Loki `{service_name="content-service"} |= "Data too long"` 최근 1h = 0건.
 - [ ] ④의 500 rate PromQL 현재값 기록.
 
 ② 기록: `evidence/AP-1/baseline/`.
@@ -534,7 +528,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/content/feeds/$FEED_ID/c
 ① 정상 측정 (주입 전, ④와 같은 쿼리):
 
 - [ ] 1KB 파일 업로드 → 200 + fileId. **500이면 잠복 버그(경로 구분자) 실증 — 문항 이전에 실버그 발견. answer.md에 기록하고 중단.**
-- [ ] Loki `{application="content-service"} |= "MaxUploadSizeExceededException"` 최근 1h = 0건.
+- [ ] Loki `{service_name="content-service"} |= "MaxUploadSizeExceededException"` 최근 1h = 0건.
 
 ② 기록: `evidence/AP-2/baseline/`.
 
@@ -564,7 +558,7 @@ rm /tmp/chaos-ap2.bin
 
 결함 후보: `ddl-auto: update`로 테이블 charset이 DB 서버 기본값에 의존한다. utf8(3byte)로 생성됐다면 4바이트 이모지 저장 시 `Incorrect string value` → 500. utf8mb4라면 정상 저장 — **문항 불성립이고, charset이 검증됐다는 그 기록이 산출물**이다.
 
-① 정상 측정: [ ] ASCII 댓글 → 200 (게이트) [ ] Loki `{application="content-service"} |= "Incorrect string value"` 1h = 0건. ② `evidence/AP-3/baseline/`.
+① 정상 측정: [ ] ASCII 댓글 → 200 (게이트) [ ] Loki `{service_name="content-service"} |= "Incorrect string value"` 1h = 0건. ② `evidence/AP-3/baseline/`.
 
 ③ 주입 — 이모지 댓글 1건:
 
@@ -603,16 +597,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/content/feeds/$FEED_ID/c
 
 - **이 클러스터가 곧 실서비스다.** 저트래픽 시간대에, 문항당 주입 시간을 최소화(수 분)하고, 복구 검증까지가 한 문항이다.
 - **원복 명령은 주입 전에 준비.** 각 런북의 원복 줄을 먼저 셸에 붙여두고 주입한다(§2.3).
-- **ArgoCD selfHeal 충돌 (Step 0에서 확인 필수).** ApplicationSet이 `automated + selfHeal`이면 `kubectl patch/scale` 주입을 수 초 내 되돌린다 → 문항 성립 안 함. patch·scale 계열(AU-1, AU-2, AU-3, CH-2) 주입 전 해당 Application의 auto-sync를 끄고, 원복 후 다시 켠다.
-
-  ```bash
-  # 주입 전 (해당 서비스-환경 Application) — master 셸
-  argocd app set <svc>-<env> --sync-policy none
-  # 원복 후
-  argocd app set <svc>-<env> --sync-policy automated
-  ```
-
-  `<svc>-<env>`는 Step 0의 `kubectl get applications -n argocd` 결과로 확인. **주의: 로그인/인증 서비스의 실제 이름이 `user`인지 `auth`인지 레포 drift로 불확실**하다(§10 Step 0). live Application 이름 기준으로 잡는다.
+- **selfHeal 자동 원복 없음 (확인됨 2026-07-24).** ArgoCD 미사용 — 배포는 GHCR 이미지 pull 방식이다. `kubectl patch/scale` 주입이 되돌아가지 않아 문항은 성립하지만, 원복도 아무도 대신해 주지 않는다. patch·scale 계열(AU-1, AU-2, AU-3, CH-2)은 원복 줄 실행을 절대 누락하지 말 것.
 - **kubectl 직접 변경은 매니페스트와 drift.** 채록 후 즉시 원복하고, `kubectl diff -k apps/<svc>/overlays/<env>`로 레포 기준과 일치하는지 확인한다. 단, 레포가 낡아 있으면(§10 Step 0) 이 확인이 무의미하니 그 정리가 선행되어야 한다.
 - **데이터 유실 동반 문항**(IN-2 Kafka, CH-1 Mongo): 알림 유실/지연 허용 범위를 먼저 결정하고 진행.
 
@@ -699,13 +684,10 @@ docs/chaos/
 ```bash
 kubectl get ns
 kubectl get deploy,svc -A | grep -E 'content|chat|auth|user'   # 실제 이름·네임스페이스 → §1 변수에 반영
-kubectl get pods -n argocd                                      # ArgoCD 동작 여부 → §7.2 selfHeal 판단
-kubectl get applications -n argocd                              # Application 이름(<svc>-<env>) → auto-sync 토글 대상
 ```
 
 - [ ] `NS`, `*_DEPLOY` 변수를 live 이름으로 교체
 - [ ] 로그인/인증 서비스의 실제 배포명 확정(`user` vs `auth-service` drift 해소)
-- [ ] ArgoCD가 selfHeal이면 §7.2의 auto-sync 토글을 patch/scale 문항에 반드시 적용
 - [ ] (권장) live 스펙을 매니페스트 레포에 역반영해 drift를 닫은 뒤 채록 시작
 
 ### 문항별 사전 작업

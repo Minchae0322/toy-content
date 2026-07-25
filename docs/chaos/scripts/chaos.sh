@@ -3,7 +3,7 @@
 #
 # 사용법:
 #   ./chaos.sh <문항ID> baseline   # ① 정상 측정 + ② 기록 — 게이트 실패(쿼리 빈 값) 시 exit 1 = 주입 금지
-#   ./chaos.sh <문항ID> on         # ③ 주입 (argocd sync 해제 포함, 주입 시각 timeline.log 기록)
+#   ./chaos.sh <문항ID> on         # ③ 주입 (주입 시각 timeline.log 기록)
 #   ./chaos.sh <문항ID> trigger    # ③ 트리거 (별도 루프가 있는 문항만: CH-2, AU-1)
 #   ./chaos.sh <문항ID> symptom    # ④ 증상 관측 — baseline과 같은 함수를 재실행 (①=④ 동일 쿼리 보장)
 #   ./chaos.sh <문항ID> off        # ⑤ 원복 + 복귀 확인 폴링
@@ -11,7 +11,7 @@
 #
 # 문항ID: CH-1 CH-2 AU-1 AU-2 AU-3 IN-1 IN-2 IN-3 AP-1 AP-2 AP-3
 #   AP 계열: 주입 = 경계값 실요청 1건 (인프라 무접촉, 원복 없음 — RUNBOOK §6 AP 공통)
-# 전제: 같은 디렉토리의 chaos.env (chaos.env.example 참고), jq, kubectl, curl, (argocd), (k6)
+# 전제: 같은 디렉토리의 chaos.env (chaos.env.example 참고), jq, kubectl, curl, (k6)
 # 수동으로 남는 것: Tempo 트레이스 모양 판독, 알림 실제 도착 확인, 판정 체크박스, 블라인드 RCA(§8)
 
 set -uo pipefail
@@ -93,6 +93,15 @@ token() {
   [ -n "$TOKEN" ] || { echo "  [ERR] 로그인 실패 — 토큰 없음"; return 1; }
 }
 
+# json_or_gate <파일> <이름> — 응답이 JSON인지 검사.
+# CDN 레이어가 API 404를 SPA index.html 200으로 마스킹하므로(2026-07-25 실증) http_code만으론 성공 판정 불가.
+json_or_gate() {
+  jq -e . "$1" >/dev/null 2>&1 && return 0
+  echo "  [경고] $2 응답이 JSON 아님(SPA 폴백 의심 — 대상 ID 미실존?) — HTTP 코드 신뢰 불가"
+  [ "$PHASE" = baseline ] && GATE_FAIL=1
+  return 1
+}
+
 # t1 <태그> — 댓글 1건. HTTP코드+메시지 출력, 본문은 $EV 저장
 t1() {
   local tag="$1" out="$EV/t1-$1.json" code
@@ -101,6 +110,7 @@ t1() {
     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
     -d '{"content":"chaos-'"$tag"'-'"$(date -u +%H%M%S)"'"}')
   echo "  T1 댓글: HTTP $code $(jq -r '.message // empty' "$out" 2>/dev/null)"
+  json_or_gate "$out" "T1"
 }
 
 # t6 — 배틀 투표 1건 (쓰기 경로 커버 — T1 편중 방지). 재투표 정책상 4xx 가능, 코드·시간·메시지 그대로 채록
@@ -111,6 +121,7 @@ t6() {
     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
     -d '{"votes":[{"itemId":'"$ITEM_ID"',"rank":1}]}')
   echo "  T6 투표: HTTP $meta $(jq -r '.message // empty' "$out" 2>/dev/null)"
+  json_or_gate "$out" "T6"
 }
 
 # fc <태그> <내용> — 피드 댓글 1건 (AP 계열). FC_CODE 설정, 본문은 $EV 저장. 내용은 jq로 안전 인코딩(이모지 포함)
@@ -122,6 +133,7 @@ fc() {
     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
     -d "$body")
   echo "  피드 댓글($tag): HTTP $FC_CODE $(jq -r '.message // empty' "$out" 2>/dev/null)"
+  json_or_gate "$out" "피드댓글"
 }
 
 # t2 — 피드 스크롤. time_total 출력, 첫 페이지 본문 저장 (작성자 실명/익명 육안 확인용)
@@ -129,6 +141,21 @@ t2() {
   local t
   t=$(curl -s -o "$EV/t2-feed.json" -w '%{time_total}' "$BASE/content/feeds/scroll")
   echo "  T2 피드: time_total ${t}s → $EV/t2-feed.json"
+}
+
+# notif_inbox — 수신자(아이템 작성자) 계정 알림함 조회 (CH-1). RECIPIENT_EMAIL 미설정 시 수동 안내
+notif_inbox() {
+  if [ -z "${RECIPIENT_EMAIL:-}" ]; then
+    manual "알림 도착 여부(수신자 계정) — baseline: 도착 / symptom: 미도착 (chaos.env RECIPIENT_* 설정 시 자동)"
+    return
+  fi
+  local rt out="$EV/notif-inbox.json" code
+  rt=$(curl -s -X POST "$BASE/auth/login" -H 'Content-Type: application/json' \
+    -d '{"email":"'"$RECIPIENT_EMAIL"'","password":"'"${RECIPIENT_PASSWORD:-}"'"}' | jq -r '.accessToken // empty')
+  [ -n "$rt" ] || { echo "  [ERR] 수신자 로그인 실패 (RECIPIENT_* 확인)"; return; }
+  code=$(curl -s -o "$out" -w '%{http_code}' "$BASE/chat/notifications?size=5" -H "Authorization: Bearer $rt")
+  echo "  수신자 알림함: HTTP $code, 총 $(jq -r '.data.totalElements // "?"' "$out" 2>/dev/null)건 → $out"
+  note "baseline: T1 알림 도착(+1) / symptom 주입 중: 조회 실패(5xx)도 그 자체가 증상 / 원복 후: 그 알림만 영구 부재"
 }
 
 login_ok()    { [ "$(http_code -X POST "$BASE/auth/login" -H 'Content-Type: application/json' -d "$LOGIN_JSON")" = "200" ]; }
@@ -147,18 +174,17 @@ poll() {
   log "[경고] 복귀 확인 실패: $desc — 수동 확인 필요"; return 1
 }
 
-argo_pause()  { if [ -n "${1:-}" ]; then argocd app set "$1" --sync-policy none      && log "argocd sync 해제: $1"; fi; }
-argo_resume() { if [ -n "${1:-}" ]; then argocd app set "$1" --sync-policy automated && log "argocd sync 복원: $1"; fi; }
-
 # ── CH-1: Mongo 다운 → 컨슈머 재시도 → DLQ ────────────────────────────────
 
 measure_CH_1() {
   token && t1 "CH1-$PHASE"
-  loki_count dlq   '{application="chat-service"} |= "DLQ"'
-  loki_count retry '{application="chat-service"} |= "Retry"'
+  prom 0 mongodb_up 'mongodb_up'
+  loki_count publish    '{service_name="content-service"} |= "알림 발행"'   # 발행 자체가 일어났는지 — 트리거 공회전 검출
+  loki_count dlq   '{service_name="chat-service"} |= "DLQ"'
+  loki_count notif_fail '{service_name="chat-service"} |= "알림 처리 실패"'  # 컨슈머 catch 후 남는 실제 실패 로그 (Spring 재시도 로그는 "Retry" 문구를 안 남김)
   tempo_search chat-error '{resource.service.name="chat-service" && status=error}'
-  manual "알림 도착 여부(작성자 계정) — baseline: 도착 / symptom: 미도착"
-  manual "baseline: 정상 트레이스(content→chat→Mongo) traceId 기록 / symptom: 재시도→DLQ span 모양 판독"
+  notif_inbox
+  manual "baseline: 정상 트레이스(content→chat→Mongo) traceId 기록 / symptom: consume span은 OK로 찍힘(예외 삼킴 함정) — 알림 처리 실패 로그의 traceId와 대조"
 }
 inject_CH_1() { infra "docker stop $MONGO_CT"; }
 revert_CH_1() {
@@ -176,7 +202,6 @@ measure_CH_2() {
   manual "알림 도착까지 소요 시간 기록 — 복구 후 '몰아서 도착'과 대조"
 }
 inject_CH_2() {
-  argo_pause "$ARGO_APP_CHAT"
   kubectl -n "$NS" scale deploy/"$CHAT_DEPLOY" --replicas=0
 }
 trigger_CH_2() {
@@ -188,7 +213,6 @@ trigger_CH_2() {
 revert_CH_2() {
   kubectl -n "$NS" scale deploy/"$CHAT_DEPLOY" --replicas=1
   kubectl -n "$NS" rollout status deploy/"$CHAT_DEPLOY"
-  argo_resume "$ARGO_APP_CHAT"
   manual "lag 해소 곡선 + 밀린 알림 일괄 도착 확인 (필요 시 symptom 재실행)"
 }
 
@@ -200,14 +224,13 @@ measure_AU_1() {
   local t; t=$(curl -s -o /dev/null -w '%{time_total}' -X POST "$BASE/auth/login" \
     -H 'Content-Type: application/json' -d "$LOGIN_JSON")
   echo "  로그인 time_total: ${t}s"
-  loki_count fallback '{application="content-service"} |= "fallback"'
+  loki_count fallback '{service_name="content-service"} |= "fallback"'
   t2
   tempo_search content-slow '{resource.service.name="content-service" && duration > 3s}'
   manual "Tempo에서 GET user-service client span duration — baseline: 수십 ms / symptom: 3s 잘림"
   manual "t2-feed.json에서 작성자 실명(baseline) / 익명 '사용자{id}'(symptom) 육안 확인"
 }
 inject_AU_1() {
-  argo_pause "$ARGO_APP_AUTH"
   kubectl -n "$NS" patch deploy/"$AUTH_DEPLOY" --type=json \
     -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/cpu","value":"50m"}]'
   kubectl -n "$NS" rollout status deploy/"$AUTH_DEPLOY"
@@ -224,7 +247,6 @@ revert_AU_1() {
   kubectl -n "$NS" patch deploy/"$AUTH_DEPLOY" --type=json \
     -p '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/cpu","value":"'"$AUTH_CPU_NORMAL"'"}]'
   kubectl -n "$NS" rollout status deploy/"$AUTH_DEPLOY"
-  argo_resume "$ARGO_APP_AUTH"
   poll "로그인 200 복귀" 24 5 login_ok
 }
 
@@ -237,13 +259,11 @@ measure_AU_2() {
   manual "symptom: content client span이 3s timeout이 아니라 connection refused 즉시 실패 — AU-1과 구별"
 }
 inject_AU_2() {
-  argo_pause "$ARGO_APP_AUTH"
   kubectl -n "$NS" scale deploy/"$AUTH_DEPLOY" --replicas=0
 }
 revert_AU_2() {
   kubectl -n "$NS" scale deploy/"$AUTH_DEPLOY" --replicas=1
   kubectl -n "$NS" rollout status deploy/"$AUTH_DEPLOY"
-  argo_resume "$ARGO_APP_AUTH"
   poll "로그인 200 복귀" 24 5 login_ok
 }
 
@@ -255,13 +275,12 @@ measure_AU_3() {
   token || return 1
   echo "  T4 인증 API: HTTP $(http_code "$BASE/content/feeds/following" -H "Authorization: Bearer $TOKEN") (baseline 기대 200 / symptom 기대 401)"
   prom 0 rate401 'sum(rate(http_server_requests_seconds_count{application="content-service", status="401"}[5m]))'
-  loki_count jwtfilter '{application="content-service"} |= "JwtFilter"'
+  loki_count jwtfilter '{service_name="content-service"} |= "JwtFilter"'
 }
 inject_AU_3() {
   kubectl -n "$NS" get secret "$CONTENT_SECRET" -o yaml > "$AU3_BK"
   grep -q "JWT_SECRET" "$AU3_BK" || { log "[중단] 백업에 JWT_SECRET 없음 — 시크릿 이름 확인"; rm -f "$AU3_BK"; return 1; }
   log "시크릿 백업: $AU3_BK (평문 포함 — 원복 시 자동 삭제)"
-  argo_pause "$ARGO_APP_CONTENT"
   kubectl -n "$NS" patch secret "$CONTENT_SECRET" \
     -p '{"stringData":{"JWT_SECRET":"chaos-au3-drift-value-not-a-real-secret-0000000000"}}'
   kubectl -n "$NS" rollout restart deploy/"$CONTENT_DEPLOY"
@@ -273,7 +292,6 @@ revert_AU_3() {
   kubectl -n "$NS" rollout restart deploy/"$CONTENT_DEPLOY"
   kubectl -n "$NS" rollout status deploy/"$CONTENT_DEPLOY"
   rm -f "$AU3_BK" && log "시크릿 백업 삭제"
-  argo_resume "$ARGO_APP_CONTENT"
   poll "T4 200 복귀" 24 5 t4_ok
 }
 
@@ -283,8 +301,8 @@ measure_IN_1() {
   t2
   token && t6
   note "T6(쓰기 경로)가 Redis 다운에도 정상인지 자체가 채록 대상 — 아픈 경로/멀쩡한 경로의 대비가 변별"
-  loki_count chat_redis    '{application="chat-service"} |= "Redis"'
-  loki_count content_redis '{application="content-service"} |= "Redis"'
+  loki_count chat_redis    '{service_name="chat-service"} |= "Redis"'
+  loki_count content_redis '{service_name="content-service"} |= "Redis"'
   tempo_search content '{resource.service.name="content-service"}'
   manual "GET user-service client span 빈도 — baseline: 낮음(캐시 히트) / symptom: 급증(직행)"
   manual "[게이트] 스케줄러 @Observed span이 주기대로 찍히는지 — 안 보이면 §10 전제 미충족, 주입 금지"
@@ -302,7 +320,7 @@ revert_IN_1() {
 measure_IN_2() {
   token && t1 "IN2-$PHASE"
   tempo_search content '{resource.service.name="content-service"}'
-  loki_count content_kafka '{application="content-service"} |= "Kafka"'
+  loki_count content_kafka '{service_name="content-service"} |= "Kafka"'
   manual "baseline: producer span이 트레이스 어디에 붙는지 기록 — symptom에서 '사라진 span'을 알아보는 기준"
   manual "symptom: producer span error 태그 유무 — 아무 데도 안 남으면 계측 구멍 발견(sendSafely)"
 }
@@ -350,8 +368,8 @@ measure_AP_1() {
   if [ "$PHASE" = baseline ] && [ "$FC_CODE" != 200 ]; then
     echo "  [GATE] 정상 댓글이 HTTP $FC_CODE — FEED_ID/토큰/서비스부터 규명 → 주입 금지(§3.3)"; GATE_FAIL=1
   fi
-  loki_count datatoolong '{application="content-service"} |= "Data too long"'
-  loki_count integrity   '{application="content-service"} |= "DataIntegrityViolationException"'
+  loki_count datatoolong '{service_name="content-service"} |= "Data too long"'
+  loki_count integrity   '{service_name="content-service"} |= "DataIntegrityViolationException"'
   prom 0 rate500 'sum(rate(http_server_requests_seconds_count{application="content-service", status="500"}[5m]))'
   tempo_search content-error '{resource.service.name="content-service" && status=error}'
   manual "symptom: INSERT JDBC span error 태그 — Tempo에서 모양 판독"
@@ -384,7 +402,7 @@ measure_AP_2() {
   if [ "$PHASE" = baseline ] && [ "$code" != 200 ]; then
     echo "  [GATE] 정상 업로드가 HTTP $code — 잠복 버그(FileService 경로 구분자 하드코딩) 실증 가능성. 실버그로 기록 후 중단(§3.3)"; GATE_FAIL=1
   fi
-  loki_count maxupload '{application="content-service"} |= "MaxUploadSizeExceededException"'
+  loki_count maxupload '{service_name="content-service"} |= "MaxUploadSizeExceededException"'
   prom 0 rate500 'sum(rate(http_server_requests_seconds_count{application="content-service", status="500"}[5m]))'
   manual "성공 업로드분(200)의 fileId 기록 — 서버 저장 파일이 정리 대상"
 }
@@ -415,7 +433,7 @@ measure_AP_3() {
   if [ "$PHASE" = baseline ] && [ "$FC_CODE" != 200 ]; then
     echo "  [GATE] ASCII 댓글이 HTTP $FC_CODE — 주입 금지(§3.3)"; GATE_FAIL=1
   fi
-  loki_count charset '{application="content-service"} |= "Incorrect string value"'
+  loki_count charset '{service_name="content-service"} |= "Incorrect string value"'
   tempo_search content-error '{resource.service.name="content-service" && status=error}'
 }
 inject_AP_3() {

@@ -71,11 +71,11 @@ sleep 60
 
 ```bash
 ./chaos.sh AU-1 baseline
-./chaos.sh AU-1 on          # cpu limit 50m patch (+ argocd sync 해제)
+./chaos.sh AU-1 on          # cpu limit 50m patch
 ./chaos.sh AU-1 trigger     # 로그인 20회
 # fallback은 user 캐시 TTL 경과 후 관측 — TTL만큼 더 기다렸다가:
 ./chaos.sh AU-1 symptom     # 로그인 P99 급등 / client span 3s 잘림 / 작성자 익명
-./chaos.sh AU-1 off         # cpu 원복(AUTH_CPU_NORMAL) + argocd sync 복원
+./chaos.sh AU-1 off         # cpu 원복(AUTH_CPU_NORMAL)
 ```
 
 ## CH-1 — Mongo 다운 → 재시도 → DLQ
@@ -152,7 +152,7 @@ sleep 60
 
 ```bash
 ./chaos.sh CH-2 baseline    # lag 메트릭 없으면 여기서 중단됨 = 주입 금지
-./chaos.sh CH-2 on          # chat deploy replicas=0 (+ argocd sync 해제)
+./chaos.sh CH-2 on          # chat deploy replicas=0
 ./chaos.sh CH-2 trigger     # 댓글 30건 × 10초 간격 ≈ 5분 (블로킹)
 ./chaos.sh CH-2 symptom     # lag 누적 / active_users 0 / content 트레이스는 무결
 ./chaos.sh CH-2 off         # replicas=1 + rollout + 밀린 알림 일괄 도착 확인
