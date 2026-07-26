@@ -73,7 +73,7 @@ public class FeedService {
    * 피드 목록 조회 (커서 페이징) - 탐색/검색용
    */
   public CursorResponse<FeedResponse.ListView> getFeedsWithCursor(Search condition, Long userId) {
-    Integer requestSize = condition.getSize();
+    Integer requestSize = condition.getSize() != null ? condition.getSize() : 20;
     condition.setSize(requestSize + 1);
 
     Optional.ofNullable(userId)

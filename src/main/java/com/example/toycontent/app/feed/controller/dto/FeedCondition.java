@@ -42,8 +42,9 @@ public abstract class FeedCondition {
     @Parameter(description = "커서 (마지막 조회한 피드 ID)")
     private Long cursor;
 
+    // 기본값 없으면 size 미지정 요청에서 FeedService가 null 언박싱 → NPE(500). Following.size와 동일하게 기본 20.
     @Parameter(description = "조회 개수")
-    private Integer size;
+    private Integer size = 20;
 
     @JsonIgnore
     @Schema(hidden = true)
