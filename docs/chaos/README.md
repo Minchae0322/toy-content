@@ -75,4 +75,4 @@ AP 계열은 인프라 무접촉(주입 = 경계값 실요청 1건, 원복 없�
 | 문항 | 주입 | 사용자 증상 | 근거 시그널 | RCA 점수 (평균±편차) | 발견된 계측 구멍 → 보강 커밋 |
 |---|---|---|---|---|---|
 | CH-1 | Mongo `docker stop` ×4회 (최장 4분 59초) | 댓글은 200, 알림만 지연(24.7s~3분 36초) — 유실 0 | 재시도 30.0s×4 트레이스 → DLQ 로그 → `mongodb_up=0` | 정식 채점 전 (블라인드 조사 2회는 [RESULTS.md](RESULTS.md) AE-01·AE-02) | 예외 삼킴 → `5eecb0a` / Mongo 트레이싱 → `cdca2a5` / 잔여는 RESULTS 표 |
-| IN-2 | Kafka `docker stop` 1회 (5분 17초) | 없음 — API 전부 200, 알림 1건 조용히 영구 유실 | `알림 발행 실패` ERROR(+traceId) → 60,060ms error span → `kafka_brokers` 부재. chat은 침묵 | 미실시 | chat dev 프로필·absent 알람·소비자 침묵 — 미수정 ([RESULTS.md](RESULTS.md) IN-2 표) |
+| IN-2 | Kafka `docker stop` 1회 (5분 17초) | 없음 — API 전부 200, 알림 1건 조용히 영구 유실 | `알림 발행 실패` ERROR(+traceId) → 60,060ms error span → `kafka_brokers` 부재. chat은 침묵 | 정식 채점 전 (블라인드 조사 1회는 [RESULTS.md](RESULTS.md) AE-03) | chat dev 프로필·absent 알람·소비자 침묵 — 미수정 ([RESULTS.md](RESULTS.md) IN-2 표) |

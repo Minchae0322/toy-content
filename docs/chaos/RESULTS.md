@@ -113,7 +113,11 @@ Kafka를 5분 17초 내렸더니 — 댓글 API는 끝까지 200이었고 알림
 
 ### AI RCA(rca-agent) 블라인드 조사
 
-미실시 — 증상 창 트리거 traceId(`6a65d0391efd3125490830158dec0de4`) + "왜 알림이 안 왔어?"를 입력으로 CH-1과 같은 프로토콜로 진행 예정. 채점 앵커는 answer.md에 박제됨.
+실시 완료 (2026-07-26, traceId `6a65d039...` + "왜 알림이 안 왔어?", **$0.92 · in 39,202/out 8,266 tok · 123.4s**):
+
+- **정답**: 직접 원인("발행 실패 → chat 미도달") 확정, **유실 판정 정답**("이미 유실, 재시도·아웃박스 없음") — CH-1 회차 3의 유실 오판과 대칭으로, 이번엔 체인의 진짜 끊김이 trace에 있어서 맞혔다. 60,060ms = `max.block.ms` 대조, outbox 권고까지 우리 결론과 일치.
+- **실패**: 하위 원인 1위를 "토픽 부재"로 오선정 (실제 = 2위 "브로커 다운"). `peer.service`의 클러스터 ID(다운 전 캐시)를 "연결 성립" 증거로 오독 + 브로커 측 데이터 전무(`kafka_brokers` 미수집·Loki 셀렉터 결함)가 원인 — **결함 #3(absent 알람)과 같은 뿌리**: 부재 신호를 못 쓴다.
+- 상세: rca-agent `docs/findings/ae-03`, 회차 기록 `docs/in-2/round-1.md`
 
 ### 포트폴리오 포인트
 
@@ -130,6 +134,7 @@ Kafka를 5분 17초 내렸더니 — 댓글 API는 끝까지 200이었고 알림
 | 정답지·채점 앵커·실측 도달 경로 | [scenarios/IN-2/answer.md](scenarios/IN-2/answer.md) |
 | 채록 원본 | `scenarios/IN-2/evidence/` (레포로 회수 완료 — baseline 2회분·symptom·timeline.log) |
 | 증상 트레이스 원본(60,060ms error span) | `scenarios/IN-2/evidence/symptom/20260726T091536Z/trace-symptom-t1.json` |
+| **회차별 상세 기록** (원인 대조·스샷용 traceId·RCA 보고서) | rca-agent `docs/in-2/round-1.md` |
 | 관측성 갭 상세 | [observability.md](../observability/observability.md) 2026-07-26 IN-2 절 |
 
 ---
