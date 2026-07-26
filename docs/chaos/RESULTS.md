@@ -108,7 +108,7 @@ Kafka를 5분 17초 내렸더니 — 댓글 API는 끝까지 200이었고 알림
 | 4 | `알림 발행 실패` ERROR 로그 알람 부재 — 유실이 로그 1줄로만 남는데 아무도 안 깨운다 (CH-1 #6과 같은 계열) | 알림 룰 | 미수정 |
 | 5 | 잠복 위험(이번엔 미발화): max.block 60s 동기 블로킹 × `notificationExecutor`(core 2/max 5/queue 100/**CallerRunsPolicy**) — 브로커 다운 중 지속 발행 시 105건 초과부터 **HTTP 요청 스레드가 60초씩 블로킹**된다. "비동기라 안전"이 포화 시점에 무너지는 구조 | toy-content `AsyncConfig` | 미수정 |
 | 6 | (긍정 판정) 함정 불성립 — 현행 `NotificationEventListener`가 span error + traceId ERROR 로그를 남겨 **계측 자백이 성립**한다. RUNBOOK §6 IN-2의 "sendSafely 예외 삼킴" 우려는 리스너 리팩토링으로 이미 닫혀 있었음 | toy-content | 검증 완료 |
-| 7 | (부수) kafka-exporter가 `kafka_consumergroup_lag`를 이미 노출 중 — **보류 중인 CH-2의 전제(§10 앱 lag 메트릭)를 exporter 게이트로 대체 가능**할 수 있다 | CH-2 문항 설계 | RUNBOOK §10 결정 대기 |
+| 7 | (부수) kafka-exporter가 `kafka_consumergroup_lag`를 이미 노출 중 — **보류 중인 CH-2의 전제(§10 앱 lag 메트릭)를 exporter 게이트로 대체 가능**할 수 있다 | CH-2 문항 설계 | 채택(2026-07-26) — CH-2 게이트를 `notification-processors`/`user.notifications` exporter 쿼리로 교체 |
 | 8 | (부수) infra Mongo 컨테이너 무인증 접근 가능(VPC 내부 한정) — 이번 채록의 ground truth(`user_notifications` 직접 조회)로는 유용했지만 보안 항목 | 인프라 | 미수정 |
 
 ### AI RCA(rca-agent) 블라인드 조사
@@ -141,4 +141,4 @@ Kafka를 5분 17초 내렸더니 — 댓글 API는 끝까지 200이었고 알림
 
 ## CH-2 · AU · IN-1 · IN-3 · AP 계열
 
-미실행. 실행 시 위와 같은 골격(실행 이력 → 실측 확정 → 발견 → RCA 평가 → 포인트)으로 이어서 기록한다. CH-2는 IN-2에서 발견한 exporter lag 메트릭(#7)으로 전제 충족 여부를 먼저 결정한다.
+미실행. 실행 시 위와 같은 골격(실행 이력 → 실측 확정 → 발견 → RCA 평가 → 포인트)으로 이어서 기록한다. CH-2는 exporter lag 메트릭(#7)으로 전제 충족을 확정했다(2026-07-26) — 게이트·런북 쿼리 교체 완료, 실행 가능.
