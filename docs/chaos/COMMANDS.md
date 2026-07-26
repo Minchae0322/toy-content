@@ -78,6 +78,18 @@ sleep 60
 ./chaos.sh AU-1 off         # cpu 원복(AUTH_CPU_NORMAL)
 ```
 
+## AU-4 — auth 다운 + user 캐시 만료 (fallback 실검증, AU-2의 캐시 만료판)
+
+AU-2와 주입은 같지만 **캐시 TTL(10분) 경과까지 유지**해야 content가 auth 직행 → fallback 경로가 열린다. 10분 전엔 캐시 히트라 AU-2와 구별 안 됨.
+
+```bash
+./chaos.sh AU-4 baseline    # 로그인 200 / T2(?size=10) 작성자 실명
+./chaos.sh AU-4 on          # auth deploy replicas=0 (+ 캐시 TTL 10분 안내)
+# 10분+ 대기 — 그동안 T2를 주기적으로 쳐 실명→익명 전환 관측 권장
+./chaos.sh AU-4 symptom     # 로그인 503 / T2 작성자 익명 "사용자N"이면 fallback 정상, 500이면 붕괴
+./chaos.sh AU-4 off         # replicas=1 + 로그인 200 복귀까지 폴링
+```
+
 ## CH-1 — Mongo 다운 → 재시도 → DLQ
 
 ```bash
@@ -146,12 +158,12 @@ sleep 60
 ./chaos.sh AU-3 off         # 백업 apply + restart + T4 200 복귀 폴링 (백업 파일 자동 삭제)
 ```
 
-## CH-2 — 컨슈머 정지 → lag 누적 (전제 충족 시에만)
+## CH-2 — 컨슈머 정지 → lag 누적
 
-전제: chat에 consumer lag 메트릭이 노출돼야 한다(RUNBOOK §10). **미충족이면 `baseline`이 게이트에서 exit 1** — 그게 정상 동작이다.
+전제(lag 메트릭)는 kafka-exporter의 `kafka_consumergroup_lag`로 충족 확인됨(2026-07-26, RUNBOOK §6 CH-2). 게이트가 여전히 지켜준다 — 빈 값이면 `baseline`이 exit 1.
 
 ```bash
-./chaos.sh CH-2 baseline    # lag 메트릭 없으면 여기서 중단됨 = 주입 금지
+./chaos.sh CH-2 baseline    # notif_lag(exporter)·ws_active_users 존재 확인 — 빈 값이면 중단 = 주입 금지
 ./chaos.sh CH-2 on          # chat deploy replicas=0
 ./chaos.sh CH-2 trigger     # 댓글 30건 × 10초 간격 ≈ 5분 (블로킹)
 ./chaos.sh CH-2 symptom     # lag 누적 / active_users 0 / content 트레이스는 무결

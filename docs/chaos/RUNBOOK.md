@@ -194,10 +194,11 @@ curl -s -X POST "$BASE/content/battles/$BATTLE_ID/items/vote" \
 | ID | 시나리오 (정답지) | 주입 | hop | 전제 (§10) |
 |---|---|---|---|---|
 | CH-1 | MongoDB 다운 → chat 컨슈머 실패 → 재시도 3회 → DLQ | `docker stop $MONGO_CT` | 2 | chat Step 0 배포 검증 |
-| CH-2 | chat 다운 → 컨슈머 lag 누적 → 복구 후 알림 몰아서 도착 | `kubectl scale --replicas=0` | 2 | **lag 메트릭 — 미구현 시 보류** |
+| CH-2 | chat 다운 → 컨슈머 lag 누적 → 복구 후 알림 몰아서 도착 | `kubectl scale --replicas=0` | 2 | lag 메트릭 — kafka-exporter로 충족(2026-07-26) |
 | AU-1 | auth CPU 기아 → 응답 지연 → content 캐시 미스 시 fallback | cpu limit 50m patch | 2~3 | (권장) auth JDBC 계측 |
 | AU-2 | auth 완전 다운 → 로그인 502, content는 전부 익명 사용자 | `kubectl scale --replicas=0` | 2 | 없음 |
 | AU-3 | JWT 시크릿 드리프트 → content 전 인증 API 401 (로그인은 성공) | Secret 변경 + restart | 1 | 없음 |
+| AU-4 | auth 다운 + user 캐시 만료 → content 작성자 익명 fallback (500이면 붕괴) | `kubectl scale --replicas=0` + 10분 유지 | 2~3 | user 캐시 TTL 10분 |
 | IN-1 | Redis 다운 → 3개 서비스 동시 이상 | `docker stop $REDIS_CT` | 다중 | 스케줄러 @Observed 보강 |
 | IN-2 | Kafka 다운 → 댓글 성공, 알림 조용히 유실 | `docker stop $KAFKA_CT` | 2 | 없음 |
 | IN-3 | 커넥션 풀 고갈 → pending 적체 → 전면 지연 | k6 + 슬로우 쿼리 | 2 | Alert P0 룰 실구현 |
@@ -248,13 +249,13 @@ $INFRA_SSH "docker start $MONGO_CT" && date -u
 
 정답지: "MongoDB 다운. 컨슈머는 3회 재시도 후 DLQ 적재 — 메시지 유실은 없음."
 
-### CH-2 — 컨슈머 정지 → lag 누적 (전제 미충족 시 보류)
+### CH-2 — 컨슈머 정지 → lag 누적
 
-전제: chat에 컨슈머 lag 메트릭(`kafka_consumer_fetch_manager_records_lag*`)이 노출되어 있어야 한다. 없으면 정답 시그널이 관측 불가 — **§10의 5줄 작업 완료 전에는 실행하지 않는다.** 보류 여부는 아래 ①에서 기계적으로 판정된다.
+전제: 알림 컨슈머의 lag 메트릭이 노출되어 있어야 한다. **충족 확인(2026-07-26)** — kafka-exporter가 `kafka_consumergroup_lag{consumergroup="notification-processors", topic="user.notifications"}`를 이미 노출 중이라(IN-2 발견 #7) §10의 앱 메트릭 작업(MicrometerConsumerListener) 없이 성립한다. 브로커 측 집계라 **컨슈머가 replicas=0인 동안에도 계속 보인다** — 앱 메트릭이었다면 주입 중 메트릭 자체가 사라져 누적 곡선을 못 그렸을 것. 단, 주입 중 이 시계열이 사라지면 그건 exporter가 빈 그룹을 누락하는 것 — 그 자체를 발견으로 기록한다.
 
 ① 정상 측정 (주입 전, ④와 같은 쿼리):
 
-- [ ] PromQL `kafka_consumer_fetch_manager_records_lag_max` — 값이 **존재하고 ≈0**. 빈 값이면 전제 미충족 → 주입 금지(§3.3 게이트).
+- [ ] PromQL `sum(kafka_consumergroup_lag{consumergroup="notification-processors", topic="user.notifications"})` — 값이 **존재하고 ≈0**. 빈 값이면 전제 미충족 → 주입 금지(§3.3 게이트).
 - [ ] PromQL `websocket_active_users` 정상값 기록.
 - [ ] T1 1건 → 알림 도착까지 소요 시간 기록 — 복구 후 "몰아서 도착"과 대조할 기준.
 
@@ -278,7 +279,7 @@ kubectl -n $NS scale deploy/$CHAT_DEPLOY --replicas=1 && kubectl -n $NS rollout 
 ④ 증상 관측 (①과 같은 쿼리):
 
 - PromQL: `websocket_active_users` — ①의 정상값 → 0으로 급락 (주입 직후).
-- PromQL: `kafka_consumer_fetch_manager_records_lag_max` — 누적 증가, 복구 후 해소 곡선.
+- PromQL: `sum(kafka_consumergroup_lag{consumergroup="notification-processors", topic="user.notifications"})` — 누적 증가(트리거 30건 ≈ +30), 복구 후 해소 곡선.
 - content 쪽 트레이스는 **깨끗해야 함** — "발행은 됐는데 소비가 없다"를 lag로 지목하는 것이 채점 포인트.
 - 복구 후: 알림 몰아서 도착 확인.
 
@@ -386,6 +387,33 @@ rm /tmp/content-secret.backup.yaml && date -u
 판정 (① 대비): [ ] 로그인 성공 + content 전 인증 API 401 (T4 200 → 401) [ ] 401 rate ① 기준선 대비 급증 채록 [ ] JwtFilter 로그 채록 [ ] ⑤ 원복 후 T4 200 복귀 (런북 마지막 줄)
 
 정답지: "content의 JWT_SECRET이 auth와 어긋남(config drift). 로그인은 되는데 아무것도 안 되는 상태."
+
+### AU-4 — auth 완전 다운 + user 캐시 만료 (fallback 경로 실검증)
+
+AU-2에서 파생 신설(2026-07-26). AU-2는 user 캐시(TTL 10분) 히트라 content가 실명을 그대로 서빙 — "auth 죽어도 content 무영향"까지만 보이고, **캐시가 없을 때 fallback이 실제로 버티는지**는 검증되지 않는다. AU-4는 캐시를 만료시켜 그 경로를 연다. 주입은 AU-2와 동일(auth `scale 0`), 차이는 **10분+ 유지**와 판정.
+
+전제(§10): user 캐시 TTL = 10분 (`UserCacheStore.DEFAULT_TTL = Duration.ofMinutes(10)`). content fallback 존재 확인됨 (`ExternalUserInfoService.getUserInfo`가 절대 null 반환 안 함 → `createFallbackUserInfo` 익명 "사용자N"). `/feeds/scroll`은 `?size=` 필수 (미지정 시 NPE 500 — content `1e7df3f`로 수정, 그 전 chaos.sh t2가 오염원이었음).
+
+① 정상 측정 (주입 전): [ ] 로그인 200 [ ] T2(`?size=10`) 작성자 실명. ② `evidence/AU-4/baseline/` 저장.
+
+③ 주입 → 10분+ 대기 → ④ 채록 → ⑤ 원복:
+
+```bash
+# 주입 — master 셸
+date -u && kubectl -n $NS scale deploy/$AUTH_DEPLOY --replicas=0
+# 캐시 만료 대기 — 10분+ (그 전엔 캐시 히트라 AU-2와 구별 안 됨). 대기 중 주기적으로 T2를 쳐 실명→익명 전환 시점 관측 권장
+curl -s "$BASE/content/feeds/scroll?size=10" | jq '.data.content[].userInfo.nickname'   # 만료 전: 실명 / 만료 후: "사용자N"
+# 트리거 — 아무 셸 (10분 경과 후)
+curl -s -o /dev/null -w '%{http_code}\n' -X POST $BASE/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"'$EMAIL'","password":"'$PASSWORD'"}'        # 기대: 503 (직접 경로)
+curl -s "$BASE/content/feeds/scroll?size=10" | jq '.data.content[].userInfo.nickname'   # 기대: 익명 "사용자N" (fallback 정상) / 500이면 fallback 붕괴
+# 원복 — master 셸
+kubectl -n $NS scale deploy/$AUTH_DEPLOY --replicas=1 && kubectl -n $NS rollout status deploy/$AUTH_DEPLOY && date -u
+```
+
+④ 증상 관측·판정 (① 대비): 로그인 200(①) → 503 / **캐시 만료 후 T2 작성자가 "사용자N" 익명이면 fallback 정상, 500이면 fallback 붕괴(실버그)** / content client span이 3s timeout(`ExternalUserApiClient` `Duration.ofSeconds(3)`) 후 fallback. ⑤ 원복 후 로그인 200 + 작성자 실명 복귀 확인.
+
+정답지: "auth 전면 다운 + user 캐시 만료 → content가 auth 직행 3s timeout 후 익명 fallback으로 저하. 원인은 auth 다운이고, content 500이면 fallback 붕괴(별개)." AU-2와의 구별(캐시 히트 vs 만료)이 채점 포인트.
 
 ### IN-1 — Redis 다운 (다중 서비스 복합, 최고 난도)
 
@@ -591,7 +619,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/content/feeds/$FEED_ID/c
 7. **IN-3** (커넥션 풀) — 부하 필요.
 8. **AP-2** (대용량 업로드) — 대역폭 부하가 있어 부하 문항 옆에. 저트래픽·1회.
 9. **AU-3** (JWT 드리프트) — 전 사용자 영향, **가장 마지막·가장 짧게**.
-10. CH-2는 §10의 lag 메트릭 작업 완료 후에만.
+10. CH-2는 lag 메트릭 전제 충족 확인(2026-07-26, kafka-exporter) — 순서 제약 해제.
 
 ### 7.2 안전 수칙 (문항 실행 전 반드시 확인)
 
@@ -694,13 +722,13 @@ kubectl get deploy,svc -A | grep -E 'content|chat|auth|user'   # 실제 이름·
 
 | 대상 | 작업 | 없으면 성립 안 되는 문항 | 크기 |
 |---|---|---|---|
-| toy-chat | `ConsumerFactory`에 `MicrometerConsumerListener` 등록 → `kafka_consumer_fetch_manager_records_lag*` 노출 + Grafana lag 패널 | CH-2 (lag 시그널) | ~5줄 |
+| toy-chat | ~~`MicrometerConsumerListener` 등록~~ **불요(2026-07-26)** — kafka-exporter의 `kafka_consumergroup_lag`로 대체 | CH-2 (lag 시그널) | 0줄 |
 | toy-content | `FeedTrendingScheduler`·`ProductPopularityScheduler`에 `@Observed` | IN-1 스케줄러 증상 관측 | 2줄 |
 | toy-user | `datasource-micrometer-spring-boot:1.1.1` 추가 (auth는 현재 JDBC span 전무) | AU-1/AU-2 auth 내부 원인 분해 | 의존성 1줄 |
 | 인프라 | infra 노드 docker 컨테이너명·중지/기동 runbook 확인 (mongo/redis/kafka) | CH-1, IN-1, IN-2 주입 수단 | 문서 |
 | 인프라 | Grafana Alert 룰 실구현 (P0 HikariCP → 5xx → P99) | IN-3 알람 발화 채록 | 대시보드 |
 
-exporter(redis/kafka/mongodb-exporter)는 v1에서 불요 — 앱 쪽 시그널만으로 전 문항 정답 도달이 가능하다. 인프라 메트릭이 없어 성립 안 하는 건 CH-2(lag)뿐이고 앱 쪽 5줄로 해결한다.
+exporter(redis/mongodb-exporter)는 v1에서 불요 — 앱 쪽 시그널만으로 정답 도달이 가능하다. 유일한 예외였던 CH-2(lag)는 이미 떠 있는 kafka-exporter가 해결했다(2026-07-26 확인).
 
 ## 11. 주입 방식 결정 근거 — 왜 앱 레벨 카오스를 안 쓰나
 
