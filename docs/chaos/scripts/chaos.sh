@@ -319,10 +319,15 @@ revert_IN_1() {
 
 measure_IN_2() {
   token && t1 "IN2-$PHASE"
+  prom 0 kafka_brokers 'kafka_brokers'    # CH-1의 mongodb_up에 대응 — kafka-exporter가 브로커 다운 시 0 또는 부재
   tempo_search content '{resource.service.name="content-service"}'
   loki_count content_kafka '{service_name="content-service"} |= "Kafka"'
+  loki_count pub_ok   '{service_name="content-service"} |= "알림 발행 성공"'   # KafkaNotificationProducer whenComplete 성공 로그
+  loki_count pub_fail '{service_name="content-service"} |= "알림 발행 실패"'   # 실측(회차 1): send()가 max.block.ms(60s) 동기 블로킹 후 스로우 → T1+60s에 리스너 catch가 찍음
+  loki_count chat_disconnect '{service_name="chat-service"} |~ "Broker may not be available|Connection to node"'   # 실측(회차 1): 항상 0 — chat은 org.apache.kafka=ERROR로 억제(그 0이 곧 발견)
+  notif_inbox
   manual "baseline: producer span이 트레이스 어디에 붙는지 기록 — symptom에서 '사라진 span'을 알아보는 기준"
-  manual "symptom: producer span error 태그 유무 — 아무 데도 안 남으면 계측 구멍 발견(sendSafely)"
+  manual "symptom: 트리거 트레이스에 notification-publish ~60,060ms error span + chat span 전면 부재 확인 (회차 1 실측 — answer.md 도달 경로)"
 }
 inject_IN_2() { infra "docker stop $KAFKA_CT"; }
 revert_IN_2() {
