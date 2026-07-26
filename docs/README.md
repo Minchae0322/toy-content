@@ -34,7 +34,7 @@
 
 ## chaos — 장애 주입 & RCA
 
-[`chaos/README.md`](chaos/README.md)부터. 복붙 실행은 [`chaos/COMMANDS.md`](chaos/COMMANDS.md), 상세 런북은 [`chaos/RUNBOOK.md`](chaos/RUNBOOK.md).
+[`chaos/README.md`](chaos/README.md)부터. 복붙 실행은 [`chaos/COMMANDS.md`](chaos/COMMANDS.md), 상세 런북은 [`chaos/RUNBOOK.md`](chaos/RUNBOOK.md), **문항별 실행 결과·발견·RCA 평가 종합은 [`chaos/RESULTS.md`](chaos/RESULTS.md)**.
 
 ## assets — 이미지
 

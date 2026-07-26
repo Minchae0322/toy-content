@@ -1,0 +1,1 @@
+{"status":"success","data":{"resultType":"vector","result":[{"metric":{"__name__":"kafka_brokers","cluster":"yogurtte-k3s-prod","instance":"infra-server","job":"kafka","k8s_cluster_name":"yogurtte-k3s-prod"},"value":[1785057161.014,"1"]}]}}

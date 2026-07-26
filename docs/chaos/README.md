@@ -8,6 +8,7 @@ AI 기반 RCA(trace·Loki·metrics로 원인 분석)의 품질을 재려면 **�
 
 | 파일 | 용도 |
 |---|---|
+| **[RESULTS.md](RESULTS.md)** | **문항별 실행 결과 종합** — 실측·발견 버그·수정 검증·AI RCA 평가·포트폴리오 포인트. 결과가 궁금하면 여기부터. |
 | **[COMMANDS.md](COMMANDS.md)** | 복붙용 실행 명령 — 문항별 `baseline→on→(trigger)→symptom→off` 시퀀스. **여기서 시작.** |
 | **[RUNBOOK.md](RUNBOOK.md)** | 마스터 런북 — 설계 원칙·실행 위치(§2)·사이클(§3.3)·문항별 상세(§6)·안전(§7)·채점(§8)·전제(§10) |
 | `scripts/chaos.sh` | 사이클 실행기. `./chaos.sh <ID> baseline\|on\|trigger\|symptom\|off\|run` |
@@ -73,4 +74,5 @@ AP 계열은 인프라 무접촉(주입 = 경계값 실요청 1건, 원복 없�
 
 | 문항 | 주입 | 사용자 증상 | 근거 시그널 | RCA 점수 (평균±편차) | 발견된 계측 구멍 → 보강 커밋 |
 |---|---|---|---|---|---|
-| | | | | | |
+| CH-1 | Mongo `docker stop` ×4회 (최장 4분 59초) | 댓글은 200, 알림만 지연(24.7s~3분 36초) — 유실 0 | 재시도 30.0s×4 트레이스 → DLQ 로그 → `mongodb_up=0` | 정식 채점 전 (블라인드 조사 2회는 [RESULTS.md](RESULTS.md) AE-01·AE-02) | 예외 삼킴 → `5eecb0a` / Mongo 트레이싱 → `cdca2a5` / 잔여는 RESULTS 표 |
+| IN-2 | Kafka `docker stop` 1회 (5분 17초) | 없음 — API 전부 200, 알림 1건 조용히 영구 유실 | `알림 발행 실패` ERROR(+traceId) → 60,060ms error span → `kafka_brokers` 부재. chat은 침묵 | 미실시 | chat dev 프로필·absent 알람·소비자 침묵 — 미수정 ([RESULTS.md](RESULTS.md) IN-2 표) |

@@ -17,8 +17,11 @@ Kafka 다운. AFTER_COMMIT 발행이 실패하며 알림만 조용히 유실 —
 `NotificationService.sendSafely`가 예외를 삼켜 **아무 span도 안 남으면** 그 자체가 계측 구멍 발견(§9) → 보강 후 재채록.
 baseline에서 producer span 위치를 먼저 기록해야 "사라진 span"을 알아본다.
 
-1.
-2.
+회차 1 실측(2026-07-26): 예외 삼킴 함정은 **불성립** — 현행 `NotificationEventListener` catch가 span error + traceId 실린 ERROR 로그를 남긴다. 실제 도달 경로는:
+
+1. 트리거 트레이스 안: HTTP POST 54ms **200** 옆에 `notification-publish` **60,060ms STATUS_CODE_ERROR** + `publish user.notifications` 60,049ms ERROR — baseline(16ms OK + chat 소비 체인)과 대조하면 chat 쪽 span 전면 부재.
+2. content 로그: `[Notification] 알림 발행 실패` ERROR 1건(트리거 +60.0s = `max.block.ms`), 원문에 `TimeoutException: Topic user.notifications not present in metadata after 60000 ms` — 재시도·DLQ 로그는 없음(발행측엔 그 경로 자체가 없음) → 유실 확정.
+3. 보조: content producer NetworkClient WARN 스팸(traceId=NONE) / `kafka_brokers` 메트릭 **부재**(0이 아님) / chat 로그는 다운 내내 0건(소비자 침묵).
 
 ## 채점 앵커 (채록 전 박제 — §8.2. 채록 후 수정 금지, 개정은 다음 회차부터)
 
@@ -44,7 +47,7 @@ baseline에서 producer span 위치를 먼저 기록해야 "사라진 span"을 �
 
 ## evidence
 
-- baseline: `evidence/baseline/<ts>/`
-- symptom: `evidence/symptom/<ts>/`
-- 주입 중 유실분(복구 불가) 기록:
-- 발견된 계측 구멍 → 보강 커밋:
+- baseline: `evidence/baseline/20260726T091240Z/`(주입 전) · `evidence/baseline/20260726T092109Z/`(⑤ 복귀 확인 — 같은 쿼리 재실행)
+- symptom: `evidence/symptom/20260726T091536Z/` (`trace-symptom-t1.json` = 60,060ms error span 원본, `loki-fail-lines.json` = ERROR 로그 원문)
+- 주입 중 유실분(복구 불가) 기록: **정확히 1건** — 09:15:36Z 트리거 댓글의 알림. Mongo `user_notifications` 주입 창(09:14:23~09:19:41) 내 문서 0건 + 창 내 `알림 발행 실패` 로그 1건(=트리거분)으로 **실사용자 유실 0건** 교차 확인. 댓글 본문은 MySQL에 정상 저장(200) — 알림만 증발.
+- 발견된 계측 구멍 → 보강 커밋: 회차 1 기준 전부 미수정 — chat 프로덕션 dev 프로필 기동, 소비자 브로커 다운 침묵(`org.apache.kafka=ERROR`), `kafka_brokers` absent 알람 부재, notificationExecutor CallerRunsPolicy 잠복 위험. 상세는 [RESULTS.md](../../RESULTS.md) IN-2 절.

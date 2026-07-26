@@ -6,6 +6,19 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-07-26 — IN-2(Kafka 다운) 주입이 드러낸 관측성 갭: chat dev 프로필·소비자 침묵·absent 메트릭
+
+두 번째 장애 주입 문항 IN-2를 실행하며(경위·실측은 [chaos/RESULTS.md](../chaos/RESULTS.md) IN-2 절) 관측성 쪽 발견만 여기 남긴다.
+
+| 발견 | 내용 | 조치 |
+|---|---|---|
+| **chat 프로덕션이 dev 프로필** | `SPRING_PROFILES_ACTIVE=dev` 실측(pod env). dev의 `org.springframework.data.mongodb: DEBUG`가 켜져 Mongo observability DEBUG 덤프(관측 컨텍스트 전체가 한 줄에 직렬화된 수 KB짜리)가 Loki로 흘러들어온다 — 로그 볼륨 낭비 + 검색 오염. 발견 경위가 역설적: "prod 설정이면 WARN이어야 할 로그가 왜 보이지?"라는 모순에서 출발 | 미수정 — 매니페스트 레포에서 prod로 교정 필요. Free tier 50GB/월 예산에 직결 |
+| **소비자는 브로커 다운에 침묵** | `org.apache.kafka: ERROR`(dev·prod 공통)가 NetworkClient의 "Broker may not be available" WARN을 전부 억제 — Kafka 다운 5분간 chat 로그 0건. 같은 시각 content(producer)는 WARN 스팸 + ERROR 1건으로 요란. 로그 기반 탐지가 발행자 쪽에만 존재한다는 뜻 | 미수정 — 레벨 상향은 스팸이라 오답. 메트릭 알람(아래)이 정공법 |
+| **`kafka_brokers`는 다운 시 0이 아니라 부재** | kafka-exporter가 브로커 연결을 잃으면 값 0을 내보내는 게 아니라 메트릭 자체가 사라진다(장애 창 실측: 쿼리 빈 결과). `kafka_brokers < 1` 류 알람은 영원히 안 울린다 — `absent(kafka_brokers)` 또는 exporter `up` 기반이어야 함. CH-1의 `mongodb_up=0`과 다른 실패 양식이라 알람 설계 시 exporter별 확인 필요 | 미수정 — Critical 알람 4종 백로그에 합류 |
+| (부수) `kafka_consumergroup_lag` 이미 존재 | kafka-exporter가 노출 중임을 이번에 확인 — 백로그의 "Micrometer Kafka binder 활성화 필요"(CH-2 전제) 없이도 exporter 쪽 lag로 CH-2 게이트를 충족할 수 있을 가능성. 앱 메트릭(컨슈머 내부 관점)과 exporter 메트릭(브로커 관점)의 의미 차이는 결정 전에 검토 | RUNBOOK §10 결정 대기 |
+
+---
+
 ## 2026-07-26 — chat 계측 마감: contextProvider 누락·중복 빈·하트비트 노이즈 3종 정리
 
 ### 왜 했나
