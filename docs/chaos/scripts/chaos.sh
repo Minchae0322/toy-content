@@ -9,7 +9,7 @@
 #   ./chaos.sh <문항ID> off        # ⑤ 원복 + 복귀 확인 폴링
 #   ./chaos.sh <문항ID> run        # ①~⑤ 전체 사이클 — 단계마다 확인 프롬프트, Ctrl-C 시 자동 원복(trap)
 #
-# 문항ID: CH-1 CH-2 AU-1 AU-2 AU-3 IN-1 IN-2 IN-3 AP-1 AP-2 AP-3
+# 문항ID: CH-1 CH-2 AU-1 AU-2 AU-3 AU-4 IN-1 IN-2 IN-3 AP-1 AP-2 AP-3
 #   AP 계열: 주입 = 경계값 실요청 1건 (인프라 무접촉, 원복 없음 — RUNBOOK §6 AP 공통)
 # 전제: 같은 디렉토리의 chaos.env (chaos.env.example 참고), jq, kubectl, curl, (k6)
 # 수동으로 남는 것: Tempo 트레이스 모양 판독, 알림 실제 도착 확인, 판정 체크박스, 블라인드 RCA(§8)
@@ -138,9 +138,14 @@ fc() {
 
 # t2 — 피드 스크롤. time_total 출력, 첫 페이지 본문 저장 (작성자 실명/익명 육안 확인용)
 t2() {
-  local t
-  t=$(curl -s -o "$EV/t2-feed.json" -w '%{time_total}' "$BASE/content/feeds/scroll")
-  echo "  T2 피드: time_total ${t}s → $EV/t2-feed.json"
+  local meta
+  # ?size=10 필수 — 미지정 시 FeedService NPE로 500(2026-07-26 실버그, content 1e7df3f로 수정). HTTP코드도 검증(과거 t2는 코드 미확인으로 500을 조용히 통과시킴)
+  meta=$(curl -s -o "$EV/t2-feed.json" -w '%{http_code} %{time_total}s' "$BASE/content/feeds/scroll?size=10")
+  echo "  T2 피드: HTTP $meta → $EV/t2-feed.json"
+  json_or_gate "$EV/t2-feed.json" "T2피드" || return
+  # 작성자 익명 fallback 판별 — auth 다운+캐시미스 시 nickname이 "사용자N"(createFallbackUserInfo). AU-2/AU-4 증상
+  local anon; anon=$(jq -r '[.data.content[]?.userInfo.nickname // empty | select(startswith("사용자"))] | length' "$EV/t2-feed.json" 2>/dev/null)
+  [ -n "$anon" ] && [ "$anon" != "0" ] && note "익명 fallback 작성자 ${anon}명('사용자N') — auth 다운+캐시미스 신호"
 }
 
 # notif_inbox — 수신자(아이템 작성자) 계정 알림함 조회 (CH-1). RECIPIENT_EMAIL 미설정 시 수동 안내
@@ -196,7 +201,8 @@ revert_CH_1() {
 # ── CH-2: 컨슈머 정지 → lag 누적 ─────────────────────────────────────────
 
 measure_CH_2() {
-  prom 1 lag_max         'kafka_consumer_fetch_manager_records_lag_max'
+  # lag는 kafka-exporter(브로커 측) 메트릭 — 컨슈머가 replicas=0이어도 계속 노출된다 (§10 앱 메트릭 전제를 이걸로 대체)
+  prom 1 notif_lag       'sum(kafka_consumergroup_lag{consumergroup="notification-processors", topic="user.notifications"})'
   prom 1 ws_active_users 'websocket_active_users'
   token && t1 "CH2-$PHASE"
   manual "알림 도착까지 소요 시간 기록 — 복구 후 '몰아서 도착'과 대조"
@@ -254,9 +260,10 @@ revert_AU_1() {
 
 measure_AU_2() {
   local code; code=$(http_code -X POST "$BASE/auth/login" -H 'Content-Type: application/json' -d "$LOGIN_JSON")
-  echo "  로그인: HTTP $code (baseline 기대 200 / symptom 기대 502)"
+  echo "  로그인(직접 auth): HTTP $code (baseline 200 / symptom 503 — ingress에 ready 엔드포인트 없음)"
   t2
-  manual "symptom: content client span이 3s timeout이 아니라 connection refused 즉시 실패 — AU-1과 구별"
+  manual "핵심 판정: 직접 경로(login)만 죽고 content 피드는 200 유지(캐시)여야 정상 — content는 auth와 decoupling"
+  manual "symptom: content client span이 3s timeout이 아니라 connection refused 즉시 실패 — AU-1과 구별. 캐시 만료 상황은 AU-4"
 }
 inject_AU_2() {
   kubectl -n "$NS" scale deploy/"$AUTH_DEPLOY" --replicas=0
@@ -293,6 +300,31 @@ revert_AU_3() {
   kubectl -n "$NS" rollout status deploy/"$CONTENT_DEPLOY"
   rm -f "$AU3_BK" && log "시크릿 백업 삭제"
   poll "T4 200 복귀" 24 5 t4_ok
+}
+
+# ── AU-4: auth 다운 + user 캐시 만료 (fallback 경로 실검증) ──────────────
+# AU-2는 캐시 히트라 content 무영향(실명 유지). AU-4는 캐시 TTL(10분) 경과 후 채록 —
+# content가 auth 직행 → 3s timeout → createFallbackUserInfo(익명 "사용자N")로 저하되는지,
+# 아니면 무너지는지(500)를 본다. 주입은 AU-2와 동일(auth scale 0), 차이는 대기 시간과 판정.
+
+measure_AU_4() {
+  local code; code=$(http_code -X POST "$BASE/auth/login" -H 'Content-Type: application/json' -d "$LOGIN_JSON")
+  echo "  로그인(직접 auth): HTTP $code (baseline 200 / symptom 503)"
+  t2   # ?size=10 — 작성자 실명(캐시 히트)/익명 '사용자N'(캐시 만료+auth 다운) 판별
+  loki_count user_fallback '{service_name="content-service"} |~ "대체 사용자|fallback|Fallback"'
+  prom 0 user_client_p99 'histogram_quantile(0.99, sum by (le) (rate(http_client_requests_seconds_bucket{application="content-service"}[5m])))'
+  manual "핵심 판정: 캐시 만료(주입 10분+ 경과) 후 T2 작성자가 익명 '사용자N'이면 fallback 정상 / 500·에러면 fallback 붕괴(실버그)"
+  manual "AU-2와 차이: AU-2=캐시 히트로 실명 유지(무영향), AU-4=캐시 만료로 fallback 경로 실검증. 3s timeout(ExternalUserApiClient) 후에야 fallback"
+}
+inject_AU_4() {
+  kubectl -n "$NS" scale deploy/"$AUTH_DEPLOY" --replicas=0
+  note "user 캐시 TTL 10분(UserCacheStore.DEFAULT_TTL) — symptom 채록은 주입 후 10분+ 대기 필수"
+  note "10분 전에는 캐시 히트라 AU-2와 구별 안 됨. 그동안 T2를 주기적으로 쳐 캐시 만료 시점 전환을 관측 권장"
+}
+revert_AU_4() {
+  kubectl -n "$NS" scale deploy/"$AUTH_DEPLOY" --replicas=1
+  kubectl -n "$NS" rollout status deploy/"$AUTH_DEPLOY"
+  poll "로그인 200 복귀" 24 5 login_ok
 }
 
 # ── IN-1: Redis 다운 (다중 서비스 복합) ──────────────────────────────────
@@ -498,7 +530,7 @@ do_run() {
 usage() { sed -n '2,14p' "$0"; }
 
 case "$ID" in
-  CH-1|CH-2|AU-1|AU-2|AU-3|IN-1|IN-2|IN-3|AP-1|AP-2|AP-3) ;;
+  CH-1|CH-2|AU-1|AU-2|AU-3|AU-4|IN-1|IN-2|IN-3|AP-1|AP-2|AP-3) ;;
   *) usage; exit 1 ;;
 esac
 

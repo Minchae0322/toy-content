@@ -6,6 +6,34 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-07-26 — AU-2 주입이 낚은 잠복 실버그: /feeds/scroll size 미지정 500(NPE) + 측정 도구 오염
+
+### 왜 했나
+
+AU-2(auth 완전 다운) 주입 중 content 피드가 익명 fallback이 아니라 HTTP 500을 반환했다. 처음엔 "auth 다운 → 피드 500"으로 귀인했으나(그리고 rca-agent도 반대로 "content 문제, auth 아님"으로 판정), auth 복구 후에도 500이 재현돼 **auth와 무관한 content 자체 버그**로 확정. content pod 로그의 스택트레이스가 정확히 가리켰다.
+
+### 무엇을 했나 (수정)
+
+| 영역 | 변경 |
+|---|---|
+| **toy-content `FeedCondition.Search.size`** | 기본값 없어 `?size=` 미지정 시 null → `FeedService.getFeedsWithCursor:77`에서 null 언박싱 → NPE → 500. 형제 `Following.size(=20)`와 동일하게 기본값 20 부여 (`1e7df3f`) |
+| **toy-content `FeedService.getFeedsWithCursor`** | 실패 지점에 방어 코드 — `getSize() != null ? getSize() : 20` (프로그래매틱 호출 경로까지 이중 차단) |
+| **chaos.sh `t2()`** | `/feeds/scroll` → `?size=10` + HTTP 코드 검증(`json_or_gate`) + 작성자 익명 판별. 기존 t2는 size 없이 호출하고 코드도 안 봐서 **CH-1·CH-2·IN-2 실험 내내 이 500을 조용히 통과**시켰다 — AU-2 증상 trace로 이 500이 뽑혀 나온 오염원 |
+| **chaos.sh `measure_AU_2`** | 판정 정정 — "content 피드는 200 유지(캐시 decoupling)여야 정상, 직접 경로(login)만 죽음". 500이면 별개 버그 |
+
+### 왜 중요한가
+
+- `/feeds/scroll`은 `isOptionalAuthPath` 공개 경로 — **비로그인 첫 진입에서 size 없이 부르면 500**. 실사용자 피해 가능. AP-1(댓글 길이 검증 부재)와 같은 "입력 방어 구멍" 계열.
+- 측정 도구가 성공 여부를 안 보면(HTTP 코드 미검증) 결함이 "정상"으로 위장된다 — CDN 404→SPA 200 마스킹(07-25)과 같은 교훈의 반복. 게이트(코드/JSON 검증)가 왜 필수인지.
+
+### 다음 단계
+
+- [ ] AU-4 신설(auth 다운 + 캐시 만료) — AU-2는 캐시 히트라 fallback 미검증. `scenarios/AU-4/answer.md` 참조. 첫 회차 대기
+- [ ] `FeedCondition.Search`에 size 상한(예: max 100) 검토 — 현재 상한 없음(과대 요청 방어)
+- [ ] AU-2 재실험 — 정정된 프로브(login 직접 + t2 size=10)로. 이번 회차는 오염되어 무효
+
+---
+
 ## 2026-07-26 — IN-2(Kafka 다운) 주입이 드러낸 관측성 갭: chat dev 프로필·소비자 침묵·absent 메트릭
 
 두 번째 장애 주입 문항 IN-2를 실행하며(경위·실측은 [chaos/RESULTS.md](../chaos/RESULTS.md) IN-2 절) 관측성 쪽 발견만 여기 남긴다.
