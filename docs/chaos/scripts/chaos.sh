@@ -425,67 +425,107 @@ revert_AP_1() {
   manual "테스트 댓글(chaos-AP1-*) 정리 여부 결정"
 }
 
-# ── AP-2: 대용량 업로드 → 실패 계층 판별 ─────────────────────────────────
-
-AP2_FILE=/tmp/chaos-ap2.bin
+# ── AP-2: 팔로우 목록 size 미기본값 → size+1 언박싱 NPE → 500 ──────────────
 
 measure_AP_2() {
   token || { GATE_FAIL=1; return; }
-  head -c 1024 /dev/urandom > /tmp/chaos-ap2-small.bin
-  local out="$EV/upload-small.json" code
-  code=$(curl -s -o "$out" -w '%{http_code}' -X POST "$BASE/content/attachment-file/upload" \
-    -H "Authorization: Bearer $TOKEN" -F "file=@/tmp/chaos-ap2-small.bin")
-  echo "  1KB 업로드: HTTP $code → $out"
-  rm -f /tmp/chaos-ap2-small.bin
+  # 정상 요청: size 명시 → 200 기대 (게이트). size 생략만 500이어야 문항 성립
+  local out="$EV/following-size20.json" code
+  code=$(curl -s -o "$out" -w '%{http_code}' \
+    "$BASE/auth/user/1/following?size=20" -H "Authorization: Bearer $TOKEN")
+  echo "  following?size=20: HTTP $code → $out"
   if [ "$PHASE" = baseline ] && [ "$code" != 200 ]; then
-    echo "  [GATE] 정상 업로드가 HTTP $code — 잠복 버그(FileService 경로 구분자 하드코딩) 실증 가능성. 실버그로 기록 후 중단(§3.3)"; GATE_FAIL=1
+    echo "  [GATE] size 명시 정상 요청이 HTTP $code — 전제(사용자/토큰/서비스) 규명 필요, 주입 금지(§3.3)"; GATE_FAIL=1
   fi
-  loki_count maxupload '{service_name="content-service"} |= "MaxUploadSizeExceededException"'
-  prom 0 rate500 'sum(rate(http_server_requests_seconds_count{application="content-service", status="500"}[5m]))'
-  manual "성공 업로드분(200)의 fileId 기록 — 서버 저장 파일이 정리 대상"
+  loki_count follow-npe '{service_name="auth-service"} |= "NullPointerException"'
+  prom 0 rate500 'sum(rate(http_server_requests_seconds_count{application="auth-service", status="500"}[5m]))'
+  tempo_search auth-error '{resource.service.name="auth-service" && status=error}'
 }
 inject_AP_2() {
   token || return 1
-  local mb="${AP2_MB:-2}" out="$EV/upload-big.txt" code
-  log "${mb}MB 파일 생성 → 업로드 (AP2_MB로 조절: 통과하면 올려서 재시도)"
-  dd if=/dev/zero of="$AP2_FILE" bs=1M count="$mb" status=none
-  code=$(curl -s -o "$out" -w '%{http_code}' -X POST "$BASE/content/attachment-file/upload" \
-    -H "Authorization: Bearer $TOKEN" -F "file=@$AP2_FILE")
-  echo "  ${mb}MB 업로드: HTTP $code — 응답 본문: $out"
-  rm -f "$AP2_FILE"
-  note "판별: 413+HTML+앱시그널 없음=ingress / 500+JSON=multipart 미매핑 / 200=한도까지 통과(AP2_MB 올려 재시도)"
+  log "size 파라미터 생략 GET 2건 — 선택 파라미터 미기본값 → limit()의 size+1 언박싱 NPE 발화"
+  local ep out code
+  for ep in following followers; do
+    out="$EV/follow-$ep.json"
+    code=$(curl -s -o "$out" -w '%{http_code}' \
+      "$BASE/auth/user/1/$ep" -H "Authorization: Bearer $TOKEN")
+    echo "  GET user/1/$ep (size 생략): HTTP $code — 기대 500, 본문: $out"
+  done
+  note "판별: 500+NPE(FollowCondition.limit)+DB span 없음=코드 언박싱 / size=20이면 200 공존=전면장애 아님 / DB 오귀인 금지"
 }
 revert_AP_2() {
-  rm -f "$AP2_FILE" /tmp/chaos-ap2-small.bin
-  log "원복: 로컬 임시 파일 삭제 — 서버에 200으로 올라간 파일은 수동 정리(answer.md 기록)"
+  log "원복 없음 — GET 실패는 상태 무변화. size=20 정상 200 재확인만."
 }
 
-# ── AP-3: 이모지 댓글 → charset 불일치 (조건부) ──────────────────────────
+# ── AP-3: 중복 해시태그 → uk_feed_hashtag 유니크 위반 → 500 ──────────────
+#   (구 이모지 charset 문항 대체 — 2026-07-28. RUNBOOK §6 AP-3 참조)
 
-EMOJI4=$'\U0001F600\U0001F389'   # 4바이트 문자 2개 (😀🎉)
+# feed_create <태그> <hashtags_json> — 첨부 업로드 → 카테고리 → 피드 생성 1건. CF_CODE 설정, 본문 $EV 저장.
+#   FEED_ID 불필요(피드를 새로 만든다). hashtags_json은 JSON 배열 문자열: 게이트 '["chaosok"]' / 주입 '["coffee","COFFEE"]'.
+#   업로드→피드 순서·필드는 rca-agent scripts/api-write-flow.sh와 동일.
+FEED_IMG=""
+feed_create() {
+  local tag="$1" hashtags="$2" out="$EV/cf-$1.json" up="$EV/cf-upload-$1.json" cat="$EV/cf-categories.json"
+  local fid stored origin sub body
+  # 0) 1x1 PNG 준비 (최초 1회)
+  if [ -z "$FEED_IMG" ]; then
+    FEED_IMG="$EV/ap3-1x1.png"
+    base64 -d > "$FEED_IMG" <<<'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+  fi
+  # 1) 첨부 업로드
+  curl -s -o "$up" -X POST "$BASE/auth/files/upload" \
+    -H "Authorization: Bearer $TOKEN" \
+    -F "file=@$FEED_IMG" -F "fileExplain=chaos-AP3-$tag" >/dev/null
+  json_or_gate "$up" "업로드" || { CF_CODE=000; return; }
+  fid=$(jq -r '.data.id // .id // empty' "$up")
+  stored=$(jq -r '.data.fileUrl // .fileUrl // empty' "$up")
+  origin=$(jq -r '.data.orgFileNm // .orgFileNm // "chaos.png"' "$up")
+  [ -n "$fid" ] && [ -n "$stored" ] || { echo "  [GATE] 업로드 응답에 fileId/fileUrl 없음 → 주입 금지"; [ "$PHASE" = baseline ] && GATE_FAIL=1; CF_CODE=000; return; }
+  # 2) 서브카테고리 (실패 시 SUB_ID 또는 1)
+  curl -s -o "$cat" "$BASE/content/categories" -H "Authorization: Bearer $TOKEN" >/dev/null
+  sub=$(jq -r '[.. | objects | .categoryId?] | map(select(. != null)) | .[0] // empty' "$cat" 2>/dev/null)
+  [ -n "$sub" ] || sub="${SUB_ID:-1}"
+  # 3) 피드 생성 (hashtags만 문항 변수)
+  body=$(jq -cn --argjson uid "${USER_ID:-1}" --argjson sub "$sub" \
+    --argjson fid "$fid" --arg stored "$stored" --arg origin "$origin" \
+    --argjson hashtags "$hashtags" --arg mark "chaos-AP3-$tag-$(date -u +%H%M%S)" '
+    { userId:$uid, productId:null, productNameCustom:$mark, subCategoryId:$sub,
+      review:$mark, buyPlace:"chaos", buyPrice:null, price:null, evaluation:"GOOD",
+      thumbnailAttachmentInfo:{fileId:$fid, storedPath:$stored, originName:$origin},
+      attachmentFileInfos:[{fileId:$fid, storedPath:$stored, originName:$origin}],
+      hashtags:$hashtags }')
+  CF_CODE=$(curl -s -o "$out" -w '%{http_code}' \
+    -X POST "$BASE/content/feeds" \
+    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$body")
+  echo "  피드 생성($tag, hashtags=$hashtags): HTTP $CF_CODE $(jq -r '.message // empty' "$out" 2>/dev/null)"
+}
 
 measure_AP_3() {
-  feed_id_set || return
   token || { GATE_FAIL=1; return; }
-  fc "AP3-$PHASE-ascii" "chaos-AP3-ok-$(date -u +%H%M%S)"
-  if [ "$PHASE" = baseline ] && [ "$FC_CODE" != 200 ]; then
-    echo "  [GATE] ASCII 댓글이 HTTP $FC_CODE — 주입 금지(§3.3)"; GATE_FAIL=1
+  # 게이트: 중복 없는 해시태그로 정상 피드 생성 → 200이어야 성립 (업로드·카테고리·토큰 규명 겸용)
+  feed_create "$PHASE-ok" '["chaosok"]'
+  if [ "$PHASE" = baseline ] && [ "$CF_CODE" != 200 ]; then
+    echo "  [GATE] 정상 피드 생성이 HTTP $CF_CODE — 업로드/카테고리/토큰부터 규명 → 주입 금지(§3.3)"; GATE_FAIL=1
   fi
-  loki_count charset '{service_name="content-service"} |= "Incorrect string value"'
+  loki_count duplicate  '{service_name="content-service"} |= "Duplicate entry"'
+  loki_count integrity  '{service_name="content-service"} |= "DataIntegrityViolationException"'
+  prom 0 rate500 'sum(rate(http_server_requests_seconds_count{application="content-service", status="500"}[5m]))'
   tempo_search content-error '{resource.service.name="content-service" && status=error}'
+  manual "symptom: 피드 생성 INSERT span error 태그 — Duplicate entry '<feedId>-<hashtagId>' for key 'tb_feed_hashtags.uk_feed_hashtag' (Tempo 판독)"
 }
 inject_AP_3() {
   token || return 1
-  fc "AP3-emoji" "chaos-AP3-$(date -u +%H%M%S)-$EMOJI4"
-  if [ "$FC_CODE" = 200 ]; then
-    log "200 — 테이블 charset utf8mb4 확인: 문항 불성립. 그 자체를 answer.md에 기록하고 종료"
+  log "정규화 충돌 해시태그(coffee/COFFEE) 피드 생성 1건 — dedup 부재로 uk_feed_hashtag 유니크 위반 발화"
+  feed_create "dup" '["coffee","COFFEE"]'
+  if [ "$CF_CODE" = 200 ]; then
+    log "200 — dedup이 이미 추가됐거나 제약 소멸: 문항 불성립. answer.md에 기록하고 종료"
   else
-    note "HTTP $FC_CODE — 증상 채록 진행 (기대 로그: Incorrect string value)"
+    note "HTTP $CF_CODE — 증상 채록 진행 (기대: Duplicate entry '<feedId>-<hashtagId>' for key 'tb_feed_hashtags.uk_feed_hashtag')"
   fi
 }
 revert_AP_3() {
-  log "원복 없음 — 실패 시 롤백, 성공(불성립) 시 테스트 댓글만 남음"
-  manual "테스트 댓글(chaos-AP3-*) 정리 여부 결정"
+  log "원복 없음 — 실패 INSERT는 롤백. 게이트의 정상 피드(chaos-AP3-*-ok)만 남음"
+  manual "테스트 피드(chaos-AP3-*) 정리 여부 결정"
 }
 
 # ── run: ①~⑤ 전체 사이클 ────────────────────────────────────────────────

@@ -50,7 +50,7 @@ PASSWORD=<비밀번호>
 # ── 대상 콘텐츠 (§3에서 선정)
 BATTLE_ID=
 ITEM_ID=
-FEED_ID=                          # AP-1·AP-3 댓글 대상 (내가 만든 테스트 피드 권장)
+FEED_ID=                          # AP-1 댓글 대상 (내가 만든 테스트 피드 권장). AP-3는 피드 생성 문항이라 FEED_ID 불필요
 ```
 
 ## 2. 실행 위치 · 측정 지점 · 원복 원칙
@@ -204,8 +204,8 @@ curl -s -X POST "$BASE/content/battles/$BATTLE_ID/items/vote" \
 | IN-3 | 커넥션 풀 고갈 → pending 적체 → 전면 지연 | k6 + 슬로우 쿼리 | 2 | Alert P0 룰 실구현 |
 | IN-4 | Pod OOMKilled (보류) | heap 부하 | 2 | kube-state-metrics 활성화 전까지 보류 |
 | AP-1 | 댓글 DTO @Size 부재 → 201자가 varchar(200) 위반 → 500 | 250자 실요청 | 1 | FEED_ID(§3.2) |
-| AP-2 | 대용량 업로드 실패 — 계층 판별(ingress / multipart / 앱 미매핑) | 대용량 실요청 | 1~2 | 없음 |
-| AP-3 | 4바이트 이모지 → charset 불일치 시 Incorrect string value | 이모지 실요청 | 1 | FEED_ID — 조건부(불성립 가능) |
+| AP-2 | 팔로우 목록 `size` 선택 파라미터 미기본값 → `size+1` 언박싱 NPE → 500 (read-path, DB 미진입) | size 생략 GET 2건 | 1 | 없음 |
+| AP-3 | 중복 해시태그 dedup 부재 → uk_feed_hashtag 유니크 위반 → 500 (구 이모지 charset 문항 대체) | 정규화 충돌 해시태그 피드 생성 1건 | 1 | 첨부 업로드 1건(썸네일) |
 
 각 문항이 **무엇을 확인하려는 문항인지**(변별 포인트·함정·대비쌍) 한 표 요약은 [README의 "문항 설계 의도"](README.md#문항-설계-의도--무엇을-확인하려-했나) 참조.
 
@@ -546,7 +546,7 @@ AP 문항의 주입은 docker stop이 아니라 **경계값 실요청 1건**이�
 
 - 원복이 없다 — 실패 요청은 트랜잭션 롤백으로 상태 무변화. `off`는 정상 요청 복귀 확인(+테스트 데이터 정리 메모)만 한다.
 - **채록 → 블라인드 채점 → 보강 커밋 순서 엄수.** 결함을 먼저 고치면 문항이 소멸한다. 보강 커밋(@Size 추가·예외 매핑·업로드 검증)이 이 계열의 최종 산출물 — §9 "Then의 실패가 곧 성과"와 같은 서사.
-- 전제: §3.2에서 `FEED_ID` 선정(AP-1·AP-3 댓글 대상 — 내가 만든 테스트 피드 권장).
+- 전제: §3.2에서 `FEED_ID` 선정(AP-1 댓글 대상 — 내가 만든 테스트 피드 권장). AP-3는 피드를 새로 생성하는 문항이라 FEED_ID 대신 첨부 업로드 1건이 전제다.
 
 ### AP-1 — 댓글 201자: DTO 검증 구멍 → varchar(200) 위반 → 500
 
@@ -583,60 +583,76 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/content/feeds/$FEED_ID/c
 
 오귀인 함정: 로그의 SQL 예외만 보고 "DB 장애"로 지목하면 감점 — DB는 제약을 정확히 지켰다.
 
-### AP-2 — 첨부 대용량 업로드: 실패 계층 판별 (ingress vs multipart vs 앱)
+### AP-2 — 팔로우 목록: 선택 파라미터 미기본값 → `size+1` 언박싱 NPE → 500 (read-path, DB 미진입)
 
-결함 위치: `spring.servlet.multipart.max-file-size: 1GB`(사실상 무제한) + 앱 레벨 크기·MIME 검증 전무 + `MaxUploadSizeExceededException` 미매핑(413이 아니라 500). 별도 잠복 버그: `FileService.uploadFile`이 경로 구분자 `"\\"`를 하드코딩 — Linux에서 업로드 자체가 깨질 수 있고, 이는 ① 게이트에서 실증된다.
+> 구 AP-2(대용량 업로드)는 폐기했다 — 실제 업로드는 toy-auth의 presigned URL + S3 직접 방식이라
+> content 로컬 업로드는 비대표 경로였고, "대용량이 앱을 통과하며 계층에서 막힌다"는 전제가 실 구조와 안 맞았다.
+> 대신 순회에서 잡힌 자연발생 500(DF-01 #2)을 근인 확정해 문항화한다.
+
+결함 위치(정답지의 근거): `FollowCondition.FollowingSearch`·`FollowerSearch`의 `size`는 `Integer`에 `@Positive @Max(100)`만 있고 **`@NotNull`이 없다**. `@Schema(defaultValue="20")`는 Swagger 문서값일 뿐 실제 바인딩 기본값이 아니다(`FollowCondition.java:19-22`). `?size=` 미지정 → `size=null` → `limit()`의 `return size + 1;`에서 **언박싱 NullPointerException**(`FollowCondition.java:24-25`·`44-45`). 이 NPE는 QueryDSL **쿼리 빌드 단계**(`FollowRepositoryCustomImpl.java:35`·`65`의 `.limit(followingSearch.limit())`)에서 터져 **DB 쿼리 실행 전**에 발생 — SQL 없음. following/followers **양방향 동일 근원**. `@Positive`는 null을 통과시켜 `@Valid`로도 안 막힌다.
 
 ① 정상 측정 (주입 전, ④와 같은 쿼리):
 
-- [ ] 1KB 파일 업로드 → 200 + fileId. **500이면 잠복 버그(경로 구분자) 실증 — 문항 이전에 실버그 발견. answer.md에 기록하고 중단.**
-- [ ] Loki `{service_name="content-service"} |= "MaxUploadSizeExceededException"` 최근 1h = 0건.
+- [ ] `GET /auth/user/1/following?size=20` → **200** (게이트: 실패하면 사용자/토큰/서비스부터 규명, 주입 금지 §3.3). `?size=20`이 200이어야 "size 생략만 500"이 변별된다.
+- [ ] Loki `{service_name="auth-service"} |= "NullPointerException"` 최근 1h 카운트 기록 (주입분 대조용).
+- [ ] auth-service 500 rate PromQL 현재값 기록.
 
 ② 기록: `evidence/AP-2/baseline/`.
 
-③ 주입 — 크기를 단계적으로 올리며 업로드 (2MB → 통과 시 1100MB. 대용량은 대역폭 부하 — 저트래픽·1회만):
+③ 주입 — `size` 생략 GET 2건 (공개 ingress, 원복 없음):
 
 ```bash
-dd if=/dev/zero of=/tmp/chaos-ap2.bin bs=1M count=2      # 통과(200)하면 count를 올려 재시도
-curl -s -o /tmp/chaos-ap2-resp.txt -w '%{http_code}\n' -X POST "$BASE/content/attachment-file/upload" \
-  -H "Authorization: Bearer $TOKEN" -F "file=@/tmp/chaos-ap2.bin"
-cat /tmp/chaos-ap2-resp.txt      # 응답 본문이 nginx HTML인지 앱 JSON인지 = 계층 판별
-rm /tmp/chaos-ap2.bin
+for ep in following followers; do
+  curl -s -o /tmp/chaos-ap2-$ep.json -w "$ep %{http_code}\n" \
+    "$BASE/auth/user/1/$ep" -H "Authorization: Bearer $TOKEN"   # 기대: 500
+done
+cat /tmp/chaos-ap2-following.json      # 응답 본문 = 앱 JSON(500) 확인
+# 원복 없음 — GET 실패는 상태 무변화
 ```
 
-④ 증상 관측 — **어느 계층이 거부했는지가 문항의 전부**:
+④ 증상 관측 (①과 같은 쿼리):
 
 | 관측 | 판정 |
 |---|---|
-| 413 + nginx HTML 본문 + 앱 로그·트레이스 **없음** | ingress body limit — 요청이 앱에 도달하지 않음 |
-| 500 + 앱 JSON + Loki에 MaxUploadSizeExceededException | Spring multipart 한도 + 예외 미매핑 |
-| 200 | 한도까지 전부 통과 — "1GB 무제한"이 실측으로 확인된 것. 그 자체를 기록 |
+| `size` 생략 요청만 500, **`?size=20`은 여전히 200** | 전면 장애 아님 — 요청 내용(파라미터)으로 시선이 감 |
+| Tempo: auth-service error 트레이스에 **DB/SQL span 없음**, error가 쿼리 빌드 직전 | NPE가 DB 진입 전 발생 |
+| (실측 확인 대상) Loki에 NPE 스택 — 최상단 `FollowCondition$…limit()` | 근인이 DTO 접근자임을 자백. **로그가 삼켜지면(GlobalExceptionHandler) 부재 자체를 기록** |
+| following·followers **둘 다 동일 500** | 단일 근원 → 두 증상 |
 
-판정 (① 대비): [ ] 1KB는 200 유지 [ ] 실패 계층 판별 근거(응답 본문 + 앱 시그널 유무) 채록 [ ] ⑤ 성공 업로드분(200) fileId·서버 파일 수동 정리
+판정 (① 대비): [ ] `?size=20` 200 유지 + size 생략만 500 [ ] error 트레이스에 DB span 부재 채록 [ ] NPE 스택/로그 유무 채록 [ ] ⑤ `?size=20` 200 재확인
 
-정답지: "업로드 실패는 계층 문제 — 앱 시그널이 없으면 ingress body limit, 있으면 multipart 한도 + 미매핑 500. 근본 원인은 앱 레벨 크기·타입 검증 부재."
+정답지: "`size`는 선택 파라미터(문서상 기본 20)인데 실제 기본값이 적용되지 않아 미지정 시 null. `FollowCondition.limit()`의 `size+1` 언박싱에서 NPE → 500. **DB 무관** — 쿼리 빌드 단계 코드 결함이고 SQL은 실행되지 않았다. following/followers 양방향 동일 근원."
 
-### AP-3 — 이모지 댓글: charset 불일치 (조건부 — 불성립 판정도 산출물)
+오귀인 함정: auth-service 500 + DB span 부재를 "DB/커넥션 장애"로 지목하면 감점 — DB는 호출조차 되지 않았다. 조치도 "`@Valid` 추가"는 오답(null이 `@Positive` 통과) — 실기본값 적용(`size==null?20:size`)이나 primitive+default가 정답.
 
-결함 후보: `ddl-auto: update`로 테이블 charset이 DB 서버 기본값에 의존한다. utf8(3byte)로 생성됐다면 4바이트 이모지 저장 시 `Incorrect string value` → 500. utf8mb4라면 정상 저장 — **문항 불성립이고, charset이 검증됐다는 그 기록이 산출물**이다.
+### AP-3 — 중복 해시태그: dedup 부재 → uk_feed_hashtag 유니크 위반 → 500
 
-① 정상 측정: [ ] ASCII 댓글 → 200 (게이트) [ ] Loki `{service_name="content-service"} |= "Incorrect string value"` 1h = 0건. ② `evidence/AP-3/baseline/`.
+> **문항 교체 (2026-07-28)**: 구 AP-3(이모지 → charset 불일치)은 2026-07-27 실행에서 이모지 댓글이
+> **200**으로 통과(테이블 utf8mb4)해 **불성립**으로 판정된 degenerate 문항이었다. AP-1의 짝 역할을
+> **실제 재현되는** 중복-해시태그 유니크 위반으로 대체한다. 구 이모지 실행 기록은 서버
+> `~/chaos/scenarios/AP-3/`(불성립)에 보존.
 
-③ 주입 — 이모지 댓글 1건:
+결함: `FeedService.findOrCreateHashtag`가 `name.trim().toLowerCase()`로 정규화 → `coffee`·`COFFEE`가 같은 `Hashtag`를 반환하는데, `createFeed`가 리스트 원소마다 `FeedHashtag`를 dedup 없이 만들어 cascade insert → 같은 `(feed_id, hashtag_id)` 두 행이 `uk_feed_hashtag`(`tb_feed_hashtags`) 위반 → `DataIntegrityViolationException` → 미매핑으로 409 아닌 **500**.
+
+① 정상 측정: [ ] 중복 없는 `hashtags`로 피드 생성 → 200 (게이트) [ ] Loki `{service_name="content-service"} |= "Duplicate entry"` 1h = 0건. ② `evidence/AP-3/baseline/`.
+
+③ 주입 — 정규화 후 중복되는 해시태그를 담은 피드 생성 1건. 첨부 업로드 → 피드 생성 순서는 `rca-agent/scripts/api-write-flow.sh`와 동일(썸네일 `thumbnailAttachmentInfo` 필수). 페이로드의 `hashtags`만 `["coffee","COFFEE"]`로 바꾼다:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/content/feeds/$FEED_ID/comments" \
+# 0) 첨부 1건 업로드 → FILE_ID, STORED 확보 (api-write-flow.sh 1단계와 동일)
+# 1) 피드 생성 — hashtags에 정규화 충돌쌍
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/content/feeds" \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"content":"chaos-AP3-😀🎉"}'
-# 200 → utf8mb4 확인, 문항 불성립 종료 (answer.md에 기록)
-# 500 → 증상 채록 진행
+  -d '{"userId":1,"subCategoryId":'"$SUB_ID"',"productNameCustom":"chaos-AP3","review":"chaos-AP3 중복 해시태그","buyPlace":"chaos","evaluation":"GOOD","thumbnailAttachmentInfo":{"fileId":'"$FILE_ID"',"storedPath":"'"$STORED"'","originName":"chaos.png"},"attachmentFileInfos":[{"fileId":'"$FILE_ID"',"storedPath":"'"$STORED"'","originName":"chaos.png"}],"hashtags":["coffee","COFFEE"]}'
+# 500 → 증상 채록 진행. 실패 INSERT는 롤백(원복 없음)
+# 200 → dedup이 이미 추가됐거나 제약이 사라진 것, 문항 불성립 종료 (answer.md에 기록)
 ```
 
-④ 증상 관측 (500인 경우, ①과 같은 쿼리): Loki `Incorrect string value` — **AP-1과 같은 API·같은 500이지만 로그 지문이 다르다**(길이 vs 인코딩). 이 구별이 채점 포인트.
+④ 증상 관측 (500인 경우): Tempo에서 방금 시각 `http post /feeds` 에러 트레이스 → INSERT `query` span error 태그 = `Duplicate entry '<feedId>-<hashtagId>' for key 'tb_feed_hashtags.uk_feed_hashtag'`. **AP-1과 같은 API·같은 `DataIntegrityViolationException`이지만 지문이 다르다**(길이 초과 vs 유니크 위반). 이 구별이 채점 포인트. 단발 요청이라 traceId를 즉시 `evidence/`에 확보한다.
 
-판정: [ ] ASCII 200 유지 [ ] 이모지 200(불성립 기록) 또는 500 + Incorrect string value 채록 [ ] ⑤ 테스트 댓글 정리 메모
+판정: [ ] 게이트 피드 200 [ ] 중복 요청 500 + `Duplicate entry ... uk_feed_hashtag` 채록(또는 200이면 불성립 기록) [ ] traceId 확보 [ ] ⑤ 게이트 테스트 피드 정리 메모
 
-정답지: "테이블 charset이 utf8(3byte)라 4바이트 문자 저장 불가 — 길이가 아니라 인코딩 문제. 조치는 utf8mb4 마이그레이션."
+정답지: "정규화로 중복된 해시태그가 dedup 없이 같은 (feed, hashtag) 두 행으로 insert돼 uk_feed_hashtag 유니크 제약 위반 — DB가 아니라 앱 dedup 구멍. 조치는 리스트 dedup + DataIntegrityViolation→409 매핑."
 
 ## 7. 실행 순서와 안전
 
@@ -651,7 +667,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$BASE/content/feeds/$FEED_ID/c
 5. **IN-2** (kafka 다운) — 조용한 유실. 유실 허용 범위 사전 결정.
 6. **IN-1** (redis 다운) — 다중 서비스 복합, 최고 난도.
 7. **IN-3** (커넥션 풀) — 부하 필요.
-8. **AP-2** (대용량 업로드) — 대역폭 부하가 있어 부하 문항 옆에. 저트래픽·1회.
+8. **AP-2** (팔로우 목록 NPE) — 인프라 무접촉·단발 GET. AP-1/AP-3과 같은 계열이라 부하 무관, 아무 때나.
 9. **AU-3** (JWT 드리프트) — 전 사용자 영향, **가장 마지막·가장 짧게**.
 10. CH-2는 lag 메트릭 전제 충족 확인(2026-07-26, kafka-exporter) — 순서 제약 해제.
 
