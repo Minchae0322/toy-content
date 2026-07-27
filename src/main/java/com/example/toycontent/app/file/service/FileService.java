@@ -15,7 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.UUID;
 
 @Transactional
@@ -34,15 +33,18 @@ public class FileService {
         }
         String originalFilename = multipartFile.getOriginalFilename();
 
-        Path rootPath = Paths.get(System.getProperty("user.dir"));
         // 작성자가 업로드한 파일명 -> 서버 내부에서 관리하는 파일명
         // 파일명을 중복되지 않게끔 UUID로 정하고 ".확장자"는 그대로
         String storeFilename = UUID.randomUUID() + "." + extractExt(originalFilename);
 
-        // 파일을 저장하는 부분 -> 파일경로 + storeFilename 에 저장
+        // 파일을 저장하는 부분 -> user.dir + uploadPath + storeFilename 에 저장
+        // 다운로드(downloadFileAsBytes)와 동일하게 Path.of 가변인자로 OS 무관하게 경로 구성
+        // (구분자를 "\\"로 하드코딩하면 Linux에서 저장 실패 → 전 업로드 500. NF-12 참조)
+        Path target = Path.of(System.getProperty("user.dir"), uploadPath, storeFilename);
 
         try {
-            multipartFile.transferTo(Path.of(rootPath + "\\" + uploadPath + storeFilename));
+            Files.createDirectories(target.getParent());
+            multipartFile.transferTo(target);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
