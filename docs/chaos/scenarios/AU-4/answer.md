@@ -9,7 +9,9 @@
 
 ## 정답지 (원인 1줄)
 
-auth 전면 다운 상태에서 user 캐시(TTL 10분)까지 만료 → content가 auth 직행 → 3s timeout → `createFallbackUserInfo`(익명 "사용자N")로 저하. **원인은 auth 다운이고, content 500이면 fallback 붕괴(별개 실버그)**.
+auth 전면 다운 상태에서 user 캐시(TTL 10분)까지 만료 → content가 auth 직행 → **Connection refused**(auth Pod 0 → Service Endpoints 부재 → TCP 즉시 거절, ~23.5ms) → `createFallbackUserInfo`(익명 "사용자N")로 저하. **원인은 auth 다운이고, content 500이면 fallback 붕괴(별개 실버그)**.
+
+> **정정 (2026-07-28)**: 구 "3s timeout" → "Connection refused". `Duration.ofSeconds(3)`은 auth Pod가 *살아있으나 무응답*일 때만 발동하는 상한이고, `replicas=0` 주입은 Endpoints가 비어 커넥션이 **즉시 거절**된다(타임아웃 아님). 구 회차 1(07-27 07:00Z)에서 실측·확정된 사실이며(유형 C 앵커 오류 — [AE-06](../../../../../yogurtte-rca-agent/docs/findings/ae-06-rca-v0-au4-blind-eval.md)), 채점 대장 앵커 작성 체크리스트("코드 독해를 실측으로 착각 금지")의 근거가 됐다. 이 정정은 재량이 아니라 인프라 사실이며 에이전트 출력과 무관하다.
 
 ## AU-2와의 구별 (이 문항의 핵심)
 
@@ -24,7 +26,7 @@ auth 전면 다운 상태에서 user 캐시(TTL 10분)까지 만료 → content�
 ## 근거 시그널 도달 경로
 
 채록하며 채운다.
-핵심: T2(`?size=10`) 응답의 작성자 nickname이 "사용자N" 익명인가 — `ExternalUserApiClient` 3s timeout(`Duration.ofSeconds(3)`) 후 `createFallbackUserInfo` 경로. 캐시 만료 전(10분 내)에는 실명이라 AU-2와 구별 안 됨.
+핵심: T2(`?size=10`) 응답의 작성자 nickname이 "사용자N" 익명인가 — `ExternalUserApiClient`가 auth에 **Connection refused**(Endpoints 부재) 후 `createFallbackUserInfo` 경로. (`Duration.ofSeconds(3)` timeout은 Pod가 살아있으나 무응답일 때만 — replicas=0에선 즉시 거절.) 캐시 만료 전(10분 내)에는 실명이라 AU-2와 구별 안 됨.
 
 ## 전제 (§10)
 

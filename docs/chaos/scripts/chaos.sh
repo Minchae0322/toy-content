@@ -126,7 +126,8 @@ t6() {
 
 # fc <태그> <내용> — 피드 댓글 1건 (AP 계열). FC_CODE 설정, 본문은 $EV 저장. 내용은 jq로 안전 인코딩(이모지 포함)
 fc() {
-  local tag="$1" body out="$EV/fc-$tag.json"
+  # local 한 줄 다중 할당은 인자를 전부 먼저 확장한다 — out에 $tag 쓰면 set -u에서 unbound. $1 직접 사용(t1과 동일 패턴)
+  local tag="$1" body out="$EV/fc-$1.json"
   body=$(jq -cn --arg c "$2" '{content:$c}')
   FC_CODE=$(curl -s -o "$out" -w '%{http_code}' \
     -X POST "$BASE/content/feeds/${FEED_ID:-}/comments" \
