@@ -15,6 +15,15 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # LAZY 연관을 IN 절로 묶어 초기화한다 (읽기 N+1 차단).
+        # 아래 jdbc.batch_size는 쓰기(insert/update) 배치라 읽기와 무관하다 - 별개 설정.
+        #
+        # 계기: AU-4 장애 주입 회차 1(2026-07-27)의 트레이스에서 /feeds/scroll이 피드 11건에
+        # 쿼리 23회를 쏘는 것이 관측됐다 - ListView.from이 피드마다 feed.getCategory()(ManyToOne),
+        # feed.getHashtags()(OneToMany)를 개별 초기화했다. 상세는 rca-agent NF-11.
+        # 컬렉션 fetch join은 커서 페이징과 함께 쓰면 메모리 페이징(HHH000104)으로 빠지므로
+        # batch fetch로 해결한다. 쿼리 수는 늘지 않고 줄기만 한다.
+        default_batch_fetch_size: 100
         jdbc:
           batch_size: 50
           order_inserts: true
