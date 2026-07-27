@@ -434,7 +434,18 @@ curl -s "$BASE/content/feeds/scroll?size=10" | jq '.data.content[].userInfo.nick
 kubectl -n $NS scale deploy/$AUTH_DEPLOY --replicas=1 && kubectl -n $NS rollout status deploy/$AUTH_DEPLOY && date -u
 ```
 
-④ 증상 관측·판정 (① 대비): 로그인 200(①) → 503 / **캐시 만료 후 T2 작성자가 "사용자N" 익명이면 fallback 정상, 500이면 fallback 붕괴(실버그)** / content client span이 3s timeout(`ExternalUserApiClient` `Duration.ofSeconds(3)`) 후 fallback. ⑤ 원복 후 로그인 200 + 작성자 실명 복귀 확인.
+④ 증상 관측·판정 (① 대비): 로그인 200(①) → 503 / **캐시 만료 후 T2 작성자가 "사용자N" 익명이면 fallback 정상, 500이면 fallback 붕괴(실버그)** / content client span에 error. ⑤ 원복 후 로그인 200 + 작성자 실명 복귀 확인.
+
+> **회차 1 실측 정정 (2026-07-27)** — 이 절의 원문은 "content client span이 **3s timeout**
+> (`Duration.ofSeconds(3)`) 후 fallback"이었으나 **틀렸다**. 실측은 **23.5ms connection refused**다.
+> `.timeout(3s)`는 *대기 상한*이라 TCP RST로 즉시 거절되면 발동하지 않는다.
+> 3s가 실제로 걸리는 건 auth가 *죽을* 때가 아니라 *느려질* 때(AU-1)다.
+>
+> 함께 정정: 찾을 span 이름은 `GET user-service`가 **아니라 `http get`**이고, 서비스 식별은
+> `client.name=auth-service` 속성에 있다. auth 서버 span은 `http get /external/users`이며
+> **baseline에는 있고 symptom에는 없다** — 이 출현/부재 대조가 이 문항의 핵심 판독이다.
+>
+> 실측 근거와 앵커 v3는 `scenarios/AU-4/answer.md`.
 
 정답지: "auth 전면 다운 + user 캐시 만료 → content가 auth 직행 3s timeout 후 익명 fallback으로 저하. 원인은 auth 다운이고, content 500이면 fallback 붕괴(별개)." AU-2와의 구별(캐시 히트 vs 만료)이 채점 포인트.
 
