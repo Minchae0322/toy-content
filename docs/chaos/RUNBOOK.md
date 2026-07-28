@@ -431,39 +431,82 @@ kubectl -n $NS scale deploy/$AUTH_DEPLOY --replicas=1 && kubectl -n $NS rollout 
 
 ### AU-3 — JWT 시크릿 드리프트 (config drift, 전 사용자 영향 — 가장 마지막에, 가장 짧게)
 
+> **`./chaos.sh AU-3 run`이 아래를 전부 수행한다.** 손으로 돌릴 때만 이 절을 따른다.
+> **2026-07-28 개정** — 트리거 신설(401을 *구간*으로 만듦) · 평시 트래픽 선행(대조군 확보) ·
+> traceparent 확정 채록 · rate lookback `[5m]`→`[1m]` · ④의 trace 서술 정정.
+
 ① 정상 측정 (주입 전, ④와 같은 쿼리):
 
 - [ ] T4 → 200.
 - [ ] ④의 401 rate PromQL 현재값 기록 (평시 401 노이즈 수준 — "급증" 판정의 기준선).
+- [ ] **게이트 ① traceparent 채택 확인** — 직접 넣은 traceId가 Tempo에 잡히는가.
+      안 잡히면 W3C 전파가 아니라는 뜻이고 **조사 입력용 traceId를 확정할 수 없다**.
+- [ ] **게이트 ② 서명 실패 로그 문구 확보** — 서명이 훼손된 토큰으로 1회 호출해 로그를 남긴다.
+      주입 후 문구와 대조해 **만료와 구별되는지** 판정한다. 구별 안 되면 앵커 ⓑ를 요건에서 뺀다.
 
 ② 기록: 위 결과를 `evidence/AU-3/baseline/`에 저장.
 
 ③ 주입 → 트리거 → ⑤ 원복:
 
 ```bash
-# 백업 (평문 시크릿 포함 — 채록 후 즉시 삭제) — master 셸
+# ── 0) 평시 트래픽 (주입 前!) — 조사 창 안에 대조군을 넣기 위함.
+#    rca-agent 수집 창은 조사 트레이스 ±120초다. 주입 후에만 트래픽이 있으면
+#    창 전체가 이미 401이라 "평시 대비 급증"을 볼 수 없다.
+TOKEN=$(curl -s -X POST $BASE/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"'$EMAIL'","password":"'$PASSWORD'"}' | jq -r '.accessToken')
+for i in $(seq 1 60); do
+  TID=$(tr -d - < /proc/sys/kernel/random/uuid)
+  echo "$TID $(curl -s -o /dev/null -w '%{http_code}' -H "traceparent: 00-$TID-${TID:0:16}-01" \
+    -H "Authorization: Bearer $TOKEN" "$BASE/content/feeds/following")"   # 기대: 전부 200
+  sleep 1
+done | tee /tmp/au3-warm.txt
+
+# ── 1) 백업 (평문 시크릿 포함 — 채록 후 즉시 삭제) — master 셸
 kubectl -n $NS get secret content-secret -o yaml > /tmp/content-secret.backup.yaml
-# 주입 — master 셸
+
+# ── 2) 주입 — master 셸
 date -u && kubectl -n $NS patch secret content-secret \
   -p '{"stringData":{"JWT_SECRET":"chaos-au3-drift-value-not-a-real-secret-0000000000"}}'
 kubectl -n $NS rollout restart deploy/$CONTENT_DEPLOY && kubectl -n $NS rollout status deploy/$CONTENT_DEPLOY
-# 트리거 — 아무 셸
+
+# ── 3) 트리거 — 아무 셸. 1회가 아니라 구간으로 쏜다.
+#    요청 1건이면 rate가 스크레이프 한 칸에만 걸려 "급증"이 안 보인다.
 TOKEN=$(curl -s -X POST $BASE/auth/login -H 'Content-Type: application/json' \
   -d '{"email":"'$EMAIL'","password":"'$PASSWORD'"}' | jq -r '.accessToken')   # 로그인은 성공해야 함
-curl -s -o /dev/null -w '%{http_code}\n' "$BASE/content/feeds/following" -H "Authorization: Bearer $TOKEN"  # 기대: 401
-# 원복 — master 셸
+for i in $(seq 1 90); do
+  TID=$(tr -d - < /proc/sys/kernel/random/uuid)
+  echo "$TID $(curl -s -o /dev/null -w '%{http_code}' -H "traceparent: 00-$TID-${TID:0:16}-01" \
+    -H "Authorization: Bearer $TOKEN" "$BASE/content/feeds/following")"   # 기대: 전부 401
+  sleep 1
+done | tee /tmp/au3-fire.txt
+
+# ── 4) 원복 — master 셸
 kubectl -n $NS apply -f /tmp/content-secret.backup.yaml
 kubectl -n $NS rollout restart deploy/$CONTENT_DEPLOY && kubectl -n $NS rollout status deploy/$CONTENT_DEPLOY
 rm /tmp/content-secret.backup.yaml && date -u
 # 정상화 확인: T4가 200으로 복귀
 ```
 
+**조사 입력은 `/tmp/au3-fire.txt`의 중반 traceId를 쓴다** — 그래야 ±120초 창에 평시(warm)와
+장애가 함께 들어온다. **warm 구간에 401이 섞였으면 주입과 트래픽이 겹친 것이므로
+그 회차는 대조군이 오염됐다.**
+
 ④ 증상 관측 (①과 같은 쿼리):
 
-- PromQL (4xx 비율): `sum(rate(http_server_requests_seconds_count{application="content-service", status="401"}[5m]))` — 인증 API 전반 급증.
-- **401은 4xx라 span error 태그가 안 붙는다** — trace로는 못 찾는 문항. 메트릭(401 rate)과 `{service_name="content-service"} |= "JwtFilter"` 로그로 도달해야 한다. trace 의존도가 낮은 문항을 섞는 목적.
+- **Mimir**: `sum(rate(http_server_requests_seconds_count{application="content-service", status="401"}[1m]))` — 인증 API 전반 급증.
+  **lookback을 `[1m]`으로 쓴다** — 수집 창이 ≈4분이라 `[5m]`이면 lookback이 창보다 길어져
+  인접 스텝이 95% 겹치고 곡선이 평평해진다.
+- **Loki**: `{service_name="content-service"} |= "JwtFilter"` — **실패 사유**까지 확인한다
+  (서명/키 불일치 계열인가, 만료 계열인가). 이 구별이 앵커 ⓑ의 핵심이다.
+- **Tempo**: 401 트레이스의 **필터체인 중단 지점** + `secured request`·컨트롤러·DB span **부재**.
 
-판정 (① 대비): [ ] 로그인 성공 + content 전 인증 API 401 (T4 200 → 401) [ ] 401 rate ① 기준선 대비 급증 채록 [ ] JwtFilter 로그 채록 [ ] ⑤ 원복 후 T4 200 복귀 (런북 마지막 줄)
+> **정정 (v2, 2026-07-28)** — 구 서술 *"401은 span error 태그가 안 붙으니 trace로는 못 찾는
+> 문항"*은 **틀렸다.** 자동 탐지(`status=error` 검색)에 안 걸리는 것과 트레이스에 정보가
+> 없는 것은 다르다. 실측상 트레이스에 상태가 속성으로 남고 Spring Security 필터체인 span이
+> 존재하므로, **401이면 체인이 중단되고 하위 span이 사라지는 부재 신호로 도달 가능**하다.
+> 구 서술대로 두면 **채록자가 trace를 안 떠 증거가 유실된다.**
+
+판정 (① 대비): [ ] 로그인 성공 + content 전 인증 API 401 (T4 200 → 401) [ ] 401 rate ① 기준선 대비 급증 채록 [ ] JwtFilter 로그의 **실패 사유** 채록 [ ] 401 트레이스의 **필터체인 중단 지점** 채록 [ ] ⑤ 원복 후 T4 200 복귀 (런북 마지막 줄)
 
 정답지: "content의 JWT_SECRET이 auth와 어긋남(config drift). 로그인은 되는데 아무것도 안 되는 상태."
 

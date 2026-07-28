@@ -333,14 +333,135 @@ revert_AU_2() {
 # ── AU-3: JWT 시크릿 드리프트 ────────────────────────────────────────────
 
 AU3_BK=/tmp/content-secret.backup.yaml
+AU3_WARM_SECONDS="${AU3_WARM_SECONDS:-60}"   # 주입 직전 평시 트래픽 (조사 창 안의 대조군)
+AU3_FIRE_SECONDS="${AU3_FIRE_SECONDS:-90}"   # 주입 후 401 트래픽 (rate 곡선 형성)
+
+# au3_call <traceId> — traceparent를 직접 주입해 traceId를 확정한다.
+# 401은 4xx라 span에 error 태그가 안 붙어 Tempo 기본 검색(status=error)으로 안 잡히고,
+# http_code는 상태 코드만 돌려주므로 traceId를 건질 방법이 달리 없다.
+# 전제: W3C 전파(Spring Boot 3 기본) + sampling.probability=1.0 → measure에서 게이트로 검증한다.
+au3_call() {
+  local tid="$1" sid="${1:0:16}"
+  curl -s -o /dev/null -w '%{http_code}' \
+    -H "traceparent: 00-$tid-$sid-01" \
+    -H "Authorization: Bearer $TOKEN" \
+    "$BASE/content/feeds/following"
+}
+au3_tid() { tr -d - < /proc/sys/kernel/random/uuid; }
+
+# au3_fire <초> <라벨> — 초당 1회 호출하며 traceId와 응답코드를 남긴다.
+# 출력 경로는 EV가 아니라 시나리오 evidence 루트로 고정한다 — warm은 inject 단계,
+# fire는 trigger 단계에서 도는데 그때 EV가 baseline 폴더를 가리키고 있어 오해를 부른다.
+au3_fire() {
+  local secs="$1" label="$2" out="$SCEN_DIR/evidence/au3-traceids-$label-$RUN_TS.txt" i tid code
+  mkdir -p "$(dirname "$out")"
+  : > "$out"
+  AU3_OUT_="$out"
+  for i in $(seq 1 "$secs"); do
+    tid=$(au3_tid); code=$(au3_call "$tid")
+    echo "$(date +%s) $tid $code" >> "$out"
+    sleep 1
+  done
+  echo "  $label: ${secs}건 → $out (응답코드: $(awk '{print $3}' "$out" | sort | uniq -c | tr '\n' ' '))"
+}
+
+# au3_probe_seen — 우리가 보낸 traceId가 로그에 그대로 찍혔는가.
+# 찍혔으면 서버가 W3C traceparent를 join한 것이고, traceId 확정 채록이 성립한다.
+# 응답에는 traceId가 없다(traceparent는 요청 방향 전파 헤더이고 앱이 응답에 넣지 않는다).
+# 로그 패턴에는 있다 — application-prod.yml `pattern.level`의 `traceId=%X{traceId}`.
+au3_probe_seen() {
+  curl -sf -u "$LOKI_USER:$GRAFANA_TOKEN" -G "$LOKI_URL/loki/api/v1/query" \
+    --data-urlencode "query=sum(count_over_time({service_name=\"content-service\"} |= \"$AU3_PROBE_TID\" [15m]))" \
+    | jq -e '((.data.result[0].value[1] // "0") | tonumber) > 0' >/dev/null
+}
+
+# au3_logs_flowing — content 로그가 Loki에 도달하고 있는가.
+# traceparent 실패와 로그 유실은 처방이 다르다. 전자는 대안(로그에서 traceId 추출)이 있고,
+# 후자는 대안이 없다 — traceId를 얻을 경로가 전부 막힌다.
+au3_logs_flowing() {
+  curl -sf -u "$LOKI_USER:$GRAFANA_TOKEN" -G "$LOKI_URL/loki/api/v1/query" \
+    --data-urlencode 'query=sum(count_over_time({service_name="content-service"} [15m]))' \
+    | jq -e '((.data.result[0].value[1] // "0") | tonumber) > 0' >/dev/null
+}
+
+# au3_pick — 조사 입력으로 쓸 traceId를 고른다.
+#
+# 수집 창은 [트레이스 시각 −120초, +120초]다. 창 안에 평시(warm)가 들어와야 앵커 ⓒ의
+# "평시 대비 급증"이 성립하므로, 조건은 warm_end > trace_time − 120 즉
+#   trace_time < warm_end + 120
+# 이다. rollout이 길수록 warm이 뒤로 밀려 이 상한이 낮아진다 —
+# **"fire 중반"은 틀린 지침이다.** 롤아웃이 100초를 넘으면 창에 warm이 아예 안 들어온다.
+au3_pick() {
+  local warm="$1" fire="$2" warm_end fire_start limit pick
+  [ -s "$warm" ] && [ -s "$fire" ] || { note "traceId 파일 없음 — 수동 선택"; return; }
+  warm_end=$(tail -1 "$warm" | awk '{print $1}')
+  fire_start=$(head -1 "$fire" | awk '{print $1}')
+  limit=$((warm_end + 120))
+  echo "  rollout 소요: $((fire_start - warm_end))초 · 평시가 창에 남는 상한: $((limit - fire_start))초(fire 시작 기준)"
+  # 401이면서 상한 안쪽인 것 중 가장 늦은 것 — 401 구간에 충분히 들어가되 warm은 살린다
+  pick=$(awk -v lim="$limit" '$3==401 && $1<lim {t=$2} END{print t}' "$fire")
+  if [ -n "$pick" ]; then
+    echo "  >>> 조사 입력 traceId: $pick"
+    mkdir -p "$SCEN_DIR/evidence"
+    echo "$pick" > "$SCEN_DIR/evidence/au3-investigate-traceid-$RUN_TS.txt"
+  else
+    echo "  [경고] 창에 평시가 남는 401 트레이스가 없다 — rollout이 너무 길었다(>120초)."
+    note "AU3_WARM_SECONDS를 늘리거나, 앵커 ⓒ를 '급증'이 아닌 '401이 전역 발생'으로 낮춰 채점한다"
+    awk '$3==401 {t=$2} END{print "  차선(마지막 401): " t}' "$fire"
+  fi
+}
 
 measure_AU_3() {
   token || return 1
   echo "  T4 인증 API: HTTP $(http_code "$BASE/content/feeds/following" -H "Authorization: Bearer $TOKEN") (baseline 기대 200 / symptom 기대 401)"
-  prom 0 rate401 'sum(rate(http_server_requests_seconds_count{application="content-service", status="401"}[5m]))'
+  # lookback 1m — rca-agent 수집 창이 트레이스 ±120초(≈4분)라 [5m]이면 lookback이 창보다
+  # 길어져 인접 스텝이 95% 겹치고 "급증" 곡선이 평평해진다.
+  prom 0 rate401 'sum(rate(http_server_requests_seconds_count{application="content-service", status="401"}[1m]))'
   loki_count jwtfilter '{service_name="content-service"} |= "JwtFilter"'
+
+  if [ "$PHASE" = baseline ]; then
+    # 게이트 ① — traceparent가 실제로 채택되는가. 안 되면 traceId 확정 채록이 불가하고
+    # 조사 입력(traceId 1개)을 만들 수 없다.
+    local code; AU3_PROBE_TID=$(au3_tid); code=$(au3_call "$AU3_PROBE_TID")
+    echo "  [게이트] traceparent 주입: HTTP $code · traceId=$AU3_PROBE_TID"
+    echo "$AU3_PROBE_TID" > "$EV/au3-probe-traceid.txt"
+    # traceId는 rca-agent의 필수 입력이다(RcaController `@NotBlank traceId`).
+    # 트레이스 본문뿐 아니라 **Loki·Mimir의 조회 시간창**이 여기서 파생되므로
+    # (Collector: TimeWindow.fromTrace → queryRange), 없으면 조사 자체가 성립하지 않는다.
+    if poll "traceparent 채택(로그의 traceId가 우리 값과 일치)" 12 5 au3_probe_seen; then
+      echo "  [게이트] W3C 전파 확인 — traceId 확정 채록 가능"
+    elif au3_logs_flowing; then
+      # 치명적이지 않다 — 로그가 흐르면 fire 이후 로그 줄의 traceId=로 대체 확보가 가능하다.
+      echo "  [경고] traceparent가 채택되지 않았다 — 서버가 자체 traceId를 만든다."
+      echo "         로그는 흐르고 있으므로 대안이 있다: fire 이후 아래 쿼리로 traceId를 뽑는다."
+      note "Grafana Loki: {service_name=\"content-service\"} |= \"JwtFilter\" — 줄의 traceId= 값 사용"
+      note "이 경우 au3_pick의 창 계산이 무의미하니, fire 시작 후 20~30초 지점의 로그 줄을 고를 것"
+      note "전파 형식 확인: management.tracing.propagation.type (기본 W3C). B3면 b3 헤더로 바꾼다"
+    else
+      echo "  [GATE] content 로그가 Loki에 아예 없다 — traceId를 얻을 경로가 전부 막혔다."
+      echo "         traceparent도 로그도 안 되면 조사 입력을 만들 수 없다 → 주입 금지(§3.3)"
+      GATE_FAIL=1
+    fi
+
+    # 게이트 ② — 앵커 ⓑ("실패 사유가 서명/키 불일치")가 성립하는지 주입 전에 확인한다.
+    # 서명이 깨진 토큰은 드리프트와 같은 계열의 검증 실패를 만든다. 여기서 로그 문구를
+    # 확보해 두면 주입 후 문구와 대조할 수 있다.
+    local bad="${TOKEN%?}"
+    if [ "${TOKEN: -1}" = "A" ]; then bad="${bad}B"; else bad="${bad}A"; fi
+    echo "  [게이트] 서명 훼손 토큰: HTTP $(http_code "$BASE/content/feeds/following" -H "Authorization: Bearer $bad") (기대 401)"
+    loki_count jwtfail '{service_name="content-service"} |~ "JwtFilter|signature|Signature|SignatureException|만료|expired|Expired"'
+    manual "위 로그에서 서명 불일치 문구를 기록 — 만료 케이스와 구별되는 문구가 아니면 앵커 ⓑ를 요건에서 뺀다(SoT AU-3/answer.md 체크리스트)"
+  fi
 }
 inject_AU_3() {
+  # 평시 트래픽을 먼저 흘린다 — 이 문항만의 예외적 책임 배치.
+  # rca-agent 수집 창은 조사 대상 트레이스 ±120초다. 주입 후에만 트래픽이 있으면 창 전체가
+  # 이미 401 상태라 앵커 ⓒ("평시 기준선 대비 전역 급증")가 구조적으로 성립하지 않는다.
+  # rollout 중에는 구 파드가 남아 200이 계속 나오므로 여기서 만든 200 구간이 대조군이 된다.
+  token || return 1   # `AU-3 on` 단독 실행 시 $TOKEN이 비어 warm이 전부 401로 오염된다
+  log "평시 트래픽 ${AU3_WARM_SECONDS}초 (조사 창 안의 대조군 확보)"
+  au3_fire "$AU3_WARM_SECONDS" warm
+
   kubectl -n "$NS" get secret "$CONTENT_SECRET" -o yaml > "$AU3_BK"
   grep -q "JWT_SECRET" "$AU3_BK" || { log "[중단] 백업에 JWT_SECRET 없음 — 시크릿 이름 확인"; rm -f "$AU3_BK"; return 1; }
   log "시크릿 백업: $AU3_BK (평문 포함 — 원복 시 자동 삭제)"
@@ -348,6 +469,16 @@ inject_AU_3() {
     -p '{"stringData":{"JWT_SECRET":"chaos-au3-drift-value-not-a-real-secret-0000000000"}}'
   kubectl -n "$NS" rollout restart deploy/"$CONTENT_DEPLOY"
   kubectl -n "$NS" rollout status deploy/"$CONTENT_DEPLOY"
+}
+trigger_AU_3() {
+  # 401을 "1건"이 아니라 "구간"으로 만든다. 요청 1건이면 rate가 스크레이프 한 칸에만 걸려
+  # 앵커 ⓒ의 "급증"을 볼 수 없다.
+  token || return 1   # 로그인은 성공해야 한다 — 이 문항의 핵심(auth는 멀쩡하다)
+  log "인증 API ${AU3_FIRE_SECONDS}초 반복 호출 (401 rate 형성 + traceId 확정 채록)"
+  au3_fire "$AU3_FIRE_SECONDS" fire
+  au3_pick "$SCEN_DIR/evidence/au3-traceids-warm-$RUN_TS.txt" \
+           "$SCEN_DIR/evidence/au3-traceids-fire-$RUN_TS.txt"
+  note "warm 구간에 401이 섞였으면 주입과 트래픽이 겹친 것 — 그 회차는 대조군이 오염됐다"
 }
 revert_AU_3() {
   [ -s "$AU3_BK" ] || { log "[중단] 백업 파일 없음 — 수동 복구 필요: $AU3_BK"; return 1; }
@@ -367,7 +498,11 @@ measure_AU_4() {
   local code; code=$(http_code -X POST "$BASE/auth/login" -H 'Content-Type: application/json' -d "$LOGIN_JSON")
   echo "  로그인(직접 auth): HTTP $code (baseline 200 / symptom 503)"
   t2   # ?size=10 — 작성자 실명(캐시 히트)/익명 '사용자N'(캐시 만료+auth 다운) 판별
-  loki_count user_fallback '{service_name="content-service"} |~ "대체 사용자|fallback|Fallback"'
+  # 실제 메시지에 맞춘 패턴. 구 패턴('대체 사용자|fallback|Fallback')은 코드 문구
+  # (`사용자 목록 조회 실패` / `사용자 정보 조회 실패`)와 달라 AU-4에서 **0건으로 오보고**됐고,
+  # 그 오보고를 "로그가 없다"로 읽은 채 앵커가 작성돼 채점 불가가 났다(결함 ⑩).
+  # A-1(로그 접두사 규약) 적용 후에는 `|= "[user-fallback]"` 한 줄로 대체한다.
+  loki_count user_fallback '{service_name="content-service"} |~ "사용자 (목록|정보) 조회 실패|외부 서비스 (일괄 )?호출 중 예외"'
   prom 0 user_client_p99 'histogram_quantile(0.99, sum by (le) (rate(http_client_requests_seconds_bucket{application="content-service"}[5m])))'
   manual "핵심 판정: 캐시 만료(주입 10분+ 경과) 후 T2 작성자가 익명 '사용자N'이면 fallback 정상 / 500·에러면 fallback 붕괴(실버그)"
   manual "AU-2와 차이: AU-2=캐시 히트로 실명 유지(무영향), AU-4=캐시 만료로 fallback 경로 실검증. 3s timeout(ExternalUserApiClient) 후에야 fallback"
