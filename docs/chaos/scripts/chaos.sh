@@ -8,11 +8,13 @@
 #                                  #   CH-3는 트리거가 자동 원복까지 수행한다 (아래 주석 참조)
 #   ./chaos.sh <문항ID> symptom    # ④ 증상 관측 — baseline과 같은 함수를 재실행 (①=④ 동일 쿼리 보장)
 #   ./chaos.sh <문항ID> off        # ⑤ 원복 + 복귀 확인 폴링
-#   ./chaos.sh <문항ID> run        # ①~⑤ 전체 사이클 — 단계마다 확인 프롬프트, Ctrl-C 시 자동 원복(trap)
+#   ./chaos.sh <문항ID> run        # ①~⑤ 전체 사이클 — **문항별 유지 시간만큼 자동 대기**(무인 실행),
+#                                  #   Ctrl-C 시 자동 원복(trap). CHAOS_CONFIRM=1이면 옛 Enter 확인 방식
 #
 # 문항ID: CH-1 CH-2 CH-3 AU-1 AU-2 AU-3 AU-4 IN-1 IN-2 IN-3 AP-1 AP-2 AP-3
 #   CH-3: Mongo 다운 20s(<30s) — 드라이버 대기 중 복구되어 지연만 남는 갈래. CH3_DOWN_SECONDS로 조절
 #   AP 계열: 주입 = 경계값 실요청 1건 (인프라 무접촉, 원복 없음 — RUNBOOK §6 AP 공통)
+#   유지 시간의 근거·기본값·환경변수는 아래 "문항별 유지 시간" 표 참조
 # 전제: 같은 디렉토리의 chaos.env (chaos.env.example 참고), jq, kubectl, curl, (k6)
 # 수동으로 남는 것: Tempo 트레이스 모양 판독, 알림 실제 도착 확인, 판정 체크박스, 블라인드 RCA(§8)
 
@@ -42,6 +44,111 @@ mark()   { mkdir -p "$(dirname "$TIMELINE")"; echo "$(date -u +%Y-%m-%dT%H:%M:%S
 evdir()  { EV="$SCEN_DIR/evidence/$1/$RUN_TS"; mkdir -p "$EV"; }
 confirm(){ read -rp ">> $1 [Enter=진행 / Ctrl-C=중단] "; }
 infra()  { $INFRA_SSH "$@"; }
+
+# hold <초> <설명> — 무인 대기. 30초마다 남은 시간을 찍고, Ctrl-C는 do_run의 trap이 받아 원복한다.
+# CHAOS_CONFIRM=1이면 대기 대신 Enter 확인(옛 동작) — 대화형으로 돌리고 싶을 때.
+hold() {
+  local s="${1:-0}" msg="$2" left step
+  if [ "${CHAOS_CONFIRM:-0}" = 1 ]; then confirm "$msg"; return 0; fi
+  if [ "$s" -le 0 ]; then note "$msg — 추가 대기 없음(앞 단계가 이미 유지 시간을 소비)"; return 0; fi
+  log "$msg — ${s}초 대기 (Ctrl-C 중단 시 자동 원복)"
+  left="$s"
+  while [ "$left" -gt 0 ]; do
+    step=$(( left > 30 ? 30 : left ))
+    sleep "$step"
+    left=$(( left - step ))
+    [ "$left" -gt 0 ] && note "대기 중… 남은 ${left}s"
+  done
+  log "대기 완료 (${s}s)"
+}
+
+# ── 문항별 유지 시간 ────────────────────────────────────────────────────────
+#
+# HOLD_PRE  = ③ 주입 → ④ 증상 채록 사이 (증상이 발현하고 시그널이 적재될 때까지)
+# HOLD_POST = ④ 증상 채록 → ⑤ 원복 사이 (채록 후에도 전개가 계속되는 문항만)
+#
+# 근거가 되는 실측/설정값 (2026-07-28 코드 확인):
+#   Mongo serverSelectionTimeoutMS ... 드라이버 기본 30s (URI가 $MONGODB_URI 외부 주입이라
+#                                      옵션이 박혀 있으면 달라진다 — CH1_/CH3_ 변수로 덮어쓸 것)
+#   chat 알림 컨슈머 재시도 ......... FixedBackOff(1000ms, 3) = 최초 1회 + 재시도 3회, 사이 1초
+#                                      (KafkaConsumerConfig.notificationListenerFactory)
+#                                      → 각 시도가 Mongo에서 30s 블로킹하므로
+#                                        DLQ 적재까지 ≈ 4×30s + 3×1s = 123s
+#   content 발행 max.block.ms ....... 미설정 → 기본 60s (IN-2 실측 producer span 60,060ms와 일치)
+#   user 캐시 TTL ................... UserCacheStore.DEFAULT_TTL = 10분 (fallback 캐시는 2분)
+#   content→auth 호출 timeout ....... ExternalUserApiClient.TIMEOUT = 3s
+#                                      (replicas=0이면 즉시 Connection refused라 대기와 무관)
+#
+# 전부 환경변수로 덮어쓸 수 있다. 예: CH1_HOLD_POST=300 ./chaos.sh CH-1 run
+hold_pre() {
+  case "$ID" in
+    CH-1) echo "${CH1_HOLD_PRE:-60}"  ;;  # Mongo 다운 성립 + 로그 전송. T1은 ④에서 발사된다
+    CH-2) echo "${CH2_HOLD_PRE:-60}"  ;;  # trigger(30건×10초≈5분)가 유지 시간을 담당하지만, **마지막
+                                          #   댓글분 lag가 스크레이프될 시간**은 따로 필요하다.
+                                          #   대기 중에도 chat은 계속 죽어 있어 lag는 더 쌓인다
+    CH-3) echo "${CH3_HOLD_PRE:-60}"  ;;  # ⚠️ trigger가 자동 원복까지 끝냈어도 **대기는 필요하다.**
+                                          #   이 문항의 유일한 신호는 trigger의 T1이 만든 "지연 트레이스"
+                                          #   (duration>10s)인데, 컨슈머가 끝난 뒤 Tempo에 적재될 때까지
+                                          #   시간이 걸린다. 0이면 measure의 tempo_search가 0건을 반환해
+                                          #   문항의 신호를 통째로 놓친다. 이미 복구된 뒤라 대기가
+                                          #   장애를 연장하지는 않는다
+    AU-1) echo "${AU1_HOLD_PRE:-660}" ;;  # trigger 후 user 캐시 TTL 10분 경과해야 fallback이 보인다
+    AU-2) echo "${AU2_HOLD_PRE:-60}"  ;;  # ⚠️ **반드시 user 캐시 TTL(10분) 안쪽**이어야 한다.
+                                          #   AU-2는 "캐시 히트라 content가 무영향"을 보는 갈래고,
+                                          #   10분을 넘기면 캐시가 만료돼 AU-4(익명 fallback) 갈래가
+                                          #   된다 — 같은 주입(scale 0)에서 유지 시간만으로 갈린다.
+                                          #   do_run이 600 이상이면 거부한다
+    AU-3) echo "${AU3_HOLD_PRE:-60}"  ;;  # inject가 rollout status까지 대기 — 여기선 로그 전송만
+    AU-4) echo "${AU4_HOLD_PRE:-660}" ;;  # 캐시 TTL 10분 만료 + 30초 여유 (RUNBOOK §6 "10분+ 유지")
+    IN-1) echo "${IN1_HOLD_PRE:-180}" ;;  # 캐시 미스 직행 급증·프레즌스 이상 관측용.
+                                          #   핫스코어 스케줄러는 매시 1회라 이 창으로 못 덮는다
+                                          #   (anchors-v2가 IN-1 스케줄러 요건을 뺀 이유 — 유형 B)
+    IN-2) echo "${IN2_HOLD_PRE:-90}"  ;;  # 발행 max.block.ms 60s 초과분 + 로그 전송
+    IN-3) echo "${IN3_HOLD_PRE:-0}"   ;;  # inject(k6)가 부하 종료까지 블로킹
+    AP-1|AP-2|AP-3) echo "${AP_HOLD_PRE:-60}" ;;  # 인프라 무접촉 — 즉발이라 로그 전송 대기만
+    *) echo 60 ;;
+  esac
+}
+# HOLD_POST가 0이 아닌 문항은 **④ 채록 시점에 전개가 아직 안 끝난** 문항이다.
+# T1(트리거)이 ④ measure 안에서 발사되므로, 비동기 전개가 완료되기 전에 원복하면
+# 장애가 성립하지 않은 채 사이클이 끝난다 — 문항 자체가 무효가 되는 조용한 실패다.
+hold_post() {
+  case "$ID" in
+    CH-1) echo "${CH1_HOLD_POST:-240}" ;;  # ④의 T1이 재시도를 소진하고 DLQ에 적재될 때까지.
+                                           #   소요 ≈123s(4×30s + 3×1s). 여기서 일찍 원복하면
+                                           #   재시도 중 Mongo가 살아나 첫 시도가 성공 → CH-3 갈래가
+                                           #   되어 문항이 뒤바뀐다. HOLD_PRE 60 + 이 값 = 총 다운 ≥5분
+                                           #   (RUNBOOK §6 "다운은 ≥5분으로 잡는다")
+    IN-2) echo "${IN2_HOLD_POST:-90}"  ;;  # ④의 T1이 발행에 실패해야 한다. 댓글 API는 200으로 즉시
+                                           #   반환되고 발행은 notificationExecutor에서 비동기로
+                                           #   max.block.ms(기본 60s)를 소진한 뒤 실패한다.
+                                           #   60초 안에 Kafka를 살리면 발행이 성공해 유실이 안 난다
+    *)    echo "${HOLD_POST:-0}" ;;        # 나머지는 채록 시점에 전개가 끝나 있다
+  esac
+}
+
+# min_down — ③ 주입 ~ ⑤ 원복 사이 **총 다운 시간의 하한**(초). 0이면 하한 없음.
+# HOLD_PRE/POST만으로는 총 다운이 "60 + 채록 소요 + 240"이라 채록이 빨리 끝나면 하한에 못 미친다.
+# 문항 성립 조건이 총 다운 길이 자체인 경우를 여기서 못 박는다.
+min_down() {
+  case "$ID" in
+    CH-1) echo "${CH1_MIN_DOWN:-300}" ;;  # RUNBOOK §6 "다운은 ≥5분으로 잡는다"
+    *)    echo 0 ;;
+  esac
+}
+
+# ensure_min_down <주입 epoch> — 하한까지 남은 만큼만 더 기다린다 (이미 넘겼으면 즉시 통과).
+ensure_min_down() {
+  local since="$1" floor rest now
+  floor="$(min_down)"
+  [ "$floor" -le 0 ] && return 0
+  now=$(date +%s); rest=$(( floor - (now - since) ))
+  if [ "$rest" -gt 0 ]; then
+    hold "$rest" "총 다운 하한 ${floor}s 충족까지 (경과 $(( now - since ))s)"
+  else
+    note "총 다운 하한 ${floor}s 충족 (경과 $(( now - since ))s) — 추가 대기 없음"
+  fi
+}
 
 # prom <gate:0|1> <이름> <promql> — 결과 저장 + 값 출력. gate=1이고 baseline에서 빈 값이면 게이트 실패.
 prom() {
@@ -721,6 +828,30 @@ revert_AP_3() {
 # ── run: ①~⑤ 전체 사이클 ────────────────────────────────────────────────
 
 do_run() {
+  local pre post
+  # IN-3만 무인 사이클이 성립하지 않는다 — inject가 k6 부하로 블로킹되므로 run으로 돌리면
+  # ④ 채록이 부하가 끝난 뒤에 실행돼 pending>0 구간을 놓친다. COMMANDS.md의 2터미널 절차를 쓴다.
+  if [ "$ID" = IN-3 ]; then
+    log "[중단] IN-3은 run을 지원하지 않는다 — inject(k6)가 블로킹이라 채록이 부하 종료 후로 밀린다"
+    note "터미널 A: ./chaos.sh IN-3 baseline && ./chaos.sh IN-3 on"
+    note "터미널 B: (부하 도는 동안) ./chaos.sh IN-3 symptom"
+    note "터미널 A: (k6 종료 후)   ./chaos.sh IN-3 off"
+    exit 1
+  fi
+  pre="$(hold_pre)"; post="$(hold_post)"
+
+  # 갈래 가드 — 유지 시간만으로 다른 문항이 되어버리는 쌍을 막는다 (CH-3의 30초 상한과 같은 취지).
+  if [ "$ID" = AU-2 ] && [ "$pre" -ge 600 ]; then
+    log "[중단] AU2_HOLD_PRE=$pre — user 캐시 TTL 10분을 넘기면 캐시가 만료돼 AU-4 갈래가 된다"
+    note "캐시 만료 경로를 재려면 AU-2가 아니라 ./chaos.sh AU-4 run 을 쓴다"
+    exit 1
+  fi
+
+  log "▶ $ID 전체 사이클 — 무인 실행"
+  note "③ 주입 → ④ 채록: ${pre}s 유지 / ④ 채록 → ⑤ 원복: ${post}s 유지"
+  note "중단은 Ctrl-C (주입 이후라면 자동 원복). 단계마다 멈추려면 CHAOS_CONFIRM=1"
+  echo
+
   PHASE=baseline; evdir baseline
   log "① 정상 측정 (게이트) → $EV"
   "measure_$FN"
@@ -728,9 +859,10 @@ do_run() {
     log "게이트 실패 — 주입 금지(§3.3). 전제(§10)나 쿼리부터 해결."; exit 1
   fi
   echo
-  confirm "② baseline 기록 완료. ③ 주입을 시작할까요? (중단 시 자동 원복 trap 설정됨)"
+  hold "${ABORT_SECONDS:-10}" "② baseline 기록 완료 — ③ 주입 시작까지"
   trap 'echo; log "[중단 감지] 자동 원복 실행"; "revert_'"$FN"'"; mark "ABORT-REVERT $ID"; exit 1' INT TERM
   mark "INJECT $ID"
+  INJECT_EPOCH=$(date +%s)
   log "③ 주입"
   "inject_$FN"
   if declare -F "trigger_$FN" >/dev/null; then
@@ -740,13 +872,14 @@ do_run() {
     note "별도 트리거 없음 — symptom 채록에 T1/T2가 포함됨"
   fi
   echo
-  confirm "④ 증상 채록 — 시그널 적재(스크레이프·로그 전송 ~1분) 대기 후 Enter"
+  hold "$pre" "④ 증상 채록까지 장애 유지 (증상 발현 + 스크레이프·로그 전송)"
   PHASE=symptom; evdir symptom
   log "④ 증상 관측 (①과 같은 쿼리) → $EV"
   "measure_$FN"
   note "시그널이 늦으면 원복 전에 ./chaos.sh $ID symptom 재실행 가능 (새 타임스탬프 폴더)"
   echo
-  confirm "⑤ 원복할까요?"
+  hold "$post" "⑤ 원복까지 장애 유지 (채록 후에도 전개가 계속되는 구간)"
+  ensure_min_down "$INJECT_EPOCH"
   log "⑤ 원복 + 복귀 확인"
   "revert_$FN"
   trap - INT TERM
@@ -758,7 +891,7 @@ do_run() {
 
 # ── 디스패처 ─────────────────────────────────────────────────────────────
 
-usage() { sed -n '2,14p' "$0"; }
+usage() { sed -n '2,16p' "$0"; }
 
 case "$ID" in
   CH-1|CH-2|CH-3|AU-1|AU-2|AU-3|AU-4|IN-1|IN-2|IN-3|AP-1|AP-2|AP-3) ;;

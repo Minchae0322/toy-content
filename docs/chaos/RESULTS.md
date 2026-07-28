@@ -51,7 +51,7 @@ Mongo 다운 문항 하나를 4회 주입해서 — 실서비스 잠복 버그 2
 | 근거 경로 백미 | lag(핸드오프 1.45ms)·풀(pending 0)·GC(0.0028s/s)를 수치로 배제 | 30.0s×4 = 드라이버 기본값 대조, refused vs timeout 구분, **같은 호스트 Redis 0.5ms 정상을 반증으로** 호스트 장애 배제 |
 | 오귀인 | 없음 | 없음 |
 | 오판 | — | 영향을 "유실"로 판정 (실제: DLQ 복구 도착) — 원인은 결함 #4 trace 단절 + 에이전트 자체 Loki 셀렉터 버그 |
-| 기록 | [리포트](../../../yogurtte-rca-agent/reports/) · [AE-01](../../../yogurtte-rca-agent/docs/findings/ae-01-rca-v0-ch1-blind-eval.md) | [리포트](../../../yogurtte-rca-agent/reports/) · [AE-02](../../../yogurtte-rca-agent/docs/findings/ae-02-rca-v0-ch1-round3-eval.md) |
+| 기록 | [리포트](../../../yogurtte-rca-agent/reports/) · [AE-01](../../../yogurtte-rca-agent/docs/findings/ae-01-rca-v0-ch1-blind-eval.md) | [리포트](../../../yogurtte-rca-agent/reports/) · [AE-02](../../../yogurtte-rca-agent/docs/findings/ae-02-rca-v0-ch1-round2-eval.md) |
 
 **두 조사의 대조가 이 실험의 핵심 결론이다**: 회차 1과 3 사이에 달라진 건 모델이 아니라 계측(`cdca2a5` Mongo 명령 트레이싱 + `5eecb0a` 에러 전파)뿐이다. trace가 error span과 예외 원문을 실어주자 v0 단발 호출로도 원인이 확정됐다 — **AI 모니터링의 상한은 모델이 아니라 계측이 정한다.**
 

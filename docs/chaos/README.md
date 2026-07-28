@@ -14,7 +14,8 @@ AI 기반 RCA(trace·Loki·metrics로 원인 분석)의 품질을 재려면 **�
 | `scripts/chaos.sh` | 사이클 실행기. `./chaos.sh <ID> baseline\|on\|trigger\|symptom\|off\|run` |
 | `scripts/chaos.env.example` | 설정 템플릿. 복사해 `chaos.env`로 채운다 |
 | `scripts/chaos.env` | 실제 값 (**gitignore** — 시크릿·사설 IP·Grafana 토큰) |
-| `scenarios/<ID>/answer.md` | 문항별 정답지 + RCA 채점 결과 |
+| **[anchors-v2.md](anchors-v2.md)** | **v2 앵커 (회차 2~ · 자연어 입력) — 전 문항 SoT.** 질문 문안 박제 · 탐색 채널 감사 · 문항별 만점 요건. 2026-07-28 rca-agent `docs/scoring/`에서 이관(정답 요건은 피험자 레포 밖에 둔다) |
+| `scenarios/<ID>/answer.md` | 문항별 정답지 + v0 앵커 + RCA 채점 결과 |
 | `scenarios/<ID>/evidence/` | `chaos.sh`가 자동 저장하는 baseline/symptom 채록 |
 
 ## 빠른 시작
