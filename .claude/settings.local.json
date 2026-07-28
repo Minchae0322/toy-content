@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(find /c/sources/toy-content -type f \\\\\\( -name \"*test*.java\" -o -name \"*Test.java\" -o -name \"*.k6.js\" -o -name \"*.js\" -o -name \"*.json\" \\\\\\) 2>/dev/null | grep -E \"\\(test|k6\\)\" | head -20)",
       "Bash(find /c/sources/toy-content -type f -name \"*.k6.*\" -o -name \"load*\" -o -name \"*perf*\" 2>/dev/null | head -20)",
@@ -71,7 +70,13 @@
       "Bash(echo \"---EXIT $?---\")",
       "Bash(git -C /Users/minchae/sources/toy-auth-user-region remote get-url origin)",
       "Bash(git -C /Users/minchae/sources/toy-auth-user-region log --oneline -5)",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "PowerShell(.\\\\gradlew.bat compileJava -q --console=plain)",
+      "Bash(cp chaos.env.example chaos.env.test)",
+      "Bash(cat)",
+      "Bash(cp /tmp/chaos-dryrun-env chaos.env)",
+      "Bash(bash chaos.sh)",
+      "Bash(echo \"exit=$?\")"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -106,6 +111,7 @@
       "Bash(git push --force-with-lease *)",
       "Bash(git rebase *)",
       "Bash(git branch -D *)"
-    ]
+    ],
+    "defaultMode": "bypassPermissions"
   }
 }

@@ -193,8 +193,9 @@ curl -s -X POST "$BASE/content/battles/$BATTLE_ID/items/vote" \
 
 | ID | 시나리오 (정답지) | 주입 | hop | 전제 (§10) |
 |---|---|---|---|---|
-| CH-1 | MongoDB 다운 → chat 컨슈머 실패 → 재시도 3회 → DLQ | `docker stop $MONGO_CT` | 2 | chat Step 0 배포 검증 |
+| CH-1 | MongoDB 다운 **≥5분** → chat 컨슈머 실패 → 재시도 3회 → DLQ | `docker stop $MONGO_CT` | 2 | chat Step 0 배포 검증 |
 | CH-2 | chat 다운 → 컨슈머 lag 누적 → 복구 후 알림 몰아서 도착 | `kubectl scale --replicas=0` | 2 | lag 메트릭 — kafka-exporter로 충족(2026-07-26) |
+| CH-3 | MongoDB 다운 **20~25초** → 드라이버 대기 중 복구 → **재시도 없이 지연만** (에러 span 0) | `docker stop $MONGO_CT` + 자동 원복 | 2 | CH-1과 동일 |
 | AU-1 | auth CPU 기아 → 응답 지연 → content 캐시 미스 시 fallback | cpu limit 50m patch | 2~3 | (권장) auth JDBC 계측 |
 | AU-2 | auth 완전 다운 → 로그인 502, content는 전부 익명 사용자 | `kubectl scale --replicas=0` | 2 | 없음 |
 | AU-3 | JWT 시크릿 드리프트 → content 전 인증 API 401 (로그인은 성공) | Secret 변경 + restart | 1 | 없음 |
@@ -267,10 +268,65 @@ $INFRA_SSH "docker exec mongodb mongosh --quiet --eval '
       회차 2는 "이후 실패 로그 0건"이라는 부재 추론에 의존했다 — 그 감점 판정의 토대가
       약했다는 것이 2026-07-27 채점에서 지적됐다
 
-정답지 (갈래별 — 트리거 후 복구까지 잔여 시간이 드라이버 대기 30s 안/밖):
+정답지: "MongoDB 다운. 컨슈머는 재시도 소진 후 DLQ 적재, 복구 후 재처리로 10분 내 도착."
 
-- **갈래 A (경계 안)**: "MongoDB 다운. 드라이버 대기 안에 복구돼 재시도 없이 통과 — 지연만, 10분 내 도착."
-- **갈래 B (경계 밖)**: "MongoDB 다운. 컨슈머는 재시도 소진 후 DLQ 적재, 복구 후 재처리로 10분 내 도착."
+> **다운은 ≥5분으로 잡는다.** 드라이버 대기 상한(`serverSelectionTimeoutMS` 기본 30s)을
+> 넘겨야 예외 → 재시도 → DLQ가 발동한다. 30초 미만이면 예외 자체가 안 나서
+> **[CH-3](#ch-3--mongo-짧은-다운--드라이버-대기-중-복구--지연-흡수)** 갈래가 된다
+> (2026-07-28에 분리 신설). 옛 "갈래 A"는 CH-3로 이관됐고, `scenarios/CH-1/answer.md`에
+> 회차 1·2 채점 근거로만 보존돼 있다.
+
+### CH-3 — Mongo 짧은 다운 → 드라이버 대기 중 복구 → 지연 흡수
+
+**CH-1과 같은 주입인데 다운 시간 하나로 전개가 갈린다.** 드라이버 서버 셀렉션 대기 상한(30s)
+**안에** 복구되면 예외가 나지 않아 재시도·DLQ가 발동하지 않고, 첫 시도가 그대로 성공한다 —
+알림은 **지연 도착, 유실 0**. 다운을 30초 미만으로 잡으면 트리거가 다운 중 언제 발사되든
+"남은 다운 < 30초"가 자동 성립하므로 **트리거 타이밍을 맞출 필요가 없다**.
+
+**이 문항이 어려운 이유: 에러 span이 하나도 없다.** 댓글은 200, 알림도 도착한다. 유일한 신호는
+`process-notification` span 안의 **자식으로 설명되지 않는 공백**이다. 조사 질문도 다르다 —
+"알림이 **안** 왔다"(CH-1·IN-2)가 아니라 **"알림이 늦게 왔다"**이다.
+
+① 정상 측정 (주입 전, ④와 같은 쿼리):
+
+- [ ] T1 1건 → 200 + 알림 **즉시** 도착. 정상 traceId 기록 — 지연 트레이스와 공백 대조용
+- [ ] `{service_name="chat-service"} |= "DLQ"` 최근 1h = 0건
+- [ ] Tempo `{resource.service.name="chat-service" && duration > 10s}` = 0건 (평시 지연 없음 확인)
+
+② 기록: `evidence/CH-3/baseline/`
+
+③ 주입 → 트리거(자동 원복 포함):
+
+```bash
+# chaos.sh가 셋을 한 덩어리로 실행한다 — 수동 실행 시 순서를 지킬 것
+./chaos.sh CH-3 on        # docker stop $MONGO_CT
+./chaos.sh CH-3 trigger   # T1 발사 → CH3_DOWN_SECONDS(기본 20s) 대기 → docker start (자동)
+./chaos.sh CH-3 symptom   # ④ 증상 채록 (이미 복구된 상태 — 의도대로)
+```
+
+> ⚠️ **이 문항만 원복이 증상 채록보다 먼저다.** 복구가 드라이버 대기 *중에* 이뤄져야
+> 시나리오가 성립하기 때문이다. `chaos.sh CH-3 run`도 같은 순서로 돈다.
+> `CH3_DOWN_SECONDS`가 30 이상이면 스크립트가 거부한다(CH-1 갈래가 되므로).
+
+④ 증상 관측:
+
+- 댓글 API 응답: **200**, 알림도 **도착** (늦게)
+- Tempo `{resource.service.name="chat-service" && duration > 10s}` — **지연 트레이스가 잡혀야 함**
+- Tempo `status=error` — **0건이어야 함** (에러가 나면 CH-1 갈래)
+- Loki `|= "DLQ"`, `|= "알림 처리 실패"` — **둘 다 0건이어야 함**
+
+판정 (① 대비):
+
+- [ ] `process-notification` span이 **1개**이고, 그 안에 자식으로 설명되지 않는 공백이 있다
+      (CH-1 갈래면 `receive` span이 **4개** + 에러 태그 + `publish …dlq`)
+- [ ] 자식 span들(mongo insert 등)이 타임라인 **오른쪽 끝**에 몰려 있다
+- [ ] 공백 길이가 **30초 미만**이다 — 넘으면 갈래를 잘못 만든 것이니 CH-1로 재분류
+- [ ] 업스트림(content POST · `notification-publish` · `publish user.notifications`) 전부 정상
+- [ ] 알림 **도착**, 유실 0 — 지연 초를 `answer.md`에 기록
+- [ ] `hikaricp_connections_pending` 0 · GC 정상 (오귀인 배제 근거로 쓰인다)
+
+정답지: "Mongo 미가용 구간이 컨슈머의 첫 Mongo 작업과 겹쳤고, 드라이버 서버 셀렉션 대기(상한
+30초) 안에 복구되어 그 첫 시도가 예외 없이 성공 — **지연 도착, 유실 0**. 재시도·DLQ 미발동."
 
 ### CH-2 — 컨슈머 정지 → lag 누적
 

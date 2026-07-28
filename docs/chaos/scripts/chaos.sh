@@ -4,12 +4,14 @@
 # 사용법:
 #   ./chaos.sh <문항ID> baseline   # ① 정상 측정 + ② 기록 — 게이트 실패(쿼리 빈 값) 시 exit 1 = 주입 금지
 #   ./chaos.sh <문항ID> on         # ③ 주입 (주입 시각 timeline.log 기록)
-#   ./chaos.sh <문항ID> trigger    # ③ 트리거 (별도 루프가 있는 문항만: CH-2, AU-1)
+#   ./chaos.sh <문항ID> trigger    # ③ 트리거 (별도 루프가 있는 문항만: CH-2, CH-3, AU-1)
+#                                  #   CH-3는 트리거가 자동 원복까지 수행한다 (아래 주석 참조)
 #   ./chaos.sh <문항ID> symptom    # ④ 증상 관측 — baseline과 같은 함수를 재실행 (①=④ 동일 쿼리 보장)
 #   ./chaos.sh <문항ID> off        # ⑤ 원복 + 복귀 확인 폴링
 #   ./chaos.sh <문항ID> run        # ①~⑤ 전체 사이클 — 단계마다 확인 프롬프트, Ctrl-C 시 자동 원복(trap)
 #
-# 문항ID: CH-1 CH-2 AU-1 AU-2 AU-3 AU-4 IN-1 IN-2 IN-3 AP-1 AP-2 AP-3
+# 문항ID: CH-1 CH-2 CH-3 AU-1 AU-2 AU-3 AU-4 IN-1 IN-2 IN-3 AP-1 AP-2 AP-3
+#   CH-3: Mongo 다운 20s(<30s) — 드라이버 대기 중 복구되어 지연만 남는 갈래. CH3_DOWN_SECONDS로 조절
 #   AP 계열: 주입 = 경계값 실요청 1건 (인프라 무접촉, 원복 없음 — RUNBOOK §6 AP 공통)
 # 전제: 같은 디렉토리의 chaos.env (chaos.env.example 참고), jq, kubectl, curl, (k6)
 # 수동으로 남는 것: Tempo 트레이스 모양 판독, 알림 실제 도착 확인, 판정 체크박스, 블라인드 RCA(§8)
@@ -197,6 +199,59 @@ revert_CH_1() {
   infra "docker start $MONGO_CT"
   poll "mongo 컨테이너 Running" 12 5 infra "docker inspect -f '{{.State.Running}}' $MONGO_CT | grep -q true"
   manual "T1 1건으로 알림 도착 복귀 확인 + DLQ 적재분 처리 방침 answer.md에 기록"
+}
+
+# ── CH-3: Mongo 짧은 다운 → 드라이버 대기 중 복구 → 지연 흡수 ──────────────
+#
+# CH-1과 같은 주입인데 **다운 시간 하나로** 전개가 갈린다. Mongo 드라이버의 서버 셀렉션
+# 대기 상한(serverSelectionTimeoutMS 기본 30s) **안에** 복구되면 예외가 나지 않아
+# 재시도·DLQ가 발동하지 않고 첫 시도가 그대로 성공한다 — 알림은 지연 도착, 유실 0.
+#
+# 다운을 30초 미만으로 잡으면 트리거가 다운 중 언제 발사되든 "남은 다운 < 30초"가 자동
+# 성립하므로 트리거 타이밍을 맞출 필요가 없다. (CH-1 회차1은 73초 다운에서 트리거가 복구
+# 23.4초 전에 *우연히* 떨어져 이 갈래가 됐다 — 재현되지 않는 설계였다.)
+#
+# ⚠️ 이 문항만 **원복이 증상 채록보다 먼저** 일어난다. 복구가 드라이버 대기 중에 이뤄져야
+#    시나리오가 성립하기 때문이다. 그래서 trigger_CH_3가 타이밍을 소유하고 자동 원복까지 한다.
+
+measure_CH_3() {
+  token && t1 "CH3-$PHASE"
+  prom 0 mongodb_up 'mongodb_up'
+  loki_count publish    '{service_name="content-service"} |= "알림 발행"'   # 트리거 공회전 검출
+  loki_count dlq        '{service_name="chat-service"} |= "DLQ"'            # 0건이어야 정상 — 잡히면 CH-1 갈래다
+  loki_count notif_fail '{service_name="chat-service"} |= "알림 처리 실패"'  # 0건이어야 정상 (예외가 없어야 함)
+  # 이 문항의 유일한 신호는 "오래 걸린 성공"이다 — 지연 트레이스를 직접 찾는다
+  tempo_search chat-slow  '{resource.service.name="chat-service" && duration > 10s}'
+  tempo_search chat-error '{resource.service.name="chat-service" && status=error}'  # 0건이어야 정상
+  notif_inbox
+  manual "symptom: process-notification span이 **1개**이고 그 안에 자식 없는 공백이 있는지 확인 (재시도 갈래면 receive span이 4개). 공백 길이 기록 — 30s 미만이어야 이 문항"
+}
+
+inject_CH_3() { infra "docker stop $MONGO_CT"; }
+
+# 트리거 = T1 발사 → 남은 다운 유지 → 자동 원복. 셋이 한 덩어리여야 갈래가 보장된다.
+trigger_CH_3() {
+  local down="${CH3_DOWN_SECONDS:-20}"
+  if [ "$down" -ge 30 ]; then
+    log "[중단] CH3_DOWN_SECONDS=$down — 30초 이상이면 드라이버가 예외를 던져 CH-1 갈래가 된다"
+    return 1
+  fi
+  token || return 1
+  log "트리거: T1 1건 발사 (Mongo 다운 상태)"
+  t1 "CH3-trigger"
+  log "다운 유지 ${down}초 — 드라이버 서버 셀렉션 대기 중에 복구시킨다"
+  sleep "$down"
+  infra "docker start $MONGO_CT"
+  mark "REVERT CH-3 (자동 — 드라이버 대기 중 복구)"
+  poll "mongo 컨테이너 Running" 12 5 infra "docker inspect -f '{{.State.Running}}' $MONGO_CT | grep -q true"
+  log "복구 완료 — 컨슈머의 첫 Mongo 시도가 예외 없이 통과했어야 한다"
+}
+
+# trigger에서 이미 복구했으므로 여기서는 확인만 한다 (멱등 — 중단 trap 경로에서도 안전).
+revert_CH_3() {
+  infra "docker start $MONGO_CT" >/dev/null 2>&1 || true
+  poll "mongo 컨테이너 Running" 12 5 infra "docker inspect -f '{{.State.Running}}' $MONGO_CT | grep -q true"
+  manual "지연 트레이스의 공백 길이 + 알림 도착 지연 초를 answer.md에 기록. DLQ·에러 0건 확인(발동했으면 CH-1 갈래로 재분류)"
 }
 
 # ── CH-2: 컨슈머 정지 → lag 누적 ─────────────────────────────────────────
@@ -571,7 +626,7 @@ do_run() {
 usage() { sed -n '2,14p' "$0"; }
 
 case "$ID" in
-  CH-1|CH-2|AU-1|AU-2|AU-3|AU-4|IN-1|IN-2|IN-3|AP-1|AP-2|AP-3) ;;
+  CH-1|CH-2|CH-3|AU-1|AU-2|AU-3|AU-4|IN-1|IN-2|IN-3|AP-1|AP-2|AP-3) ;;
   *) usage; exit 1 ;;
 esac
 
