@@ -3,7 +3,9 @@ package com.example.toycontent.app.auth.token;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -12,6 +14,7 @@ import java.security.Key;
 import java.util.*;
 
 @Component
+@Slf4j
 public class JwtParser {
 
     private final Key key;
@@ -30,15 +33,24 @@ public class JwtParser {
                     .build()
                     .parseClaimsJws(token);
             return true;
-        } catch (SecurityException | MalformedJwtException e) {
-            // JWT 서명이 올바르지 않거나, 토큰 형식이 잘못된 경우
-            // ex) 위조된 토큰
+        } catch (SignatureException e) {
+            // 서명 불일치 — 위조 토큰 또는 서비스 간 시크릿 드리프트.
+            // io.jsonwebtoken.security.SignatureException 이므로 io.jsonwebtoken.* 와일드카드로는
+            // 잡히지 않는다. 과거 catch 절의 SecurityException 은 java.lang 것이어서 미포착 →
+            // 필터 밖으로 전파 → 500 이었다.
+            log.warn("JWT 서명 검증 실패 — 위조 또는 시크릿 불일치");
         } catch (ExpiredJwtException e) {
-            // 토큰이 만료된 경우
+            log.warn("JWT 만료 exp={}", e.getClaims() == null ? "unknown" : e.getClaims().getExpiration());
+        } catch (MalformedJwtException e) {
+            log.warn("JWT 형식 오류");
         } catch (UnsupportedJwtException e) {
-            // 지원하지 않는 JWT 토큰인 경우
+            log.warn("지원하지 않는 JWT");
         } catch (IllegalArgumentException e) {
-            // JWT 토큰이 비어있거나 null인 경우
+            log.warn("JWT 값이 비어 있음");
+        } catch (JwtException e) {
+            // 최후 방어. JwtException 은 jjwt 예외의 부모이고 io.jsonwebtoken 패키지라
+            // 와일드카드에 잡힌다. 새 예외 타입이 생겨도 500 으로 새지 않는다.
+            log.warn("JWT 검증 실패 {}", e.getClass().getSimpleName());
         }
         return false;
     }
