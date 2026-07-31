@@ -32,14 +32,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             String method = req.getMethod();
             String uri = req.getRequestURI();
 
+            // 성공 요청은 기록하지 않는다 — 전량 기록은 Tempo(샘플링 1.0)가 SoT.
+            // docs/observability/logging-format.md R9
             if (status >= 500) {
                 log.error("[HTTP] {} {} {} - {}ms", method, uri, status, elapsed);
             } else if (status >= 400) {
                 log.warn("[HTTP] {} {} {} - {}ms", method, uri, status, elapsed);
             } else if (elapsed > SLOW_THRESHOLD_MS) {
                 log.warn("[HTTP-SLOW] {} {} {} - {}ms", method, uri, status, elapsed);
-            } else {
-                log.info("[HTTP] {} {} {} - {}ms", method, uri, status, elapsed);
             }
         }
     }
