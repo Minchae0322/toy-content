@@ -36,11 +36,11 @@ public class FeedTrendingScheduler {
   @Transactional
   public void updateTrendingAndSnapshot() {
     if (!enabled) {
-      log.debug("[피드 트렌딩] 업데이트 스케줄러 OFF");
+      log.debug("[scheduler] 업데이트 스케줄러 OFF");
       return;
     }
 
-    log.info("[피드 트렌딩] 시작 (기준: {})", trendingThreshold);
+    log.info("[scheduler] 시작 (기준: {})", trendingThreshold);
     StopWatch stopWatch = new StopWatch();
     stopWatch.start();
 
@@ -51,10 +51,10 @@ public class FeedTrendingScheduler {
 
 
       stopWatch.stop();
-      log.info("[피드 트렌딩] 완료 - marked: {}, unmarked: {}, snapshot: {}, {}ms",
+      log.info("[scheduler] 완료 - marked: {}, unmarked: {}, snapshot: {}, {}ms",
           marked, unmarked, snapshot, stopWatch.getTotalTimeMillis());
     } catch (Exception e) {
-      log.error("[피드 트렌딩] 실패", e);
+      log.error("[scheduler] 실패", e);
     }
   }
 }

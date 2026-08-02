@@ -73,11 +73,11 @@ public class FeedHotScoreScheduler {
   @Transactional
   public void timeWeightUpdate() {
     if (!timeWeightEnabled) {
-      log.info("[피드 핫 스코어] 시간 가중치 업데이트 스케줄러 OFF");
+      log.info("[scheduler] 시간 가중치 업데이트 스케줄러 OFF");
       return;
     }
 
-    log.info("[피드 핫 스코어] 시간 가중치 업데이트 시작");
+    log.info("[scheduler] 시간 가중치 업데이트 시작");
     StopWatch stopWatch = new StopWatch();
     stopWatch.start();
 
@@ -87,10 +87,10 @@ public class FeedHotScoreScheduler {
           LocalDateTime.now().minusMinutes(60), decayExponent);
 
       stopWatch.stop();
-      log.info("[피드 핫 스코어] 시간 가중치 업데이트 완료 - {}건, decay={}, {}ms",
+      log.info("[scheduler] 시간 가중치 업데이트 완료 - {}건, decay={}, {}ms",
           count, decayExponent, stopWatch.getTotalTimeMillis());
     } catch (Exception e) {
-      log.error("[피드 핫 스코어] 시간 가중치 업데이트 실패", e);
+      log.error("[scheduler] 시간 가중치 업데이트 실패", e);
     }
   }
 
@@ -110,11 +110,11 @@ public class FeedHotScoreScheduler {
   @Transactional
   public void fullRecalculate() {
     if (!fullRecalculateEnabled) {
-      log.info("[피드 핫 스코어] 전체 재계산 스케줄러 OFF");
+      log.info("[scheduler] 전체 재계산 스케줄러 OFF");
       return;
     }
 
-    log.info("[피드 핫 스코어] 전체 재계산 시작");
+    log.info("[scheduler] 전체 재계산 시작");
     StopWatch stopWatch = new StopWatch();
     stopWatch.start();
 
@@ -125,10 +125,10 @@ public class FeedHotScoreScheduler {
       long count = feedRepository.bulkUpdateHotScoreAll(recentDays, decayExponent);
 
       stopWatch.stop();
-      log.info("[피드 핫 스코어] 전체 재계산 완료 - {}건, decay={}, {}ms",
+      log.info("[scheduler] 전체 재계산 완료 - {}건, decay={}, {}ms",
           count, decayExponent, stopWatch.getTotalTimeMillis());
     } catch (Exception e) {
-      log.error("[피드 핫 스코어] 전체 재계산 실패", e);
+      log.error("[scheduler] 전체 재계산 실패", e);
     }
   }
 
@@ -141,7 +141,7 @@ public class FeedHotScoreScheduler {
     long recentCount = feedRepository.countRecentFeeds(since);
     boolean fast = recentCount >= decayThreshold;
     double exponent = fast ? decayFast : decaySlow;
-    log.info("[피드 핫 스코어] decay 결정 - 최근 {}시간 신규 {}건, threshold={}, decay={}",
+    log.info("[scheduler] decay 결정 - 최근 {}시간 신규 {}건, threshold={}, decay={}",
         decayWindowHours, recentCount, decayThreshold, exponent);
     return exponent;
   }
@@ -158,7 +158,7 @@ public class FeedHotScoreScheduler {
         return Double.parseDouble(stored);
       }
     } catch (Exception e) {
-      log.warn("[피드 핫 스코어] decay 지수 Redis 조회 실패, fallback 계산", e);
+      log.warn("[scheduler] decay 지수 Redis 조회 실패, fallback 계산", e);
     }
     double fallback = decideDecayExponent();
     storeActiveDecayExponent(fallback);
@@ -170,7 +170,7 @@ public class FeedHotScoreScheduler {
       stringRedisTemplate.opsForValue()
           .set(DECAY_REDIS_KEY, Double.toString(exponent), DECAY_REDIS_TTL);
     } catch (Exception e) {
-      log.warn("[피드 핫 스코어] decay 지수 Redis 저장 실패", e);
+      log.warn("[scheduler] decay 지수 Redis 저장 실패", e);
     }
   }
 }

@@ -50,7 +50,7 @@ public class UserDailyMissionAssignmentService {
         .ifPresent(assignment -> {
           boolean completed = assignment.incrementProgress(incrementBy);
           if (completed) {
-            log.info("미션 완료 - userId: {}, missionCode: {}", userId, missionCode);
+            log.info("[reward] 미션 완료 - userId: {}, missionCode: {}", userId, missionCode);
           }
         });
   }

@@ -49,7 +49,7 @@ public class ExternalUserFollowingService {
     }
 
     if (cacheStore.evict(userId)) {
-      log.info("팔로잉 캐시 무효화 완료: userId={}", userId);
+      log.info("[user-cache] 팔로잉 캐시 무효화 완료: userId={}", userId);
     }
   }
 
@@ -76,7 +76,7 @@ public class ExternalUserFollowingService {
       return followingIds;
 
     } catch (Exception e) {
-      log.error("팔로잉 목록 조회 실패, Fallback 반환: userId={}", userId, e);
+      log.error("[user-fallback] 팔로잉 목록 조회 실패, Fallback 반환: userId={}", userId, e);
       return List.of();
     }
   }

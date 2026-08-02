@@ -49,7 +49,7 @@ public class NotificationEventListener {
       if (current != null) {
         current.error(e);
       }
-      log.error("[Notification] 알림 발행 실패: userId={}, type={}, error={}",
+      log.error("[notify] 알림 발행 실패: userId={}, type={}, error={}",
           dto.getUserId(), dto.getType(), e.getMessage(), e);
     }
   }

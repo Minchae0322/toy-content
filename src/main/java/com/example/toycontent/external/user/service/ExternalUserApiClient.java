@@ -4,6 +4,7 @@ package com.example.toycontent.external.user.service;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.UserErrorCode;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,6 +17,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -31,6 +33,7 @@ public class ExternalUserApiClient {
 
   private final WebClient userServiceWebClient;
   private final UserCacheStore userCacheStore;
+  private final MeterRegistry meterRegistry;
 
   /**
    * 외부 서비스에서 여러 사용자 정보 일괄 조회 후 캐시 저장
@@ -50,9 +53,19 @@ public class ExternalUserApiClient {
             (existing, replacement) -> existing
         ));
 
+    long fallbackCount = userIds.stream()
+        .distinct()
+        .filter(userId -> !result.containsKey(userId))
+        .count();
+
     // 조회 실패한 userId는 fallback 처리
     userIds.forEach(userId ->
         result.computeIfAbsent(userId, this::createFallbackUserInfo));
+
+    if (fallbackCount > 0) {
+      // Prometheus에는 user_fallback_total로 노출된다 — 알람: rate(user_fallback_total[5m]) > 0
+      meterRegistry.counter("user.fallback").increment(fallbackCount);
+    }
 
     return result;
   }
@@ -72,7 +85,7 @@ public class ExternalUserApiClient {
           try {
             return fetchAndCacheUserInfo(userId);
           } catch (Exception e) {
-            log.warn("[외부사용자 조회] 외부 API 호출 실패 - userId: {}", userId, e);
+            log.warn("[user-fallback] auth 단건 조회 실패 → 익명 대체: userId={}", userId, e);
             return createFallbackUserInfo(userId);
           }
         });
@@ -83,6 +96,7 @@ public class ExternalUserApiClient {
    * 외부 서비스에서 사용자 정보 조회 후 캐시 저장
    */
   private ExternalUserInfo fetchAndCacheUserInfo(Long userId) {
+    Map<String, String> callerMdc = MDC.getCopyOfContextMap();
     try {
       ExternalUserInfo externalUserInfo = userServiceWebClient.get()
           .uri("/api/external/users/{userId}", userId)
@@ -93,8 +107,8 @@ public class ExternalUserApiClient {
           )
           .bodyToMono(ExternalUserInfo.class)
           .timeout(TIMEOUT)
-          .doOnError(error ->
-              log.error("사용자 정보 조회 실패: userId={}", userId, error))
+          .doOnError(error -> logWithCallerMdc(callerMdc, () ->
+              log.error("[user-fallback] auth 단건 조회 실패: userId={}", userId, error)))
           .onErrorReturn(createFallbackUserInfo(userId))
           .block();
 
@@ -106,7 +120,7 @@ public class ExternalUserApiClient {
       return createFallbackUserInfo(userId);
 
     } catch (Exception e) {
-      log.error("외부 서비스 호출 중 예외: userId={}", userId, e);
+      log.error("[user-fallback] auth 호출 예외: userId={}", userId, e);
       return createFallbackUserInfo(userId);
     }
   }
@@ -116,6 +130,7 @@ public class ExternalUserApiClient {
         .map(String::valueOf)
         .collect(Collectors.joining(","));
 
+    Map<String, String> callerMdc = MDC.getCopyOfContextMap();
     try {
       return userServiceWebClient.get()
           .uri(uriBuilder -> uriBuilder
@@ -127,11 +142,13 @@ public class ExternalUserApiClient {
           .bodyToFlux(ExternalUserInfo.class)
           .timeout(TIMEOUT)
           .collectList()
-          .doOnError(error -> log.error("사용자 목록 조회 실패: userIds={}", userIds, error))
+          .doOnError(error -> logWithCallerMdc(callerMdc, () ->
+              log.error("[user-fallback] auth 목록 조회 실패 → {}명 익명 대체: userIds={}",
+                  userIds.size(), userIds, error)))
           .onErrorReturn(Collections.emptyList())
           .block();
     } catch (Exception e) {
-      log.error("외부 서비스 일괄 호출 중 예외: userIds={}", userIds, e);
+      log.error("[user-fallback] auth 일괄 호출 예외: userIds={}", userIds, e);
       return Collections.emptyList();
     }
   }
@@ -182,6 +199,26 @@ public class ExternalUserApiClient {
 
 
 
+
+  /**
+   * WebClient 콜백은 Reactor Netty 이벤트 루프 스레드에서 실행돼 요청 스레드의
+   * MDC(traceId·spanId·userId)가 비어 있다. 호출 시점에 캡처한 MDC를 복원한 뒤 로그를 남긴다.
+   */
+  private static void logWithCallerMdc(Map<String, String> callerMdc, Runnable logAction) {
+    Map<String, String> backup = MDC.getCopyOfContextMap();
+    if (callerMdc != null) {
+      MDC.setContextMap(callerMdc);
+    }
+    try {
+      logAction.run();
+    } finally {
+      if (backup != null) {
+        MDC.setContextMap(backup);
+      } else {
+        MDC.clear();
+      }
+    }
+  }
 
   /**
    * 폴백 사용자 정보 생성

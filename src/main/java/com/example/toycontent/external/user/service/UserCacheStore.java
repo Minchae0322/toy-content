@@ -48,7 +48,7 @@ public class UserCacheStore {
     try {
       return redisTemplate.opsForValue().get(cacheKey);
     } catch (Exception e) {
-      log.error("Redis 캐시 조회 실패: cacheKey={}", cacheKey, e);
+      log.error("[user-cache] Redis 캐시 조회 실패: cacheKey={}", cacheKey, e);
       return null;
     }
   }
@@ -76,7 +76,7 @@ public class UserCacheStore {
       return true;
 
     } catch (Exception e) {
-      log.error("Redis 캐시 저장 실패: userId={}", externalUserInfo.getUserId(), e);
+      log.error("[user-cache] Redis 캐시 저장 실패: userId={}", externalUserInfo.getUserId(), e);
       return false;
     }
   }
@@ -93,7 +93,7 @@ public class UserCacheStore {
    */
   public int cacheUserInfoBatch(List<ExternalUserInfo> externalUserInfos, Duration ttl) {
     if (CollectionUtils.isEmpty(externalUserInfos) || ttl == null || ttl.isNegative()) {
-      log.warn("⚠️ 유효하지 않은 사용자 정보 목록 또는 TTL");
+      log.warn("[user-cache] 유효하지 않은 사용자 정보 목록 또는 TTL");
       return 0;
     }
 
@@ -102,7 +102,7 @@ public class UserCacheStore {
         .toList();
 
     if (validExternalUserInfos.isEmpty()) {
-      log.warn("⚠️ 저장할 유효한 사용자 정보가 없습니다");
+      log.warn("[user-cache] 저장할 유효한 사용자 정보가 없습니다");
       return 0;
     }
 
@@ -119,20 +119,20 @@ public class UserCacheStore {
                 serializedValue.getBytes()
             );
           } catch (Exception e) {
-            log.warn("⚠️ 개별 사용자 정보 캐시 저장 실패: userId={}",
+            log.warn("[user-cache] 개별 사용자 정보 캐시 저장 실패: userId={}",
                 externalUserInfo.getUserId(), e);
           }
         });
         return null;
       });
 
-      log.debug("💾 사용자 정보 일괄 캐시 저장 완료: 성공={}/{}, ttl={}초",
+      log.debug("[user-cache] 사용자 정보 일괄 캐시 저장 완료: 성공={}/{}, ttl={}초",
           validExternalUserInfos.size(), externalUserInfos.size(), ttl.getSeconds());
 
       return validExternalUserInfos.size();
 
     } catch (Exception e) {
-      log.error("❌ Redis 일괄 캐시 저장 실패", e);
+      log.error("[user-cache] Redis 일괄 캐시 저장 실패", e);
       return 0;
     }
   }
@@ -148,7 +148,7 @@ public class UserCacheStore {
     if (isFallbackUserInfo(fallbackExternalUserInfo)) {
       boolean result = cacheUserInfo(fallbackExternalUserInfo, FALLBACK_TTL);
       if (result) {
-        log.debug("폴백 사용자 정보 캐시 저장: userId={}", fallbackExternalUserInfo.getUserId());
+        log.debug("[user-cache] 폴백 사용자 정보 캐시 저장: userId={}", fallbackExternalUserInfo.getUserId());
       }
       return result;
     }
@@ -161,7 +161,7 @@ public class UserCacheStore {
    */
   public boolean evictUserCache(Long userId) {
     if (userId == null) {
-      log.warn("⚠️ userId가 null입니다");
+      log.warn("[user-cache] userId가 null입니다");
       return false;
     }
 
@@ -170,11 +170,11 @@ public class UserCacheStore {
       Boolean deleted = redisTemplate.delete(cacheKey);
       boolean result = Boolean.TRUE.equals(deleted);
 
-      log.debug("🗑️ 사용자 캐시 무효화: userId={}, deleted={}", userId, result);
+      log.debug("[user-cache] 사용자 캐시 무효화: userId={}, deleted={}", userId, result);
       return result;
 
     } catch (Exception e) {
-      log.error("❌ 사용자 캐시 무효화 실패: userId={}", userId, e);
+      log.error("[user-cache] 사용자 캐시 무효화 실패: userId={}", userId, e);
       return false;
     }
   }
@@ -193,7 +193,7 @@ public class UserCacheStore {
         .collect(Collectors.toList());
 
     if (validUserIds.isEmpty()) {
-      log.warn("⚠️ 유효한 userId가 없습니다");
+      log.warn("[user-cache] 유효한 userId가 없습니다");
       return 0L;
     }
 
@@ -205,13 +205,13 @@ public class UserCacheStore {
       Long deletedCount = redisTemplate.delete(cacheKeys);
       long result = deletedCount != null ? deletedCount : 0L;
 
-      log.debug("🗑️ 사용자 캐시 일괄 무효화: 요청={}, 삭제={}",
+      log.debug("[user-cache] 사용자 캐시 일괄 무효화: 요청={}, 삭제={}",
           validUserIds.size(), result);
 
       return result;
 
     } catch (Exception e) {
-      log.error("❌ 사용자 캐시 일괄 무효화 실패: userIds={}", validUserIds, e);
+      log.error("[user-cache] 사용자 캐시 일괄 무효화 실패: userIds={}", validUserIds, e);
       return 0L;
     }
   }
@@ -221,7 +221,7 @@ public class UserCacheStore {
    */
   public long evictUserCacheByPattern(String pattern) {
     if (!StringUtils.hasText(pattern)) {
-      log.warn("⚠️ 패턴이 비어있습니다");
+      log.warn("[user-cache] 패턴이 비어있습니다");
       return 0L;
     }
 
@@ -230,20 +230,20 @@ public class UserCacheStore {
       Set<String> keys = redisTemplate.keys(searchPattern);
 
       if (CollectionUtils.isEmpty(keys)) {
-        log.debug("🔍 패턴 매칭 키 없음: pattern={}", pattern);
+        log.debug("[user-cache] 패턴 매칭 키 없음: pattern={}", pattern);
         return 0L;
       }
 
       Long deletedCount = redisTemplate.delete(keys);
       long result = deletedCount != null ? deletedCount : 0L;
 
-      log.debug("🗑️ 패턴 기반 캐시 무효화: pattern={}, 삭제={}",
+      log.debug("[user-cache] 패턴 기반 캐시 무효화: pattern={}, 삭제={}",
           pattern, result);
 
       return result;
 
     } catch (Exception e) {
-      log.error("❌ 패턴 기반 캐시 무효화 실패: pattern={}", pattern, e);
+      log.error("[user-cache] 패턴 기반 캐시 무효화 실패: pattern={}", pattern, e);
       return 0L;
     }
   }
@@ -260,7 +260,7 @@ public class UserCacheStore {
       String cacheKey = buildCacheKey(userId);
       return Boolean.TRUE.equals(redisTemplate.hasKey(cacheKey));
     } catch (Exception e) {
-      log.error("❌ 캐시 존재 여부 확인 실패: userId={}", userId, e);
+      log.error("[user-cache] 캐시 존재 여부 확인 실패: userId={}", userId, e);
       return false;
     }
   }
@@ -270,7 +270,7 @@ public class UserCacheStore {
    */
   public boolean extendCacheTTL(Long userId, Duration newTtl) {
     if (userId == null || newTtl == null || newTtl.isNegative()) {
-      log.warn("⚠️ 유효하지 않은 파라미터: userId={}, ttl={}", userId, newTtl);
+      log.warn("[user-cache] 유효하지 않은 파라미터: userId={}, ttl={}", userId, newTtl);
       return false;
     }
 
@@ -278,13 +278,13 @@ public class UserCacheStore {
       String cacheKey = buildCacheKey(userId);
       boolean result = Boolean.TRUE.equals(redisTemplate.expire(cacheKey, newTtl));
 
-      log.debug("⏰ 캐시 TTL 연장: userId={}, newTtl={}초, success={}",
+      log.debug("[user-cache] 캐시 TTL 연장: userId={}, newTtl={}초, success={}",
           userId, newTtl.getSeconds(), result);
 
       return result;
 
     } catch (Exception e) {
-      log.error("❌ 캐시 TTL 연장 실패: userId={}", userId, e);
+      log.error("[user-cache] 캐시 TTL 연장 실패: userId={}", userId, e);
       return false;
     }
   }
@@ -304,7 +304,7 @@ public class UserCacheStore {
           "fallbackTtlSeconds", FALLBACK_TTL.getSeconds()
       );
     } catch (Exception e) {
-      log.error("❌ 캐시 통계 조회 실패", e);
+      log.error("[user-cache] 캐시 통계 조회 실패", e);
       return Map.of("error", e.getMessage());
     }
   }
@@ -323,7 +323,7 @@ public class UserCacheStore {
     try {
       return objectMapper.readValue(json, ExternalUserInfo.class);
     } catch (JsonProcessingException e) {
-      log.error("UserInfo 역직렬화 실패: json={}", json, e);
+      log.error("[user-cache] UserInfo 역직렬화 실패: json={}", json, e);
       return null;
     }
   }
@@ -336,7 +336,7 @@ public class UserCacheStore {
     try {
       return deserializeUserInfo(cachedValue);
     } catch (Exception e) {
-      log.warn("⚠️ 사용자 정보 역직렬화 실패: userId={}", userId, e);
+      log.warn("[user-cache] 사용자 정보 역직렬화 실패: userId={}", userId, e);
       // 손상된 캐시 데이터 삭제
       evictUserCache(userId);
       return null;

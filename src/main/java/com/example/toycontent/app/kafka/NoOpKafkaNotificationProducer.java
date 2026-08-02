@@ -16,6 +16,6 @@ public class NoOpKafkaNotificationProducer extends KafkaNotificationProducer {
 
   @Override
   public void send(KafkaNotificationDto dto) {
-    log.info("[Kafka-NoOp] 알림 스킵: userId={}, type={}", dto.getUserId(), dto.getType());
+    log.info("[notify] 알림 스킵: userId={}, type={}", dto.getUserId(), dto.getType());
   }
 }

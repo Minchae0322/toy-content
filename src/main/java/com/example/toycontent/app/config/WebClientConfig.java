@@ -31,7 +31,7 @@ public class WebClientConfig {
    */
   @Bean("userServiceWebClient")
   public WebClient userServiceWebClient(WebClient.Builder builder) {
-    log.info("UserService API Key: {}", apiKey);
+    log.info("[config] UserService API Key: {}", apiKey);
 
     return builder
         .baseUrl(UriComponentsBuilder.newInstance()

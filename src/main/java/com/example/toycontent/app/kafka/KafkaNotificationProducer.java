@@ -27,10 +27,10 @@ public class KafkaNotificationProducer {
     kafkaTemplate.send(topic, key, dto)
         .whenComplete((result, ex) -> {
           if (ex != null) {
-            log.error("[Kafka] 알림 발행 실패: userId={}, type={}, error={}",
+            log.error("[notify] 알림 발행 실패: userId={}, type={}, error={}",
                 dto.getUserId(), dto.getType(), ex.getMessage(), ex);
           } else {
-            log.info("[Kafka] 알림 발행 성공: userId={}, type={}, partition={}, offset={}",
+            log.info("[notify] 알림 발행 성공: userId={}, type={}, partition={}, offset={}",
                 dto.getUserId(), dto.getType(),
                 result.getRecordMetadata().partition(),
                 result.getRecordMetadata().offset());

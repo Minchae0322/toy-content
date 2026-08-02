@@ -39,7 +39,7 @@ public class FollowingCacheStore {
       return Optional.of(result);
 
     } catch (Exception e) {
-      log.error("팔로잉 캐시 조회 실패: userId={}", userId, e);
+      log.error("[user-cache] 팔로잉 캐시 조회 실패: userId={}", userId, e);
       return Optional.empty();
     }
   }
@@ -67,7 +67,7 @@ public class FollowingCacheStore {
       return true;
 
     } catch (Exception e) {
-      log.error("팔로잉 캐시 저장 실패: userId={}", userId, e);
+      log.error("[user-cache] 팔로잉 캐시 저장 실패: userId={}", userId, e);
       return false;
     }
   }
@@ -86,7 +86,7 @@ public class FollowingCacheStore {
     try {
       return Boolean.TRUE.equals(redisTemplate.delete(buildKey(userId)));
     } catch (Exception e) {
-      log.error("팔로잉 캐시 무효화 실패: userId={}", userId, e);
+      log.error("[user-cache] 팔로잉 캐시 무효화 실패: userId={}", userId, e);
       return false;
     }
   }

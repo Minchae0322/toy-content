@@ -59,7 +59,7 @@ public class LevelExpDataInitializer implements ApplicationRunner {
   @Transactional
   public void run(ApplicationArguments args) {
     if (levelExpRepository.count() > 0) {
-      log.info("레벨 테이블 이미 존재 - 초기화 스킵");
+      log.info("[reward] 레벨 테이블 이미 존재 - 초기화 스킵");
       return;
     }
 
@@ -73,6 +73,6 @@ public class LevelExpDataInitializer implements ApplicationRunner {
           .cumulativeExp(cumulative)
           .build());
     }
-    log.info("레벨 테이블 초기화 완료 - {}개 레벨", REQUIRED_EXP.length);
+    log.info("[reward] 레벨 테이블 초기화 완료 - {}개 레벨", REQUIRED_EXP.length);
   }
 }

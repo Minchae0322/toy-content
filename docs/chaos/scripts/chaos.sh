@@ -459,8 +459,31 @@ au3_tid() { tr -d - < /proc/sys/kernel/random/uuid; }
 # au3_fire <초> <라벨> — 초당 1회 호출하며 traceId와 응답코드를 남긴다.
 # 출력 경로는 EV가 아니라 시나리오 evidence 루트로 고정한다 — warm은 inject 단계,
 # fire는 trigger 단계에서 도는데 그때 EV가 baseline 폴더를 가리키고 있어 오해를 부른다.
+# au3_jwtfail_seen — JWT 검증 실패 로그가 Loki에 도달했는가.
+# 로그는 즉시 조회되지 않는다(수집 에이전트 배치 + Loki 쓰기 지연). 요청 직후 곧바로 세면
+# 0건이 나오는데, 이건 "로그가 없다"가 아니라 "아직 안 들어왔다"이다.
+# 실제로 게이트가 이 때문에 0건을 오보고했고 앵커 ⓑ를 폐기할 뻔했다.
+au3_jwtfail_seen() {
+  curl -sf -u "$LOKI_USER:$GRAFANA_TOKEN" -G "$LOKI_URL/loki/api/v1/query" \
+    --data-urlencode 'query=sum(count_over_time({service_name="content-service"} |~ "JWT 서명 검증 실패|JWT 만료|SignatureException" [15m]))' \
+    | jq -e '((.data.result[0].value[1] // "0") | tonumber) > 0' >/dev/null
+}
+
+# au3_content_ready — 드리프트 주입 후 content 파드가 실제로 기동했는가.
+# 주입값이 유효한 Base64가 아니면 JwtParser 빈 생성이 실패해 파드가 안 뜨고,
+# rollout이 멈춘 채 구 파드가 계속 200을 서빙해 "증상 없는 주입"이 된다.
+au3_content_ready() {
+  local n
+  n=$(kubectl -n "$NS" get deploy/"$CONTENT_DEPLOY" -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
+  [ -n "$n" ] && [ "$n" -ge 1 ] 2>/dev/null
+}
+
 au3_fire() {
-  local secs="$1" label="$2" out="$SCEN_DIR/evidence/au3-traceids-$label-$RUN_TS.txt" i tid code
+  # 한 줄로 합치지 말 것 — bash는 local의 인자를 "전부 확장한 뒤" 대입하므로
+  # 같은 줄에서 $label을 참조하면 아직 미대입 상태고 set -u가 셸을 종료시킨다.
+  local secs="$1" label="$2"
+  local out="$SCEN_DIR/evidence/au3-traceids-$label-$RUN_TS.txt"
+  local i tid code
   mkdir -p "$(dirname "$out")"
   : > "$out"
   AU3_OUT_="$out"
@@ -556,7 +579,8 @@ measure_AU_3() {
     local bad="${TOKEN%?}"
     if [ "${TOKEN: -1}" = "A" ]; then bad="${bad}B"; else bad="${bad}A"; fi
     echo "  [게이트] 서명 훼손 토큰: HTTP $(http_code "$BASE/content/feeds/following" -H "Authorization: Bearer $bad") (기대 401)"
-    loki_count jwtfail '{service_name="content-service"} |~ "JwtFilter|signature|Signature|SignatureException|만료|expired|Expired"'
+    poll "JWT 실패 로그 Loki 도달" 10 3 au3_jwtfail_seen
+    loki_count jwtfail '{service_name="content-service"} |~ "JWT 서명 검증 실패|JWT 만료|SignatureException|JwtFilter"'
     manual "위 로그에서 서명 불일치 문구를 기록 — 만료 케이스와 구별되는 문구가 아니면 앵커 ⓑ를 요건에서 뺀다(SoT AU-3/answer.md 체크리스트)"
   fi
 }
@@ -572,10 +596,17 @@ inject_AU_3() {
   kubectl -n "$NS" get secret "$CONTENT_SECRET" -o yaml > "$AU3_BK"
   grep -q "JWT_SECRET" "$AU3_BK" || { log "[중단] 백업에 JWT_SECRET 없음 — 시크릿 이름 확인"; rm -f "$AU3_BK"; return 1; }
   log "시크릿 백업: $AU3_BK (평문 포함 — 원복 시 자동 삭제)"
+  # 주입값은 반드시 유효한 Base64여야 한다 — JwtParser 생성자가 Base64.getDecoder().decode()
+  # 를 거쳐 Keys.hmacShaKeyFor()에 넣기 때문이다. 알파벳 밖 문자('-' 등)가 있으면 빈 생성이
+  # 실패해 파드가 아예 안 뜨고, 그러면 rollout이 멈춰 구 파드가 계속 200을 서빙한다
+  # (= 시크릿 드리프트가 아니라 배포 실패가 되고 증상이 안 난다).
+  # 아래 값 = base64("chaos-au3-drift-not-a-real-secret-0000000000") · 디코드 44바이트(HS256은 32+ 필요).
   kubectl -n "$NS" patch secret "$CONTENT_SECRET" \
-    -p '{"stringData":{"JWT_SECRET":"chaos-au3-drift-value-not-a-real-secret-0000000000"}}'
+    -p '{"stringData":{"JWT_SECRET":"Y2hhb3MtYXUzLWRyaWZ0LW5vdC1hLXJlYWwtc2VjcmV0LTAwMDAwMDAwMDA="}}'
   kubectl -n "$NS" rollout restart deploy/"$CONTENT_DEPLOY"
   kubectl -n "$NS" rollout status deploy/"$CONTENT_DEPLOY"
+  # 파드가 실제로 떴는지 확인 — 위 Base64 조건이 깨지면 여기서 걸린다.
+  poll "content 기동 확인" 24 5 au3_content_ready
 }
 trigger_AU_3() {
   # 401을 "1건"이 아니라 "구간"으로 만든다. 요청 1건이면 rate가 스크레이프 한 칸에만 걸려

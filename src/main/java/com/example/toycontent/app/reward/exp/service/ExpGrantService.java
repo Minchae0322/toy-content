@@ -171,7 +171,7 @@ public class ExpGrantService {
     userRewardService.addExp(userId, actualAmount, source, sourceId);
     boolean capped = actualAmount < amount;
 
-    log.info("EXP 지급 - userId: {}, source: {}, requested: {}, actual: {}, capped: {}",
+    log.info("[reward] EXP 지급 - userId: {}, source: {}, requested: {}, actual: {}, capped: {}",
         userId, source, amount, actualAmount, capped);
 
     return ExpGrantResult.granted(amount, actualAmount, capped);
@@ -199,7 +199,7 @@ public class ExpGrantService {
     userRewardService.addExp(userId, actualAmount, source, sourceId);
     boolean capped = actualAmount < amount;
 
-    log.info("EXP 지급 (횟수 제한) - userId: {}, source: {}, sourceId: {}, requested: {}, actual: {}, capped: {}",
+    log.info("[reward] EXP 지급 (횟수 제한) - userId: {}, source: {}, sourceId: {}, requested: {}, actual: {}, capped: {}",
         userId, source, sourceId, amount, actualAmount, capped);
 
     return ExpGrantResult.granted(amount, actualAmount, capped);
@@ -210,13 +210,13 @@ public class ExpGrantService {
    */
   private ExpGrantResult grantWithoutCap(Long userId, long amount, ExpSource source, Long sourceId) {
     if (sourceId != null && isDuplicate(userId, source, sourceId)) {
-      log.debug("EXP 중복 지급 방지 - userId: {}, source: {}, sourceId: {}", userId, source, sourceId);
+      log.debug("[reward] EXP 중복 지급 방지 - userId: {}, source: {}, sourceId: {}", userId, source, sourceId);
       return ExpGrantResult.duplicated(amount);
     }
 
     userRewardService.addExp(userId, amount, source, sourceId);
 
-    log.info("EXP 지급 (캡 제외) - userId: {}, source: {}, amount: {}", userId, source, amount);
+    log.info("[reward] EXP 지급 (캡 제외) - userId: {}, source: {}, amount: {}", userId, source, amount);
 
     return ExpGrantResult.granted(amount, amount, false);
   }

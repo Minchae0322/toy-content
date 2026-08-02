@@ -43,11 +43,11 @@ public class BattleHotScoreScheduler {
   @Transactional
   public void timeWeightUpdate() {
     if (!timeWeightEnabled) {
-      log.debug("[배틀 핫 스코어] 시간 가중치 업데이트 스케줄러 OFF");
+      log.debug("[scheduler] 시간 가중치 업데이트 스케줄러 OFF");
       return;
     }
 
-    log.info("[배틀 핫 스코어] 시간 가중치 업데이트 시작");
+    log.info("[scheduler] 시간 가중치 업데이트 시작");
     StopWatch stopWatch = new StopWatch();
     stopWatch.start();
 
@@ -56,17 +56,17 @@ public class BattleHotScoreScheduler {
           LocalDateTime.now().minusMinutes(30));
 
       if (battles.isEmpty()) {
-        log.info("[배틀 핫 스코어] 시간 가중치 업데이트 완료 - 대상 없음");
+        log.info("[scheduler] 시간 가중치 업데이트 완료 - 대상 없음");
         return;
       }
 
       battles.forEach(Battle::updateHotScore);
 
       stopWatch.stop();
-      log.info("[배틀 핫 스코어] 시간 가중치 업데이트 완료 - {}건, {}ms",
+      log.info("[scheduler] 시간 가중치 업데이트 완료 - {}건, {}ms",
           battles.size(), stopWatch.getTotalTimeMillis());
     } catch (Exception e) {
-      log.error("[배틀 핫 스코어] 시간 가중치 업데이트 실패", e);
+      log.error("[scheduler] 시간 가중치 업데이트 실패", e);
     }
   }
 
@@ -85,11 +85,11 @@ public class BattleHotScoreScheduler {
   @Transactional
   public void fullRecalculate() {
     if (!fullRecalculateEnabled) {
-      log.debug("[배틀 핫 스코어] 전체 재계산 스케줄러 OFF");
+      log.debug("[scheduler] 전체 재계산 스케줄러 OFF");
       return;
     }
 
-    log.info("[배틀 핫 스코어] 전체 재계산 시작");
+    log.info("[scheduler] 전체 재계산 시작");
     StopWatch stopWatch = new StopWatch();
     stopWatch.start();
 
@@ -97,17 +97,17 @@ public class BattleHotScoreScheduler {
       List<Battle> battles = battleRepository.findActiveAndUpcomingBattles();
 
       if (battles.isEmpty()) {
-        log.info("[배틀 핫 스코어] 전체 재계산 완료 - 대상 없음");
+        log.info("[scheduler] 전체 재계산 완료 - 대상 없음");
         return;
       }
 
       battles.forEach(Battle::updateHotScore);
 
       stopWatch.stop();
-      log.info("[배틀 핫 스코어] 전체 재계산 완료 - {}건, {}ms",
+      log.info("[scheduler] 전체 재계산 완료 - {}건, {}ms",
           battles.size(), stopWatch.getTotalTimeMillis());
     } catch (Exception e) {
-      log.error("[배틀 핫 스코어] 전체 재계산 실패", e);
+      log.error("[scheduler] 전체 재계산 실패", e);
     }
   }
 }

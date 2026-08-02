@@ -39,18 +39,18 @@ public class BattleItemCommentService {
 
   @Transactional
   public void createComment(Long battleId, Long itemId, Long actionUserId, BattleItemCommentRequest.Create request) {
-    log.info("댓글 작성 시작 - battleId: {}, itemId: {}, userId: {}", battleId, itemId, actionUserId);
+    log.info("[battle] 댓글 작성 시작 - battleId: {}, itemId: {}, userId: {}", battleId, itemId, actionUserId);
 
     try {
       BattleItem battleItem = battleItemRepository.findById(itemId)
               .orElseThrow(() -> {
-                log.warn("배틀 아이템 조회 실패 - itemId: {}", itemId);
+                log.warn("[battle] 배틀 아이템 조회 실패 - itemId: {}", itemId);
                 return new RestApiException(BattleErrorCode.BATTLE_ITEM_NOT_FOUND);
               });
-      log.debug("1단계 통과 - 배틀 아이템 조회 완료");
+      log.debug("[battle] 1단계 통과 - 배틀 아이템 조회 완료");
 
       ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(actionUserId);
-      log.debug("2단계 통과 - 유저 정보 조회 완료: nickname={}", userInfo.getNickname());
+      log.debug("[battle] 2단계 통과 - 유저 정보 조회 완료: nickname={}", userInfo.getNickname());
 
       BattleItemComment comment = BattleItemComment.builder()
               .battleItem(battleItem)
@@ -62,13 +62,13 @@ public class BattleItemCommentService {
               .content(request.getContent())
               .build();
 
-      log.debug("3단계 통과 - 댓글 엔티티 생성 완료");
+      log.debug("[battle] 3단계 통과 - 댓글 엔티티 생성 완료");
 
       battleItem.getBattle().incrementTotalCommentCount();
-      log.debug("4단계 통과 - 댓글 수 증가 완료");
+      log.debug("[battle] 4단계 통과 - 댓글 수 증가 완료");
 
       commentRepository.save(comment);
-      log.debug("5단계 통과 - 댓글 저장 완료");
+      log.debug("[battle] 5단계 통과 - 댓글 저장 완료");
 
       // 알림은 이벤트로 등록만 한다. 실제 발행은 트랜잭션 커밋 이후에 일어나므로,
       // 이 트랜잭션이 롤백되면 알림도 함께 폐기된다(유령 알림 방지).
@@ -85,12 +85,12 @@ public class BattleItemCommentService {
               battleItem.getDisplayName()
       );
 
-      log.info("댓글 작성 완료 - commentId: {}, battleId: {}, itemId: {}", comment.getId(), battleId, itemId);
+      log.info("[battle] 댓글 작성 완료 - commentId: {}, battleId: {}, itemId: {}", comment.getId(), battleId, itemId);
 
     } catch (RestApiException e) {
       throw e;
     } catch (Exception e) {
-      log.error("댓글 작성 실패 - battleId: {}, itemId: {}, userId: {}, 원인: {}",
+      log.error("[battle] 댓글 작성 실패 - battleId: {}, itemId: {}, userId: {}, 원인: {}",
               battleId, itemId, actionUserId, e.getMessage(), e);
       throw e;
     }

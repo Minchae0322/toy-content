@@ -38,19 +38,19 @@ public class JwtParser {
             // io.jsonwebtoken.security.SignatureException 이므로 io.jsonwebtoken.* 와일드카드로는
             // 잡히지 않는다. 과거 catch 절의 SecurityException 은 java.lang 것이어서 미포착 →
             // 필터 밖으로 전파 → 500 이었다.
-            log.warn("JWT 서명 검증 실패 — 위조 또는 시크릿 불일치");
+            log.warn("[auth-jwt] JWT 서명 검증 실패 — 위조 또는 시크릿 불일치");
         } catch (ExpiredJwtException e) {
-            log.warn("JWT 만료 exp={}", e.getClaims() == null ? "unknown" : e.getClaims().getExpiration());
+            log.warn("[auth-jwt] JWT 만료 exp={}", e.getClaims() == null ? "unknown" : e.getClaims().getExpiration());
         } catch (MalformedJwtException e) {
-            log.warn("JWT 형식 오류");
+            log.warn("[auth-jwt] JWT 형식 오류");
         } catch (UnsupportedJwtException e) {
-            log.warn("지원하지 않는 JWT");
+            log.warn("[auth-jwt] 지원하지 않는 JWT");
         } catch (IllegalArgumentException e) {
-            log.warn("JWT 값이 비어 있음");
+            log.warn("[auth-jwt] JWT 값이 비어 있음");
         } catch (JwtException e) {
             // 최후 방어. JwtException 은 jjwt 예외의 부모이고 io.jsonwebtoken 패키지라
             // 와일드카드에 잡힌다. 새 예외 타입이 생겨도 500 으로 새지 않는다.
-            log.warn("JWT 검증 실패 {}", e.getClass().getSimpleName());
+            log.warn("[auth-jwt] JWT 검증 실패 {}", e.getClass().getSimpleName());
         }
         return false;
     }

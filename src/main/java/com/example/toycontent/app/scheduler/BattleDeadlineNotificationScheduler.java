@@ -57,7 +57,7 @@ public class BattleDeadlineNotificationScheduler {
 
     List<Battle> battles = battleRepository.findByEndDateBetween(from, to);
     if (battles.isEmpty()) {
-      log.debug("[배틀 알림] D-7 대상 없음");
+      log.debug("[scheduler] D-7 대상 없음");
       return;
     }
 
@@ -69,7 +69,7 @@ public class BattleDeadlineNotificationScheduler {
         .toList();
 
     sentRepository.saveAll(newSent);
-    log.info("[배틀 알림] D-7 발송 완료 - 대상 배틀 {}건, 발송 {}건", battles.size(), newSent.size());
+    log.info("[scheduler] D-7 발송 완료 - 대상 배틀 {}건, 발송 {}건", battles.size(), newSent.size());
   }
 
   /**
@@ -94,7 +94,7 @@ public class BattleDeadlineNotificationScheduler {
 
     List<Battle> battles = battleRepository.findByEndDateBetween(from, now);
     if (battles.isEmpty()) {
-      log.debug("[배틀 알림] 종료 대상 없음");
+      log.debug("[scheduler] 종료 대상 없음");
       return;
     }
 
@@ -110,7 +110,7 @@ public class BattleDeadlineNotificationScheduler {
         .toList();
 
     sentRepository.saveAll(newSent);
-    log.info("[배틀 알림] 종료 발송 완료 - 대상 배틀 {}건, 발송 {}건", battles.size(), newSent.size());
+    log.info("[scheduler] 종료 발송 완료 - 대상 배틀 {}건, 발송 {}건", battles.size(), newSent.size());
   }
 
   private BattleNotificationSent sendD7AndMark(Battle battle) {

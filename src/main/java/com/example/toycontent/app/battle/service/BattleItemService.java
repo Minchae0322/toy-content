@@ -575,7 +575,7 @@ public class BattleItemService {
       // notificationService.notifyItemUnderReview(battle.getCreatorId(), item);
     }
 
-    log.info("배틀 아이템 신고: battleId={}, itemId={}, reportCount={}",
+    log.info("[battle] 배틀 아이템 신고: battleId={}, itemId={}, reportCount={}",
         battleId, itemId, item.getReportCount());
   }
 

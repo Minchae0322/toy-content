@@ -51,7 +51,7 @@ public class ExternalUserInfoService {
    */
   public ExternalUserInfo getUserInfo(Long userId) {
     if (userId == null) {
-      log.info("[외부사용자 조회] userId가 null 입니다. 대체 사용자 정보를 반환합니다.");
+      log.info("[user-fallback] userId가 null 입니다. 대체 사용자 정보를 반환합니다.");
       return createFallbackUserInfo(null);
     }
 
@@ -60,17 +60,17 @@ public class ExternalUserInfoService {
     return cacheService.getCachedUserInfos(userId)
             .map(cachedInfo -> {
               long elapsed = System.currentTimeMillis() - start;
-              log.info("[외부사용자 조회] 캐시 HIT - userId: {}, elapsed: {}ms", userId, elapsed);
+              log.info("[user-cache] 캐시 HIT - userId: {}, elapsed: {}ms", userId, elapsed);
               return cachedInfo;
             })
             .orElseGet(() -> {
               long elapsed = System.currentTimeMillis() - start;
-              log.info("[외부사용자 조회] 캐시 MISS - userId: {}, elapsed: {}ms, API 호출합니다.", userId, elapsed);
+              log.info("[user-cache] 캐시 MISS - userId: {}, elapsed: {}ms, API 호출합니다.", userId, elapsed);
 
               long apiStart = System.currentTimeMillis();
               ExternalUserInfo result = serviceClient.getUserInfoOrElseFetchAndCache(userId);
               long apiElapsed = System.currentTimeMillis() - apiStart;
-              log.info("[외부사용자 조회] API 호출 완료 - userId: {}, API elapsed: {}ms, total: {}ms",
+              log.info("[user-fallback] API 호출 완료 - userId: {}, API elapsed: {}ms, total: {}ms",
                       userId, apiElapsed, System.currentTimeMillis() - start);
               return result;
             });
@@ -89,7 +89,7 @@ public class ExternalUserInfoService {
    */
   public Map<Long, ExternalUserInfo> getUserInfos(List<Long> userIds) {
     if (CollectionUtils.isEmpty(userIds)) {
-      log.debug("[외부사용자 조회] 빈 요청 - 조회 생략");
+      log.debug("[user-cache] 빈 요청 - 조회 생략");
       return Map.of();
     }
 
@@ -172,7 +172,7 @@ public class ExternalUserInfoService {
    */
   public void evictUserCache(Long userId) {
     cacheService.evictUserCache(userId);
-    log.info("🗑️ 사용자 캐시 무효화: userId={}", userId);
+    log.info("[user-cache] 사용자 캐시 무효화: userId={}", userId);
   }
 
   /**
@@ -183,7 +183,7 @@ public class ExternalUserInfoService {
    */
   public long evictUserCacheBatch(List<Long> userIds) {
     long deletedCount = cacheService.evictUserCacheBatch(userIds);
-    log.info("🗑️ 사용자 캐시 일괄 무효화: 삭제={}", deletedCount);
+    log.info("[user-cache] 사용자 캐시 일괄 무효화: 삭제={}", deletedCount);
     return deletedCount;
   }
 
@@ -199,15 +199,15 @@ public class ExternalUserInfoService {
    */
   public void refreshUserCache(Long userId, ExternalUserInfo userInfo) {
     if (userInfo == null || userId == null) {
-      log.warn("⚠️ 유효하지 않은 사용자 정보: userId={}", userId);
+      log.warn("[user-cache] 유효하지 않은 사용자 정보: userId={}", userId);
       return;
     }
 
     boolean success = cacheService.cacheUserInfo(userInfo);
     if (success) {
-      log.info("🔄 사용자 캐시 갱신 완료: userId={}", userId);
+      log.info("[user-cache] 사용자 캐시 갱신 완료: userId={}", userId);
     } else {
-      log.warn("⚠️ 사용자 캐시 갱신 실패: userId={}", userId);
+      log.warn("[user-cache] 사용자 캐시 갱신 실패: userId={}", userId);
     }
   }
 
@@ -220,7 +220,7 @@ public class ExternalUserInfoService {
    */
   public long evictCacheByPattern(String pattern) {
     long deletedCount = cacheService.evictUserCacheByPattern(pattern);
-    log.info("🗑️ 패턴 기반 캐시 무효화: pattern={}, 삭제={}", pattern, deletedCount);
+    log.info("[user-cache] 패턴 기반 캐시 무효화: pattern={}, 삭제={}", pattern, deletedCount);
     return deletedCount;
   }
 

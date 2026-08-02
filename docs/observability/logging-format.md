@@ -164,6 +164,33 @@ Grafana Explore에서 사람이 읽을 때의 표준 쿼리:
 - **재검토 조건**: 트레이스 샘플링을 1.0 미만으로 내리는 날, 성공 기록의 유일 채널이
   로그가 되므로 이 규칙을 다시 판단한다 (필터 레벨 한 줄 변경으로 전환 가능).
 
+### R10 — message는 도메인 접두사 `[도메인] `로 시작한다 (2026-08-02 제정)
+
+```
+[user-fallback] auth 목록 조회 실패 → 3명 익명 대체: userIds=[1, 2, 3]
+```
+
+- **왜**: 프로브·쿼리·알람이 메시지 **본문 문구**에 결합되면 문구가 바뀌는 순간 조용히
+  깨진다 — AU-4에서 하네스 프로브 패턴이 실제 문구와 어긋나 fallback **0건 오보고** →
+  앵커 오염 → 채점 불가로 이어졌다 (rca-agent NF-09). 접두사에 결합하면 본문은 자유(R7)다.
+- **이모지 금지.** 이모지 접두가 접두사 3종 혼용(없음/한글 대괄호/이모지)의 하나였다.
+- `[HTTP]` · `[HTTP-SLOW]`는 R9 요청 자동 기록 전용으로 선점 — 다른 로그에 쓰지 않는다.
+- 같은 개념은 서비스가 달라도 같은 접두사를 쓴다 (`[user-cache]`가 content·chat 양쪽에
+  존재 — 서비스 구분은 `service_name` 라벨의 몫이라 충돌하지 않는다, R4).
+- 새 도메인이 생기면 **이 표에 먼저 추가하고** 코드에 쓴다 (R8).
+
+| 서비스 | 접두사 (도메인) |
+|---|---|
+| 공통 | `[user-cache]` 사용자 캐시 · `[user-fallback]` auth 호출 실패·폴백 · `[auth-jwt]` JWT 파싱/검증 · `[api-error]` 전역 예외 핸들러 · `[config]` 설정/기동 · `[kafka]` Kafka 발행/소비 |
+| content | `[scheduler]` 스케줄러 · `[battle]` 배틀 · `[reward]` 보상 · `[notify]` 알림 발행 |
+| chat | `[websocket]` STOMP/세션 · `[presence]` 접속 상태 · `[chat]` 채팅 도메인 · `[notify]` 알림 도메인 · `[push]` FCM 푸시 |
+| auth | `[auth-login]` 로그인/OAuth · `[user]` 사용자 · `[email]` 메일 · `[fcm]` FCM 토큰 · `[external-api]` 내부 제공 API · `[file]` 파일/S3 · `[notify]` 알림 설정 · `[diagnostics]` 진단 |
+
+- **적용 시 본문 불변 원칙**: 접두사 도입은 접두사 추가·이모지 제거만 하고 본문 문구는
+  바꾸지 않는다. 하네스 프로브가 아직 본문 문구(`알림 발행` · `DLQ` · `알림 처리 실패` ·
+  `JWT 서명 검증 실패` 등)를 grep하기 때문이다 — Loki `|=`는 부분 문자열 매칭이라
+  접두사 추가는 안전하고, 프로브의 접두사 전환(A-4b류)은 배포와 함께 별도로 한다.
+
 ---
 
 ## 4. 표준 설정 스니펫
@@ -235,6 +262,7 @@ rca-agent 평가 규율(변경군 분리·baseline 고정)을 따른다. 이 변
 | 규칙 제정 (이 문서) | 완료 |
 | R1 JSON 구조화 | 미적용 (auth는 Boot 3.2.1이라 선결: 업그레이드) |
 | R9 요청 자동 기록 (content 축소 · chat/toy-user 추가) | **코드 반영 완료 (2026-07-31, 커밋·배포 전).** 앵커 의존 확인됨 — chaos 앵커에 `[HTTP]` 의존 없음, 조사 리포트 인용은 전부 500 ERROR 줄이라 유지됨 |
+| R10 도메인 접두사 (세 서비스 전 로그) | **코드 반영 완료 (2026-08-02).** content 118(회차 2용 선행분 30 포함) · chat 225 · auth(toy-auth-user-region) 99개 로그 지점 — 접두사 추가·이모지 제거만, 본문 불변(하네스 grep 문구 보존을 전후 개수 대조로 확인). 세 레포 compileJava·test 통과. **미배포** |
 | auth 로그 보강 (toy-user) | **코드 반영 완료 (2026-07-31)** — JWT 검증 실패 사유 로그(A-0 동일 코드) · JwtFilter USER_NOT_FOUND 사유 · ControllerAdvice `RestApiException` 무로그 해소 · `handleAllException` WARN→ERROR |
 | **auth 레포 이원화** | **미해결** — `toy-user`(이번 반영)와 `toy-auth-user-region`(A-0 기반영) 중 **배포본 확정 필요.** 배포본이 region이면 R9·로그 보강을 그쪽에 포팅해야 한다 |
 | 부수 수정: chat `logging.level` 키 오타 | 완료 — `com.example.chat`(존재하지 않는 패키지) → `com.example.toychat` |

@@ -44,7 +44,7 @@ public class BattlePredictionService {
         battlePredictionRepository.findByBattleIdAndHitIsNull(battleId);
     predictions.forEach(prediction -> prediction.settle(winnerItem));
     long hitCount = predictions.stream().filter(BattlePrediction::getHit).count();
-    log.info("배틀 예측 판정 완료 - battleId: {}, 총 {}건, 적중 {}건",
+    log.info("[reward] 배틀 예측 판정 완료 - battleId: {}, 총 {}건, 적중 {}건",
         battleId, predictions.size(), hitCount);
 
     // 적중한 유저에게 EXP 지급

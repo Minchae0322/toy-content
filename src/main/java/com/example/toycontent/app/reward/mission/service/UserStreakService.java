@@ -42,7 +42,7 @@ public class UserStreakService {
     UserStreak streak = getOrCreateUserStreak(userId);
     boolean recorded = streak.recordPosting(LocalDate.now());
     if (!recorded) {
-      log.debug("이미 오늘 인증 완료 - userId: {}", userId);
+      log.debug("[reward] 이미 오늘 인증 완료 - userId: {}", userId);
       return new RecordPostingResult(streak, ExpGrantInfo.aggregate());
     }
 
@@ -51,7 +51,7 @@ public class UserStreakService {
     int current = streak.getCurrentStreak();
     if (STREAK_MILESTONES.contains(current)) {
       grant = expGrantService.grantStreakBonus(userId, current);
-      log.info("스트릭 마일스톤 달성 - userId: {}, streak: {}", userId, current);
+      log.info("[reward] 스트릭 마일스톤 달성 - userId: {}, streak: {}", userId, current);
     }
 
     return new RecordPostingResult(streak, ExpGrantInfo.aggregate(grant));

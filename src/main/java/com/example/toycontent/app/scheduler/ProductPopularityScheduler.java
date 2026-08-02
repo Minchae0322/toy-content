@@ -37,21 +37,21 @@ public class ProductPopularityScheduler {
   )
   public void timeWeightUpdate() {
     if (!timeWeightEnabled) {
-      log.debug("[제품 인기도] 시간 가중치 업데이트 스케줄러 OFF");
+      log.debug("[scheduler] 시간 가중치 업데이트 스케줄러 OFF");
       return;
     }
 
-    log.info("[Product Popularity] 시간 가중치 업데이트 시작");
+    log.info("[scheduler] 시간 가중치 업데이트 시작");
     StopWatch stopWatch = new StopWatch();
     stopWatch.start();
 
     try {
       int count = popularityService.updateDirtyProducts();
       stopWatch.stop();
-      log.info("[제품 인기도] 시간 가중치 업데이트 완료 -  {}건, {}ms",
+      log.info("[scheduler] 시간 가중치 업데이트 완료 -  {}건, {}ms",
               count, stopWatch.getTotalTimeMillis());
     } catch (Exception e) {
-      log.error("[제품 인기도] 시간 가중치 업데이트 실패", e);
+      log.error("[scheduler] 시간 가중치 업데이트 실패", e);
     }
   }
 
@@ -68,21 +68,21 @@ public class ProductPopularityScheduler {
   public void fullRecalculate() {
 
     if (!fullRecalculateEnabled) {
-      log.debug("[제품 인기도] 전체 재계산 스케줄러 OFF");
+      log.debug("[scheduler] 전체 재계산 스케줄러 OFF");
       return;
     }
 
-    log.info("[제품 인기도] 전체 재계산 시작");
+    log.info("[scheduler] 전체 재계산 시작");
     StopWatch stopWatch = new StopWatch();
     stopWatch.start();
   //2026-03-12 23:00:50.478 [scheduling-1] INFO  c.e.t.a.s.ProductPopularityScheduler - [제품 인기도] 전체 재계산 완료 - 2010건, 50191ms
     try {
       int count = popularityService.recalculateAll();
       stopWatch.stop();
-      log.info("[제품 인기도] 전체 재계산 완료 - {}건, {}ms",
+      log.info("[scheduler] 전체 재계산 완료 - {}건, {}ms",
               count, stopWatch.getTotalTimeMillis());
     } catch (Exception e) {
-      log.error("[제품 인기도] 전체 재계산 실패", e);
+      log.error("[scheduler] 전체 재계산 실패", e);
     }
   }
 }
