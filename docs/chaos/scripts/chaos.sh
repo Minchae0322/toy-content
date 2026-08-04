@@ -4,7 +4,7 @@
 # 사용법:
 #   ./chaos.sh <문항ID> baseline   # ① 정상 측정 + ② 기록 — 게이트 실패(쿼리 빈 값) 시 exit 1 = 주입 금지
 #   ./chaos.sh <문항ID> on         # ③ 주입 (주입 시각 timeline.log 기록)
-#   ./chaos.sh <문항ID> trigger    # ③ 트리거 (별도 루프가 있는 문항만: CH-2, CH-3, AU-1)
+#   ./chaos.sh <문항ID> trigger    # ③ 트리거 (별도 루프가 있는 문항만: CH-2, CH-3, AU-1, IN-1)
 #                                  #   CH-3는 트리거가 자동 원복까지 수행한다 (아래 주석 참조)
 #   ./chaos.sh <문항ID> symptom    # ④ 증상 관측 — baseline과 같은 함수를 재실행 (①=④ 동일 쿼리 보장)
 #   ./chaos.sh <문항ID> off        # ⑤ 원복 + 복귀 확인 폴링
@@ -100,7 +100,12 @@ hold_pre() {
                                           #   do_run이 600 이상이면 거부한다
     AU-3) echo "${AU3_HOLD_PRE:-60}"  ;;  # inject가 rollout status까지 대기 — 여기선 로그 전송만
     AU-4) echo "${AU4_HOLD_PRE:-660}" ;;  # 캐시 TTL 10분 만료 + 30초 여유 (RUNBOOK §6 "10분+ 유지")
-    IN-1) echo "${IN1_HOLD_PRE:-180}" ;;  # 캐시 미스 직행 급증·프레즌스 이상 관측용.
+    IN-1) echo "${IN1_HOLD_PRE:-30}"  ;;  # ⚠️ 180 → 30 (2026-08-04). 유지 시간이 준 것이 아니라
+                                          #   trigger_IN_1(기본 150초)로 **옮긴 것**이다 —
+                                          #   150+30 = 종전과 같은 약 3분이되 그 3분에 트래픽이 있다.
+                                          #   종전에는 이 180초가 통째로 무트래픽이라 증상이
+                                          #   관측에 안 남았다(회차 2에서 실측, 감점 15점).
+                                          #   여기 30초는 마지막 요청분의 스크레이프·로그 전송용.
                                           #   핫스코어 스케줄러는 매시 1회라 이 창으로 못 덮는다
                                           #   (anchors-v2가 IN-1 스케줄러 요건을 뺀 이유 — 유형 B)
     IN-2) echo "${IN2_HOLD_PRE:-90}"  ;;  # 발행 max.block.ms 60s 초과분 + 로그 전송
@@ -670,6 +675,38 @@ measure_IN_1() {
   manual "최근 핫스코어 갱신 시각 기록 — symptom의 '갱신 정체'와 대조"
 }
 inject_IN_1() { infra "docker stop $REDIS_CT"; }
+
+# trigger_IN_1 — 다운 구간 내내 읽기 트래픽을 만든다.
+#
+# 🔴 왜 필요한가 (2026-08-04 회차 2에서 실측): 이 문항은 트리거가 없어서 주입 후 hold 동안
+# **아무 요청도 안 들어갔다.** 다운 3분간 관측된 사용자 HTTP 요청은 단 1건, 그것도
+# measure_IN_1의 token()이 원복 4초 전에 쏜 로그인이었다(00:46:30, 216ms 정상).
+# 결과: 증상 ①(로그인 느림)·③(작성자 이름)이 관측에 무흔적 → 채점 83/100 중 **15점이 이 때문**.
+# 회차 1(98점)은 우연히 외부 트래픽이 겹쳐 피드가 16~20초로 남았던 것이다.
+# **장애를 주입해도 그 구간에 요청이 없으면 증상은 존재하지 않는다.**
+# 상세: yogurtte-rca-agent `docs/in-1/round-2.md` §1·§5.
+#
+# 커버하는 증상: ① POST /auth/login · ③ GET /content/feeds/scroll(작성자 캐시) ·
+#              ② GET /chat/notifications/unread/count(프레즌스 경로, 토큰 있을 때만)
+trigger_IN_1() {
+  local secs="${IN1_TRIGGER_SECONDS:-150}"
+  log "트리거: ${secs}초 동안 읽기 트래픽 (로그인·피드·알림 반복)"
+  local end=$((SECONDS + secs)) n=0
+  while [ $SECONDS -lt $end ]; do
+    n=$((n + 1))
+    # 증거 파일은 남기지 않는다 — trigger 단계의 $EV는 아직 baseline 폴더를 가리킨다
+    # (위 au3_fire 주석과 같은 이유). 여기서 필요한 것은 트래픽이지 채록이 아니다.
+    # 실패해도 멈추지 않는다 — Redis가 죽어 있으니 5xx/타임아웃이 나는 것이 정상이고,
+    # 그 느린 응답 자체가 이 문항이 남겨야 할 신호다.
+    curl -s -o /dev/null --max-time 30 -X POST "$BASE/auth/login" \
+      -H 'Content-Type: application/json' -d "$LOGIN_JSON" || true
+    curl -s -o /dev/null --max-time 30 "$BASE/content/feeds/scroll?size=10" || true
+    [ -n "$TOKEN" ] && curl -s -o /dev/null --max-time 30 \
+      -H "Authorization: Bearer $TOKEN" "$BASE/chat/notifications/unread/count" || true
+    sleep 5
+  done
+  log "트리거 완료 — ${n}회 왕복"
+}
 revert_IN_1() {
   infra "docker start $REDIS_CT"
   poll "redis 컨테이너 Running" 12 5 infra "docker inspect -f '{{.State.Running}}' $REDIS_CT | grep -q true"
