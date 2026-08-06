@@ -6,6 +6,193 @@ Grafana Cloud Free(메트릭 10k 시리즈, 로그·트레이스 각 50GB/월, r
 
 ---
 
+## 2026-08-06 — 스크레이프 간격 실측: **23초짜리 장애는 메트릭에서 사라질 수 있다** + 파드 교체 사유를 물을 채널이 없다
+
+### 왜 했나
+
+rca-agent 회차 5로 CH-2(chat `scale 0` 6분)·CH-3(Mongo 다운 23초)를 연달아 조사했는데,
+**CH-3의 정답 지표인 `mongodb_up`이 전 구간 1이었다.** 에이전트가 리포트에서
+*"~23초 중단은 잡혔어야 한다 — 익스포터가 stale일 가능성"* 이라며 **관측 도구를 의심**했다.
+그 의심이 맞는지 직접 쟀다. **결론: 익스포터는 멀쩡하다. 스크레이프 간격 문제다.**
+
+### 무엇을 했나 (측정만, 변경 없음)
+
+`count_over_time(<metric>[5m])`으로 **실제 저장된 샘플 개수**를 셌다.
+그래프 점 개수(쿼리 step)가 아니라 진짜 측정 횟수다.
+
+| 층 | job | **간격** | 활성 시리즈 |
+|---|---|---:|---:|
+| **인프라 exporter** | `mongodb` · `kafka` · `redis` (전부 `instance=infra-server`) | **30초** | **145** (18 / 104 / 23) |
+| **앱 (Micrometer)** | `chat-service` · `content-service` | **60초** | **2,513** (565 / 1,948) |
+
+확인 지표 — `mongodb_up` · `kafka_brokers` · `kafka_consumergroup_lag` · `up{job=redis|mongodb|kafka}` = 30초.
+`up{job=chat-service|content-service}` · `hikaricp_connections_*` · `websocket_active_users` = 60초.
+
+**포착 확률 산수** — 간격 `I`, 장애 길이 `D`일 때 **`D ≥ I`면 최소 1샘플이 반드시 들어간다.**
+`D < I`면 확률은 `D / I`.
+
+| 장애 | 간격 | 포착 | |
+|---|---:|---:|---|
+| CH-3 Mongo **23.6초** | 30초 | **79%** | 🔴 이번 회차가 남은 21%에 걸렸다 |
+| IN-3 풀 고갈 (수십 초 예상) | 60초 | 불확실 | 🔴 **정답 신호가 여기 걸려 있다** |
+| CH-1 Mongo 5분 | 30초 | 100% | 영향 없음 |
+| CH-2 컨슈머 부재 6~10분 | 30초 | 100% | 영향 없음 |
+| AU-2 · AU-4 auth 다운 (분 단위) | 60초 | 100% | 영향 없음 |
+
+### 🔴 집계 쿼리로는 못 고친다
+
+rca-agent는 이미 스윕 쿼리를 `min_over_time(mongodb_up[5m])`으로 쓰고 있고
+(`application.yml` 주석에 *"한계: 스크레이프 간격이 하한이다"* 까지 적혀 있다), **그 처방은 맞다.**
+다만 하한 아래로는 못 내려간다 — 구멍이 두 개이기 때문이다.
+
+| 구멍 | 증상 | `min_over_time`이 고치나 |
+|---|---|---|
+| **A. 쿼리가 건너뜀** | 샘플엔 0이 있는데 step이 1인 지점만 집음 | **고친다** |
+| **B. 애초에 안 잼** | 그 구간에 샘플 자체가 없음 | **못 고친다** |
+
+실측 확인 — `min_over_time(mongodb_up[1m])`을 3시간 15분에 걸쳐 돌려도 **0 샘플 0개**.
+Grafana 패널의 Min도 같다(받은 점들의 후처리라 데이터가 동일하다).
+
+### 두 번째 발견 — 파드가 **왜** 사라졌는지 물을 채널이 없다
+
+CH-2·CH-3 두 회차 연속으로 같은 문장이 나왔다 — *"파드가 왜 교체됐는지 근거가 없다.
+배포인지 OOMKill인지 프로브 실패인지 **데이터 부족**"*. 실제 주입은 `kubectl scale --replicas=0`이었다.
+
+`kube-state-metrics`는 클러스터에 떠 있고(`up{job=integrations/kubernetes/kube-state-metrics}`=1)
+`kube_deployment_spec_replicas{deployment="chat-service"}`가 **1→0→1을 정확히 기록**했는데
+(00:39~00:40 = 1→0, 00:45~00:46 = 0→1 · 60초 간격), **rca-agent 수집 쿼리 목록에 이 계열이 하나도 없다.**
+`up` 시계열의 소멸·출현으로 *"파드가 바뀌었다"* 까지는 가지만
+**의도된 replica 변경 / 크래시 / OOMKill을 가를 수단이 없다.**
+
+### 왜 중요한가
+
+- **CH-3는 회차마다 21% 확률로 메트릭 채널이 통째로 사라진다.** 문항당 N≥2를 요구하는 채점
+  프로토콜에서 치명적이다 — *"회차 A는 메트릭이 잡았고 B는 못 잡았다"* 가 되면 점수 차가
+  **능력 차인지 주사위인지 구분되지 않는다.** CH-1 회차 5에서 이미 겪은 모양이다.
+- **그런데 CH-3는 만점이 나왔다** — 앱 채널(Loki `InterruptedAtShutdown`·`Connection refused` 원문 +
+  트레이스 span 공백 22.71초)이 살아 있었다. **CH-2는 정반대로 메트릭만 살아 있었다.**
+  둘을 합치면 결론은 하나다 — **채널 하나에 의존하는 설계는 양방향으로 다 깨진다.**
+- **IN-3는 대안이 없다.** 정답 신호가 `hikaricp_connections_pending > 0` 구간인데 60초 간격이다.
+  주입 전에 정하지 않으면 관측 불가한 요건으로 앵커 부적합이 난다.
+
+### ✅ 적용 완료 — 인프라 층만 30초 → 10초 (2026-08-06 **02:48~02:50Z 전환**)
+
+**적용 후 실측** (`count_over_time`):
+
+| 지표 | 전 | 후 | |
+|---|---:|---:|---|
+| `mongodb_up` | **2 샘플/분** (30초) | **6 샘플/분** (10초) | ✅ |
+| `kafka_brokers` | 30초 | **10초** (30샘플/5분) | ✅ |
+| `up{job="redis"}` | 30초 | **10초** | ✅ |
+| `up{job="chat-service"}` | 60초 | **60초** | ✅ **앱 층 무변경 — 의도대로** |
+
+전환 시각은 `count_over_time(mongodb_up[1m])`을 2분 step으로 훑어 2 → 4 → 6으로 계단이 뜬 지점으로 확정했다.
+
+**🔴 이 시각이 도구 세대 경계다.** rca-agent 회차 5 조사(CH-2 00:53Z · CH-3 01:36Z)는 **전부 변경 전**이고,
+02:49Z 이후 조사는 다른 구성이다. 회차를 나란히 두고 비교하지 않는다.
+
+| | 바꾼 것 | 그대로 둔 것 |
+|---|---|---|
+| 대상 | 인프라 exporter job (**145 시리즈 · 전체의 5.5%**) | 앱 job (**2,513 시리즈 · 94%**) |
+| 효과 | **10초 이상 장애 100% 포착** — CH-3(20~25초)는 최소 2샘플 | — |
+| 비용 | 시리즈 수 **불변**(Free 10k 한도 무관), 샘플 3배 → DPM 기준 청구 단위 3배 (환산 ~2,803 → ~3,383) | 60→10초면 6배라 불가 |
+
+**아직 검증 안 된 것** — 간격이 줄었다는 것과 **23초 다운이 실제로 `0`으로 찍힌다**는 것은 다른 명제다.
+mongodb_exporter가 연결 실패를 즉시 반영하는지는 **다음 CH-3 주입 때 확인**한다(아래 검증 설계).
+
+**더 줄이려면** 가용성 지표만 떼면 된다 — `mongodb_up`은 시리즈가 **1개**다.
+`up`·`mongodb_up`·`kafka_brokers`만 별도 job으로 10초, 나머지 exporter 지표는 30초로 두면
+늘어나는 것이 수십 개다.
+
+**IN-3에는 이 처방이 안 닿는다**(앱 층). 셋 중 하나를 골라야 한다 —
+ⓐ **주입을 60초 이상 지속**(제일 싸다) · ⓑ 앱 job만 15초로(비싸다) ·
+ⓒ 앵커의 정답 대상을 **트레이스 `acquired` 대기 이벤트**로 교체(해상도 문제에서 벗어난다).
+
+### 어디를 바꾸나 — **찾았다: `alloy-metrics.extraConfig` 한 줄** (2026-08-06 확인)
+
+스크레이프 설정은 **k3s 클러스터의 k8s-monitoring Helm 릴리스 값**이다(release rev 14 · chart `3.8.7` pin).
+어느 레포에도 커밋돼 있지 않다. `helm -n monitoring get values grafana-k8s-monitoring`로 확인한 결과:
+
+```alloy
+# values: alloy-metrics.extraConfig
+prometheus.scrape "infra_external" {
+  targets = [
+    { __address__ = "172.31.46.124:9100", job = "node-infra", instance = "infra-server" },
+    { __address__ = "172.31.46.124:9121", job = "redis",      instance = "infra-server" },
+    { __address__ = "172.31.46.124:9216", job = "mongodb",    instance = "infra-server" },
+    { __address__ = "172.31.46.124:9308", job = "kafka",      instance = "infra-server" },
+  ]
+  scrape_interval = "30s"        # ← 목표물. 이 한 줄.
+  forward_to = [prometheus.relabel.infra_filter.receiver]
+}
+```
+
+**두 층이 설정상으로도 완전히 분리돼 있다** — 인프라 30초는 위 `extraConfig`의 명시적 값이고,
+앱 60초는 `annotationAutodiscovery`(chart 기본)다. **인프라만 건드리는 것이 문법적으로도 깨끗하다.**
+
+**필터는 손댈 필요 없다** — 같은 `extraConfig`의 `prometheus.relabel "infra_filter"` 화이트리스트에
+`mongodb_up` · `kafka_brokers` · `kafka_consumergroup_lag` · `redis_up` · `up`이 전부 들어 있다.
+
+**적용 절차**
+
+```bash
+helm repo add grafana https://grafana.github.io/helm-charts 2>/dev/null; helm repo update
+helm -n monitoring get values grafana-k8s-monitoring -o yaml > ksm-values.yaml
+#   ksm-values.yaml에서 scrape_interval = "30s"  →  "10s"  (한 곳)
+helm -n monitoring upgrade grafana-k8s-monitoring grafana/k8s-monitoring \
+  --version 3.8.7 -f ksm-values.yaml
+```
+
+- `--version 3.8.7` **반드시 유지** — 4.0.3은 `destinations` 스키마가 array→map breaking change다(2026-05-19 기록).
+- `-o yaml`을 써야 `USER-SUPPLIED VALUES:` 헤더 없이 나온다.
+- **적용 확인**: `count_over_time(mongodb_up[5m])`이 **10 → 30**이면 성공.
+
+**환산 비용** — 시리즈 수는 불변(Free 10k 한도 무관), 샘플만 3배.
+
+| | 지금 | 변경 후 |
+|---|---:|---:|
+| 앱 2,513 시리즈 @ 60초 (1 DPM) | 2,513 | 2,513 |
+| 인프라 145 시리즈 @ 30초 → **10초** | 290 (2 DPM) | **870** (6 DPM) |
+| 환산 합계 | ~2,803 | **~3,383** (10k의 34%) |
+
+**가용성 지표만 따로 빼는 안은 기각한다.** 블록을 하나 더 만들면 같은 타겟·같은 라벨을 두 번 긁어
+**중복 샘플로 깨진다.** 피하려면 `instance` 라벨을 바꿔야 하고, 그러면
+`mongodb_up{instance="infra-server"}`를 쓰는 기존 쿼리·rca-agent 설정·앵커가 전부 갈라진다.
+**145개 3배가 그 복잡도보다 싸다.**
+
+> 🔴 **values.yaml이 버전 관리 밖인 것 자체가 결함이다.** `alloy-receiver`·`destinations` 변경
+> (2026-05-19)도 같은 상태로 서버에만 있다. **rev 14까지 왔는데 이력이 문서에만 있다.**
+> 이번에 `helm get values -o yaml` 결과를 레포로 커밋하는 것을 권한다.
+
+### 검증 설계 (아직 안 함 — 예측만 박아 둔다)
+
+- **예측**: 10초로 내리면 CH-3 재주입 시 `mongodb_up`에 **0이 최소 2샘플** 찍히고,
+  rca-agent 스윕의 `min_over_time(mongodb_up[5m])`이 그것을 잡아 `zero-is-abnormal` 목록
+  (`up`·`mongodb_up`·`kafka_brokers`)에 걸려 **후보로 승격**된다. 사슬의 나머지는 이미 다 깔려 있다.
+- 🔴 **미검증 전제**: 10초로 내려도 **mongodb_exporter가 그 순간의 연결 실패를 즉시 0으로 반영**해야 한다.
+  exporter 자체 타임아웃이나 캐시가 있으면 늦는다. **코드로는 알 수 없고 다음 CH-3 주입 때 실측해야 한다.**
+- **반증 조건**: 10초로 바꿨는데도 23초 주입에서 `mongodb_up` 0이 안 찍히면
+  간격이 아니라 **exporter 동작**이 원인이므로 처방을 다시 짜야 한다.
+- **적용 시점**: 에이전트가 보는 것이 바뀌므로 **회차 경계에서 넣고 전후를 기록**한다
+  (회차 중간 적용은 델타를 무너뜨린다).
+
+### 다음 단계
+
+- [ ] `helm get values`로 현재 스크레이프 설정 확보 → **레포로 커밋**
+- [ ] 인프라 exporter job 30초 → 10초 (회차 경계에서)
+- [ ] rca-agent 심층 수집 쿼리도 집계로 (`mongodb_up` → `min_over_time(...)`) — 지금은 스윕만 적용돼 있다
+- [ ] rca-agent 수집 목록에 `kube_deployment_spec_replicas` · `kube_deployment_status_replicas_available` ·
+      `kube_pod_container_status_restarts_total` 추가 (rca-agent `docs/round-6/` **B-41**)
+- [ ] **IN-3 주입 전 게이트** — `hikaricp_connections_pending`이 60초 간격에 잡히도록 주입 사양을
+      정하거나 앵커 정답 대상을 바꾼다. **부하만 있으면 주입 없이 확인 가능**
+- [ ] `mongodb_exporter`의 연결 실패 반영 지연 실측 (위 미검증 전제)
+
+> 근거 회차: rca-agent [`docs/ch-3/round-5.md`](../../../yogurtte-rca-agent/docs/ch-3/round-5.md) ·
+> [`docs/ch-2/round-5.md`](../../../yogurtte-rca-agent/docs/ch-2/round-5.md) ·
+> 대기열 [`docs/round-6/`](../../../yogurtte-rca-agent/docs/round-6/README.md)
+
+---
+
 ## 2026-07-26 — AU-2 주입이 낚은 잠복 실버그: /feeds/scroll size 미지정 500(NPE) + 측정 도구 오염
 
 ### 왜 했나
