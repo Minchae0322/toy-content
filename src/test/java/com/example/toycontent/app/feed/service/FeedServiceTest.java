@@ -68,8 +68,8 @@ class FeedServiceTest {
   class GetFeed {
 
     @Test
-    @DisplayName("조회에 성공하면 조회수가 1 증가한다")
-    void 조회시_조회수_증가() {
+    @DisplayName("조회는 조회수를 바꾸지 않는다 - 증가는 increaseViewCount로 분리됐다")
+    void 조회는_조회수를_바꾸지_않는다() {
       // given
       Feed feed = FeedFixture.withId(FEED_ID);
       int previousViewCount = feed.getViewCount();
@@ -84,8 +84,18 @@ class FeedServiceTest {
 
       // then
       assertThat(feed.getViewCount())
-          .as("조회 이후 조회수")
-          .isEqualTo(previousViewCount + 1);
+          .as("조회 이후 조회수 - getFeed는 readOnly라 엔티티를 건드리지 않는다")
+          .isEqualTo(previousViewCount);
+    }
+
+    @Test
+    @DisplayName("increaseViewCount는 단문 UPDATE 쿼리에 위임한다")
+    void 조회수_증가는_단문_UPDATE로() {
+      // when
+      feedService.increaseViewCount(FEED_ID);
+
+      // then
+      then(feedRepository).should().incrementViewCount(FEED_ID);
     }
 
     @Test

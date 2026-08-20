@@ -102,6 +102,7 @@ public class FeedController {
       @Parameter(description = "피드 ID") @PathVariable Long feedId,
       @CurrentUserId(required = false) Long userId) {
 
+    feedService.increaseViewCount(feedId);
     FeedResponse.Detail feed = feedService.getFeed(feedId, userId);
     return ResponseEntity.ok(ApiResponse.success(feed));
   }

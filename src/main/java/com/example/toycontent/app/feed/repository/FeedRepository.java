@@ -24,6 +24,14 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
   Optional<Feed> findByIdWithPessimisticLock(@Param("id") Long id);
 
   /**
+   * 조회수 원자 증가. 엔티티 로드·더티 체킹 없이 단문 UPDATE 하나로 처리한다.
+   * 읽기 경로(getFeed)가 readOnly 트랜잭션이 될 수 있도록 쓰기를 여기로 분리했다.
+   */
+  @Modifying
+  @Query("UPDATE Feed f SET f.viewCount = f.viewCount + 1 WHERE f.id = :id")
+  int incrementViewCount(@Param("id") Long id);
+
+  /**
    * 검색 조건에 따른 피드 목록 조회 (전체)
    */
   @Query("SELECT f FROM Feed f " +

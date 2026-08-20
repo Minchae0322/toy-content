@@ -32,7 +32,7 @@ import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserFollowingService;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +49,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class FeedService {
 
   private final FeedRepository feedRepository;
@@ -167,7 +167,8 @@ public class FeedService {
 
 
   /**
-   * 피드 단건 조회
+   * 피드 단건 조회. 조회수 증가는 {@link #increaseViewCount}로 분리됐다 —
+   * 이 메서드는 readOnly 트랜잭션에서 돈다.
    */
   public FeedResponse.Detail getFeed(Long feedId, Long userId) {
     Feed feed = findFeedById(feedId);
@@ -180,10 +181,17 @@ public class FeedService {
 
     UserRewardInfo userRewardInfo = userRewardService.getUserRewardInfo(feed.getUserId());
 
-    // 조회수 증가
-    feed.incrementViewCount();
-
     return FeedResponse.Detail.from(feed, userInfo, usersReactions, userRewardInfo);
+  }
+
+  /**
+   * 조회수 증가 — 단문 UPDATE 한 방. 엔티티를 로드하지 않으므로 더티 체킹·스냅샷이 없고,
+   * getFeed(readOnly)와 별도 트랜잭션이라 커넥션을 중첩 점유하지 않는다.
+   * 컨트롤러에서 getFeed보다 먼저 호출해 본인 조회가 응답 조회수에 반영된다.
+   */
+  @Transactional
+  public void increaseViewCount(Long feedId) {
+    feedRepository.incrementViewCount(feedId);
   }
 
   /**
