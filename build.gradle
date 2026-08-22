@@ -57,6 +57,11 @@ dependencies {
     // @Observed AOP — 서비스/스케줄러 메서드 단위 span 생성
     implementation 'org.springframework.boot:spring-boot-starter-aop'
 
+    // 핫리스트 공유 캐시 (2026-08-23): 사용자 무관·1시간 주기 데이터의 요청당 재계산(16ms) 제거.
+    // 저장소는 Redis - 처음 설계(Caffeine 로컬)는 ShedLock 리더만 evict돼 파드 간 순위가
+    // TTL만큼 어긋나는 문제로 기각(파드 간 즉시 정합 요구). 근거·트레이드오프는 CacheConfig 주석
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+
     // JDBC 자동 계측 — Hikari + JPA에서 실행되는 SQL마다 span 자동 생성 (Tempo에서 병목 SQL 식별용)
     implementation 'net.ttddyy.observation:datasource-micrometer-spring-boot:1.1.1'
 

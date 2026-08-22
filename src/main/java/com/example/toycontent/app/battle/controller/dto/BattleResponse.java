@@ -34,7 +34,10 @@ public abstract class BattleResponse {
   @Builder
   @NoArgsConstructor
   @AllArgsConstructor
-  public static class BattleHotList {
+  public static class BattleHotList implements java.io.Serializable {
+
+    // Redis 캐시(JDK 직렬화) 대상 - UID 고정으로 배포 간 호환 유지
+    private static final long serialVersionUID = 1L;
     @Schema(description = "배틀 ID", example = "1")
     private Long id;
 
@@ -81,7 +84,10 @@ public abstract class BattleResponse {
   @NoArgsConstructor
   @AllArgsConstructor
   @Schema(description = "핫 배틀 TOP 3 아이템 — voteType별로 totalScore/votePercentage 의미가 달라짐")
-  public static class BattleHotItem {
+  public static class BattleHotItem implements java.io.Serializable {
+
+    // Redis 캐시(JDK 직렬화) 대상 - UID 고정으로 배포 간 호환 유지
+    private static final long serialVersionUID = 1L;
     @Schema(description = "아이템 ID")
     private Long id;
 

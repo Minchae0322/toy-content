@@ -34,7 +34,10 @@ public abstract class ProductResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     @Schema(description = "상품 목록 응답")
-    public static class ProductList {
+    public static class ProductList implements java.io.Serializable {
+
+    // Redis 캐시(JDK 직렬화) 대상 - UID 고정으로 배포 간 호환 유지
+    private static final long serialVersionUID = 1L;
         @Schema(description = "상품 ID", example = "1")
         private Long id;
 

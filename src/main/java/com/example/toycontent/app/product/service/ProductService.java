@@ -160,6 +160,14 @@ public class ProductService {
      * @param pageable        페이징 정보
      * @param isAdmin         관리자 여부
      */
+    // 인기 상품 캐시 (2026-08-23): 대시보드의 popularityScore 정렬 호출이 실트래픽 최다.
+    // 범용 목록이라 조건부로만 캐시한다 - 키워드 검색·관리자 조회는 제외 (키 폭발·낡음 방지),
+    // 나머지는 검색조건+페이지를 키로. 인기 점수도 스케줄러 갱신이라 TTL 5분 낡음은 무해.
+    @org.springframework.cache.annotation.Cacheable(
+        cacheNames = com.example.toycontent.app.config.CacheConfig.POPULAR_PRODUCTS,
+        condition = "#searchCondition.keyword == null && !#isAdmin",
+        key = "#searchCondition.categoryId + ':' + #searchCondition.brand + ':' "
+            + "+ #searchCondition.productType + ':' + #pageable.toString()")
     @Transactional(readOnly = true)
     public Page<ProductResponse.ProductList> getAllProducts(
         ProductSearchCondition searchCondition, Pageable pageable, boolean isAdmin) {

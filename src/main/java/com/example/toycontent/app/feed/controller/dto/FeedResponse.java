@@ -271,7 +271,10 @@ public abstract class FeedResponse {
   @NoArgsConstructor
   @AllArgsConstructor
   @Schema(description = "핫 피드 응답")
-  public static class HotFeedResponse {
+  public static class HotFeedResponse implements java.io.Serializable {
+
+    // Redis 캐시(JDK 직렬화) 대상 - UID 고정으로 배포 간 호환 유지
+    private static final long serialVersionUID = 1L;
 
     @Schema(description = "피드 ID")
     private Long feedId;

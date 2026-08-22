@@ -199,6 +199,11 @@ public class BattleService {
     return new PageImpl<>(battleLists, pageable, totalCount);
   }
 
+  // 핫리스트 캐시 (2026-08-23): feeds/hot과 동일 근거. 대시보드(size 7)·배틀 메뉴(size 5)가
+  // 파라미터만 다른 같은 리스트라 키에 pageable 전체를 쓴다.
+  @org.springframework.cache.annotation.Cacheable(
+      cacheNames = com.example.toycontent.app.config.CacheConfig.HOT_BATTLES,
+      key = "#pageable.toString()")
   @Transactional(readOnly = true)
   public Page<BattleHotList> getHotBattleList(Pageable pageable) {
     Page<BattleHotList> page = battleRepository.findHotBattlesWithSearchCondition(pageable);

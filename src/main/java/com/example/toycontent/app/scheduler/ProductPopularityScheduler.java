@@ -35,6 +35,12 @@ public class ProductPopularityScheduler {
           lockAtLeastFor = "30m",
           lockAtMostFor = "50m"
   )
+  // 캐시 무효화 (2026-08-23): 재계산 완료 직후 Redis 공유 캐시를 비운다.
+  // 캐시가 Redis(전 파드 공유)라, ShedLock 리더 1곳의 evict 한 번으로 모든 파드가 즉시
+  // 새 목록을 본다 - 파드 간 순위 불일치 없음. TTL 5분은 evict 누락 대비 안전망.
+  @org.springframework.cache.annotation.CacheEvict(
+      cacheNames = com.example.toycontent.app.config.CacheConfig.POPULAR_PRODUCTS,
+      allEntries = true)
   public void timeWeightUpdate() {
     if (!timeWeightEnabled) {
       log.debug("[scheduler] 시간 가중치 업데이트 스케줄러 OFF");
@@ -65,6 +71,9 @@ public class ProductPopularityScheduler {
           lockAtMostFor = "6h"
   )
   @Scheduled(cron = "${scheduler.product-popularity.full-recalculate.cron}")
+  @org.springframework.cache.annotation.CacheEvict(
+      cacheNames = com.example.toycontent.app.config.CacheConfig.POPULAR_PRODUCTS,
+      allEntries = true)
   public void fullRecalculate() {
 
     if (!fullRecalculateEnabled) {

@@ -160,6 +160,11 @@ public class FeedService {
    *
    * 최근 N일 이내 게시물만 대상으로 하여 성능 최적화
    */
+  // 핫리스트 캐시 (2026-08-23): 사용자 무관 + 핫스코어는 스케줄러가 1시간마다 갱신 - 요청마다
+  // 재계산할 이유가 없다. 캐시 히트 시 트랜잭션·커넥션도 안 탄다 (@Cacheable이 @Transactional보다 먼저).
+  @org.springframework.cache.annotation.Cacheable(
+      cacheNames = com.example.toycontent.app.config.CacheConfig.HOT_FEEDS,
+      key = "#pageable.toString()")
   public Page<FeedResponse.HotFeedResponse> getHotFeeds(Pageable pageable) {
     // 실시간 핫 스코어 계산하여 조회
     return feedRepository.findAllByHotScore(HOT_FEED_RECENT_DAYS, hotFeedMinViews, pageable);

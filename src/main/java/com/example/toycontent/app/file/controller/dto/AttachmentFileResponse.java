@@ -13,7 +13,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AttachmentFileResponse {
+public class AttachmentFileResponse implements java.io.Serializable {
+
+    // Redis 캐시(JDK 직렬화) 대상 - UID 고정으로 배포 간 호환 유지
+    private static final long serialVersionUID = 1L;
 
     @Schema(description = "제품 첨부 파일 ID", example = "1")
     private Long id;

@@ -71,6 +71,12 @@ public class FeedHotScoreScheduler {
       lockAtMostFor = "25m"
   )
   @Transactional
+  // 캐시 무효화 (2026-08-23): 재계산 완료 직후 Redis 공유 캐시를 비운다.
+  // 캐시가 Redis(전 파드 공유)라, ShedLock 리더 1곳의 evict 한 번으로 모든 파드가 즉시
+  // 새 목록을 본다 - 파드 간 순위 불일치 없음. TTL 5분은 evict 누락 대비 안전망.
+  @org.springframework.cache.annotation.CacheEvict(
+      cacheNames = com.example.toycontent.app.config.CacheConfig.HOT_FEEDS,
+      allEntries = true)
   public void timeWeightUpdate() {
     if (!timeWeightEnabled) {
       log.info("[scheduler] 시간 가중치 업데이트 스케줄러 OFF");
@@ -108,6 +114,9 @@ public class FeedHotScoreScheduler {
       lockAtMostFor = "6h"
   )
   @Transactional
+  @org.springframework.cache.annotation.CacheEvict(
+      cacheNames = com.example.toycontent.app.config.CacheConfig.HOT_FEEDS,
+      allEntries = true)
   public void fullRecalculate() {
     if (!fullRecalculateEnabled) {
       log.info("[scheduler] 전체 재계산 스케줄러 OFF");
