@@ -2,10 +2,6 @@ package com.example.toycontent.app.feed.repository.querydsl.impl;
 
 import static com.example.toycontent.app.feed.domain.QFeed.feed;
 import static com.example.toycontent.app.feed.domain.QFeedAttachmentFile.feedAttachmentFile;
-import static com.example.toycontent.app.feed.domain.QFeedHashtag.feedHashtag;
-import static com.example.toycontent.app.feed.domain.QFeedReaction.feedReaction;
-import static com.example.toycontent.app.hashtag.domain.QHashtag.hashtag;
-import static com.example.toycontent.app.product.domain.QProduct.product;
 
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.HotFeedResponse;
@@ -57,12 +53,6 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .limit(condition.getSize())
         .fetch();
 
-    if (feeds.isEmpty()) {
-      return feeds;
-    }
-
-    fetchAssociations(feeds, condition.getReaderId());
-
     return feeds;
   }
 
@@ -80,13 +70,6 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .orderBy(feed.id.desc())
         .limit(condition.getSize())
         .fetch();
-
-    if (feeds.isEmpty()) {
-      return feeds;
-    }
-
-
-    fetchAssociations(feeds, condition.getReaderId());
 
     return feeds;
   }
@@ -113,32 +96,14 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
     return feeds;
   }
 
-  /**
-   * 연관 데이터 배치 조회. 첨부 파일(thumbnail/imageCount)은 service에서
-   * {@link #findAttachmentsByFeedIds}로 별도 매핑하므로 여기선 다루지 않는다.
-   */
-  private void fetchAssociations(List<Feed> feeds, Long readerId) {
-    List<Long> feedIds = extractFeedIds(feeds);
-
-    fetchHashtags(feedIds);
-
-    if(readerId != null) {
-      fetchUserReactions(feedIds, readerId);
-    }
-  }
+  // fetchAssociations(hashtags·reactions 선행 로드)는 2026-08-23 제거 - 결과를 버리는 쿼리였다.
+  // 컬렉션·프록시 초기화는 hibernate.default_batch_fetch_size=100이 IN 배치로 처리하고,
+  // 조회자 리액션은 service의 findByFeedIdsAndUserId가 (반환값을 실제로 쓰면서) 담당한다.
 
   private List<Long> extractFeedIds(List<Feed> feeds) {
     return feeds.stream()
         .map(Feed::getId)
         .toList();
-  }
-
-  private void fetchHashtags(List<Long> feedIds) {
-    queryFactory
-        .selectFrom(feedHashtag)
-        .join(feedHashtag.hashtag, hashtag).fetchJoin()
-        .where(feedHashtag.feed.id.in(feedIds))
-        .fetch();
   }
 
   private void fetchPrimaryAttachments(List<Long> feedIds) {
@@ -161,19 +126,6 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .where(feedAttachmentFile.feed.id.in(feedIds))
         .fetch();
   }
-
-
-
-  private void fetchUserReactions(List<Long> feedIds, Long readerId) {
-    queryFactory
-        .selectFrom(feedReaction)
-        .where(
-            feedReaction.feed.id.in(feedIds),
-            feedReaction.userId.eq(readerId)
-        )
-        .fetch();
-  }
-
 
   @Override
   public Page<HotFeedResponse> findAllByHotScore(int recentDays, int minViews, Pageable pageable) {

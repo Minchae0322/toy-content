@@ -54,6 +54,53 @@ public class UserCacheStore {
   }
 
   /**
+   * 여러 사용자 정보 일괄 캐시 조회 - MGET 한 번으로 왕복 1회.
+   * 역직렬화 실패·미존재 키는 결과에서 빠지며, 호출부는 빠진 ID를 캐시 미스로 처리한다.
+   * Redis 장애 시 빈 맵을 반환해 전체를 미스로 돌린다 (단건 조회와 같은 폴백 규약).
+   */
+  public Map<Long, ExternalUserInfo> getCachedUserInfoBatch(List<Long> userIds) {
+    if (CollectionUtils.isEmpty(userIds)) {
+      return Map.of();
+    }
+
+    List<Long> validUserIds = userIds.stream()
+        .filter(Objects::nonNull)
+        .distinct()
+        .toList();
+    if (validUserIds.isEmpty()) {
+      return Map.of();
+    }
+
+    try {
+      List<String> cacheKeys = validUserIds.stream()
+          .map(this::buildCacheKey)
+          .toList();
+
+      List<String> cachedValues = redisTemplate.opsForValue().multiGet(cacheKeys);
+      if (cachedValues == null) {
+        return Map.of();
+      }
+
+      Map<Long, ExternalUserInfo> result = new java.util.HashMap<>();
+      for (int i = 0; i < validUserIds.size(); i++) {
+        String cachedValue = i < cachedValues.size() ? cachedValues.get(i) : null;
+        if (!StringUtils.hasText(cachedValue)) {
+          continue;
+        }
+        ExternalUserInfo userInfo = deserializeUserInfo(cachedValue);
+        if (userInfo != null) {
+          result.put(validUserIds.get(i), userInfo);
+        }
+      }
+      return result;
+
+    } catch (Exception e) {
+      log.error("[user-cache] Redis 일괄 캐시 조회 실패: 요청={}건", validUserIds.size(), e);
+      return Map.of();
+    }
+  }
+
+  /**
    * 단일 사용자 정보 캐시 저장
    */
   public boolean cacheUserInfo(ExternalUserInfo externalUserInfo) {

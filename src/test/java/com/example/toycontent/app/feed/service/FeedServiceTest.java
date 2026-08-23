@@ -15,6 +15,7 @@ import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.feed.controller.dto.FeedRequest;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedHashtag;
+import com.example.toycontent.app.feed.event.FeedViewedEvent;
 import com.example.toycontent.app.feed.repository.FeedAttachmentFileRepository;
 import com.example.toycontent.app.feed.repository.FeedHashtagRepository;
 import com.example.toycontent.app.feed.repository.FeedReactionRepository;
@@ -39,6 +40,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("FeedService")
@@ -60,6 +62,7 @@ class FeedServiceTest {
   @Mock private FeedHashtagRepository feedHashtagRepository;
   @Mock private ExpGrantService expGrantService;
   @Mock private UserRewardService userRewardService;
+  @Mock private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks private FeedService feedService;
 
@@ -68,7 +71,7 @@ class FeedServiceTest {
   class GetFeed {
 
     @Test
-    @DisplayName("조회는 조회수를 바꾸지 않는다 - 증가는 increaseViewCount로 분리됐다")
+    @DisplayName("조회는 조회수를 바꾸지 않는다 - 증가는 FeedViewedEvent 리스너로 분리됐다")
     void 조회는_조회수를_바꾸지_않는다() {
       // given
       Feed feed = FeedFixture.withId(FEED_ID);
@@ -89,13 +92,22 @@ class FeedServiceTest {
     }
 
     @Test
-    @DisplayName("increaseViewCount는 단문 UPDATE 쿼리에 위임한다")
-    void 조회수_증가는_단문_UPDATE로() {
+    @DisplayName("조회가 끝나면 FeedViewedEvent를 발행한다 - UPDATE는 커밋 후 리스너 몫")
+    void 조회는_이벤트를_발행한다() {
+      // given
+      Feed feed = FeedFixture.withId(FEED_ID);
+      given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
+      given(feedReactionRepository.findByFeedIdAndUserIdAndIsActiveTrue(FEED_ID, FEED_OWNER_ID))
+          .willReturn(List.of());
+      given(externalUserInfoService.getUserInfo(feed.getUserId()))
+          .willReturn(ExternalUserInfo.builder().userId(feed.getUserId()).nickname("작성자").build());
+
       // when
-      feedService.increaseViewCount(FEED_ID);
+      feedService.getFeed(FEED_ID, FEED_OWNER_ID);
 
       // then
-      then(feedRepository).should().incrementViewCount(FEED_ID);
+      then(eventPublisher).should().publishEvent(new FeedViewedEvent(FEED_ID));
+      then(feedRepository).should(never()).incrementViewCount(FEED_ID);
     }
 
     @Test

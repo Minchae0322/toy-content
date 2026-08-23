@@ -102,7 +102,7 @@ public class FeedController {
       @Parameter(description = "피드 ID") @PathVariable Long feedId,
       @CurrentUserId(required = false) Long userId) {
 
-    feedService.increaseViewCount(feedId);
+    // 조회수 증가는 getFeed가 발행하는 FeedViewedEvent를 리스너가 커밋 후 처리한다 (2026-08-23)
     FeedResponse.Detail feed = feedService.getFeed(feedId, userId);
     return ResponseEntity.ok(ApiResponse.success(feed));
   }

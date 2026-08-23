@@ -246,7 +246,8 @@ public abstract class FeedResponse {
           .buyPlace(feed.getBuyPlace())
           .buyPrice(feed.getBuyPrice())
           .price(feed.getPrice())
-          .viewCount(feed.getViewCount())
+          // +1: 본인 조회 보정. 증가는 AFTER_COMMIT 이벤트로 처리돼 이 SELECT에는 안 실려 있다
+          .viewCount(feed.getViewCount() + 1)
           .likeCount(feed.getLikeCount())
           .isTrending(feed.getIsTrending())
           .commentCount(feed.getCommentCount())

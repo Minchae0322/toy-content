@@ -103,14 +103,8 @@ public class ExternalUserInfoService {
       return Map.of();
     }
 
-    // 캐시에서 조회 가능한 것들 수집
-    Map<Long, ExternalUserInfo> cachedUsers = validUserIds.stream()
-        .map(userId -> Map.entry(userId, cacheService.getCachedUserInfos(userId)))
-        .filter(entry -> entry.getValue().isPresent())
-        .collect(Collectors.toMap(
-            Map.Entry::getKey,
-            entry -> entry.getValue().get()
-        ));
+    // 캐시에서 일괄 조회 (MGET 왕복 1회 - ID당 순차 GET이던 것을 2026-08-23 배치화)
+    Map<Long, ExternalUserInfo> cachedUsers = cacheService.getCachedUserInfoBatch(validUserIds);
 
     // 캐시 미스된 ID 추출
     List<Long> missingIds = validUserIds.stream()

@@ -16,6 +16,13 @@ public class LevelExpService {
 
   private final LevelExpRepository levelExpRepository;
 
+  // 레벨 테이블은 부팅 시 LevelExpDataInitializer가 넣는 정적 데이터인데, 종전에는
+  // 피드 목록·상세 요청마다 DB에서 다시 읽었다 (극한 부하에서 초당 200회+).
+  // 인메모리 TTL 캐시로 전환 - 운영 중 테이블을 손대는 경로가 없어 TTL은 안전망이다.
+  private static final long TABLE_CACHE_TTL_MILLIS = 10 * 60 * 1000L;
+  private volatile List<LevelExp> cachedLevelTable;
+  private volatile long cachedLevelTableAt;
+
   public LevelInfo computeLevelInfo(long totalExp) {
     return computeLevelInfo(totalExp, getLevelTable());
   }
@@ -41,7 +48,14 @@ public class LevelExpService {
   }
 
   public List<LevelExp> getLevelTable() {
-    return levelExpRepository.findAllByOrderByLevelAsc();
+    List<LevelExp> table = cachedLevelTable;
+    if (table != null && System.currentTimeMillis() - cachedLevelTableAt < TABLE_CACHE_TTL_MILLIS) {
+      return table;
+    }
+    table = List.copyOf(levelExpRepository.findAllByOrderByLevelAsc());
+    cachedLevelTable = table;
+    cachedLevelTableAt = System.currentTimeMillis();
+    return table;
   }
 
   /**

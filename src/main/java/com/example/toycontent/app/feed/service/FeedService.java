@@ -5,6 +5,7 @@ import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.FeedCursorResponse;
 import com.example.toycontent.app.feed.domain.FeedReaction;
+import com.example.toycontent.app.feed.event.FeedViewedEvent;
 import com.example.toycontent.app.feed.repository.FeedHashtagRepository;
 import com.example.toycontent.app.feed.repository.FeedReactionRepository;
 import com.example.toycontent.app.product.domain.Product;
@@ -42,6 +43,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -63,6 +65,7 @@ public class FeedService {
   private final FeedHashtagRepository feedHashtagRepository;
   private final ExpGrantService expGrantService;
   private final UserRewardService userRewardService;
+  private final ApplicationEventPublisher eventPublisher;
 
   private static final int HOT_FEED_RECENT_DAYS = 30;
 
@@ -172,8 +175,13 @@ public class FeedService {
 
 
   /**
-   * 피드 단건 조회. 조회수 증가는 {@link #increaseViewCount}로 분리됐다 —
-   * 이 메서드는 readOnly 트랜잭션에서 돈다.
+   * 피드 단건 조회 — readOnly 트랜잭션에서 돈다.
+   *
+   * <p>조회수 증가는 {@link com.example.toycontent.app.feed.event.FeedViewedEvent} 발행으로
+   * 대체됐다 (2026-08-23). 종전에는 컨트롤러가 별도 쓰기 트랜잭션을 먼저 호출해 요청마다
+   * 커넥션을 두 번 획득했는데, 극한 부하(풀 12·acquire 9.1s)에서 detail이 풀 압력을 배로
+   * 만드는 원인이었다. 이제 UPDATE는 커밋 후 리스너가 수행하고, 본인 조회 몫은 응답에서
+   * +1 보정된다 (Detail.from).
    */
   public FeedResponse.Detail getFeed(Long feedId, Long userId) {
     Feed feed = findFeedById(feedId);
@@ -186,17 +194,9 @@ public class FeedService {
 
     UserRewardInfo userRewardInfo = userRewardService.getUserRewardInfo(feed.getUserId());
 
-    return FeedResponse.Detail.from(feed, userInfo, usersReactions, userRewardInfo);
-  }
+    eventPublisher.publishEvent(new FeedViewedEvent(feedId));
 
-  /**
-   * 조회수 증가 — 단문 UPDATE 한 방. 엔티티를 로드하지 않으므로 더티 체킹·스냅샷이 없고,
-   * getFeed(readOnly)와 별도 트랜잭션이라 커넥션을 중첩 점유하지 않는다.
-   * 컨트롤러에서 getFeed보다 먼저 호출해 본인 조회가 응답 조회수에 반영된다.
-   */
-  @Transactional
-  public void increaseViewCount(Long feedId) {
-    feedRepository.incrementViewCount(feedId);
+    return FeedResponse.Detail.from(feed, userInfo, usersReactions, userRewardInfo);
   }
 
   /**
