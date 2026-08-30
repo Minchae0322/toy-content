@@ -33,6 +33,7 @@ import com.example.toycontent.app.reward.exp.service.dto.ExpGrantResult;
 import com.example.toycontent.external.user.dto.ExternalUserInfo;
 import com.example.toycontent.external.user.service.ExternalUserFollowingService;
 import com.example.toycontent.external.user.service.ExternalUserInfoService;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
@@ -55,6 +56,7 @@ import org.springframework.stereotype.Service;
 public class FeedService {
 
   private final FeedRepository feedRepository;
+  private final FeedQueryService feedQueryService;
   private final CategoryRepository categoryRepository;
   private final ProductRepository productRepository;
   private final HashtagRepository hashtagRepository;
@@ -74,7 +76,14 @@ public class FeedService {
   
   /**
    * 피드 목록 조회 (커서 페이징) - 탐색/검색용
+   *
+   * <p>커넥션 점유 경계 분리 (2026-08-30): DB 조회+매핑은 {@link FeedQueryService}의 좁은
+   * readOnly 트랜잭션에서 끝내고, userInfo(Redis/auth-service)는 트랜잭션 밖에서 채운다.
+   * 종전에는 클래스 레벨 트랜잭션이 외부 I/O 왕복 동안에도 커넥션을 잡고 있었다
+   * (T2-B 극한에서 acquire 10.1s의 배경). NOT_SUPPORTED는 클래스 레벨 @Transactional을
+   * 이 메서드에서만 무효화한다.
    */
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public CursorResponse<FeedResponse.ListView> getFeedsWithCursor(Search condition, Long userId) {
     Integer requestSize = condition.getSize() != null ? condition.getSize() : 20;
     condition.setSize(requestSize + 1);
@@ -82,11 +91,14 @@ public class FeedService {
     Optional.ofNullable(userId)
         .ifPresent(condition::setReaderId);
 
-    List<Feed> feeds = feedRepository.findFeedsWithCursor(condition);
+    FeedQueryService.ListViews loaded = feedQueryService.loadListViews(condition, userId);
 
-    Map<Long, List<FeedReaction>> userReactionsMap = getUserReactionsByFeedId(feeds, userId);
+    Map<Long, ExternalUserInfo> userInfoMap =
+        externalUserInfoService.getUserInfos(loaded.creatorIds());
 
-    List<FeedResponse.ListView> feedResponses = toListView(feeds, userReactionsMap);
+    List<FeedResponse.ListView> feedResponses = loaded.views();
+    IntStream.range(0, feedResponses.size())
+        .forEach(i -> feedResponses.get(i).setUserInfo(userInfoMap.get(loaded.creatorIds().get(i))));
 
     return CursorResponse.of(feedResponses, requestSize, FeedResponse.ListView::getFeedId);
   }
@@ -183,20 +195,15 @@ public class FeedService {
    * 만드는 원인이었다. 이제 UPDATE는 커밋 후 리스너가 수행하고, 본인 조회 몫은 응답에서
    * +1 보정된다 (Detail.from).
    */
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public FeedResponse.Detail getFeed(Long feedId, Long userId) {
-    Feed feed = findFeedById(feedId);
+    // 커넥션 점유 경계 분리 (2026-08-30): DB 조회+매핑(이벤트 발행 포함)은 좁은 트랜잭션,
+    // userInfo(Redis/auth-service)는 트랜잭션 밖. getFeedsWithCursor와 같은 구조.
+    FeedQueryService.DetailView loaded = feedQueryService.loadDetail(feedId, userId);
 
-    List<FeedReaction> usersReactions = Optional.ofNullable(userId)
-        .map(currentUserId -> feedReactionRepository.findByFeedIdAndUserIdAndIsActiveTrue(feedId, currentUserId))
-        .orElse(Collections.emptyList());
+    loaded.detail().setUserInfo(externalUserInfoService.getUserInfo(loaded.creatorId()));
 
-    ExternalUserInfo userInfo = externalUserInfoService.getUserInfo(feed.getUserId());
-
-    UserRewardInfo userRewardInfo = userRewardService.getUserRewardInfo(feed.getUserId());
-
-    eventPublisher.publishEvent(new FeedViewedEvent(feedId));
-
-    return FeedResponse.Detail.from(feed, userInfo, usersReactions, userRewardInfo);
+    return loaded.detail();
   }
 
   /**

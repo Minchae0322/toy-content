@@ -12,7 +12,9 @@ import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.category.repository.CategoryRepository;
 import com.example.toycontent.app.common.enumuration.FeedEvaluation;
 import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.common.exception.impl.FeedErrorCode;
 import com.example.toycontent.app.feed.controller.dto.FeedRequest;
+import com.example.toycontent.app.feed.controller.dto.FeedResponse;
 import com.example.toycontent.app.feed.domain.Feed;
 import com.example.toycontent.app.feed.domain.FeedHashtag;
 import com.example.toycontent.app.feed.event.FeedViewedEvent;
@@ -63,58 +65,41 @@ class FeedServiceTest {
   @Mock private ExpGrantService expGrantService;
   @Mock private UserRewardService userRewardService;
   @Mock private ApplicationEventPublisher eventPublisher;
+  @Mock private FeedQueryService feedQueryService;
 
   @InjectMocks private FeedService feedService;
 
   @Nested
-  @DisplayName("getFeed - 단건 조회")
+  @DisplayName("getFeed - 단건 조회 (오케스트레이션)")
   class GetFeed {
+    // DB 동작(조회수 불변·이벤트 발행·피드 없음 예외)은 FeedQueryServiceTest로 이사했다
+    // (트랜잭션 경계 분리, 2026-08-30). 여기서는 로더 결과 + userInfo 후주입만 검증한다.
 
     @Test
-    @DisplayName("조회는 조회수를 바꾸지 않는다 - 증가는 FeedViewedEvent 리스너로 분리됐다")
-    void 조회는_조회수를_바꾸지_않는다() {
+    @DisplayName("로더가 만든 Detail에 userInfo를 트랜잭션 밖에서 채워 반환한다")
+    void 로더_결과에_userInfo를_채운다() {
       // given
       Feed feed = FeedFixture.withId(FEED_ID);
-      int previousViewCount = feed.getViewCount();
-      given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
-      given(feedReactionRepository.findByFeedIdAndUserIdAndIsActiveTrue(FEED_ID, FEED_OWNER_ID))
-          .willReturn(List.of());
-      given(externalUserInfoService.getUserInfo(feed.getUserId()))
-          .willReturn(ExternalUserInfo.builder().userId(feed.getUserId()).nickname("작성자").build());
+      FeedResponse.Detail detail = FeedResponse.Detail.from(feed, null, List.of(), null);
+      given(feedQueryService.loadDetail(FEED_ID, FEED_OWNER_ID))
+          .willReturn(new FeedQueryService.DetailView(detail, feed.getUserId()));
+      ExternalUserInfo userInfo =
+          ExternalUserInfo.builder().userId(feed.getUserId()).nickname("작성자").build();
+      given(externalUserInfoService.getUserInfo(feed.getUserId())).willReturn(userInfo);
 
       // when
-      feedService.getFeed(FEED_ID, FEED_OWNER_ID);
+      FeedResponse.Detail result = feedService.getFeed(FEED_ID, FEED_OWNER_ID);
 
       // then
-      assertThat(feed.getViewCount())
-          .as("조회 이후 조회수 - getFeed는 readOnly라 엔티티를 건드리지 않는다")
-          .isEqualTo(previousViewCount);
+      assertThat(result.getUserInfo()).isEqualTo(userInfo);
     }
 
     @Test
-    @DisplayName("조회가 끝나면 FeedViewedEvent를 발행한다 - UPDATE는 커밋 후 리스너 몫")
-    void 조회는_이벤트를_발행한다() {
-      // given
-      Feed feed = FeedFixture.withId(FEED_ID);
-      given(feedRepository.findById(FEED_ID)).willReturn(Optional.of(feed));
-      given(feedReactionRepository.findByFeedIdAndUserIdAndIsActiveTrue(FEED_ID, FEED_OWNER_ID))
-          .willReturn(List.of());
-      given(externalUserInfoService.getUserInfo(feed.getUserId()))
-          .willReturn(ExternalUserInfo.builder().userId(feed.getUserId()).nickname("작성자").build());
-
-      // when
-      feedService.getFeed(FEED_ID, FEED_OWNER_ID);
-
-      // then
-      then(eventPublisher).should().publishEvent(new FeedViewedEvent(FEED_ID));
-      then(feedRepository).should(never()).incrementViewCount(FEED_ID);
-    }
-
-    @Test
-    @DisplayName("존재하지 않는 피드 조회 시 RestApiException을 던진다")
+    @DisplayName("로더가 피드 없음 예외를 던지면 그대로 전파하고 외부 호출은 하지 않는다")
     void 피드_없음_예외() {
       // given
-      given(feedRepository.findById(FEED_ID)).willReturn(Optional.empty());
+      given(feedQueryService.loadDetail(FEED_ID, FEED_OWNER_ID))
+          .willThrow(new RestApiException(FeedErrorCode.FEED_NOT_FOUND));
 
       // when & then
       assertThatThrownBy(() -> feedService.getFeed(FEED_ID, FEED_OWNER_ID))
