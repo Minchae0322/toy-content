@@ -9,6 +9,8 @@ import com.example.toycontent.app.common.enumuration.ResultVisibility;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
+import com.example.toycontent.app.common.hotscore.HotScoreFormula;
+import com.example.toycontent.app.common.hotscore.HotScoreSettings;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -160,11 +162,13 @@ public class Battle extends BaseTimeEntity {
 
   public void incrementTotalVotes(int delta) {
     this.totalVotes += delta;
+    updateHotScore();
   }
 
   /** SWIPE 배틀의 신규 스와이프 1건 카운트 (upsert 멱등 정책상 동일 verdict no-op/덮어쓰기는 호출 안 함). */
   public void incrementTotalSwipes() {
     this.totalSwipes++;
+    updateHotScore();
   }
 
   public boolean hasParticipants() {
@@ -212,14 +216,16 @@ public class Battle extends BaseTimeEntity {
     if (command.voteType() != null) {
       this.voteType = command.voteType();
     }
+    updateHotScore();
   }
 
   public void incrementTotalParticipants(int delta) {
     this.totalParticipants += delta;
+    updateHotScore();
   }
 
   /**
-   * 핫 스코어 업데이트 (외부 호출용 - 스케줄러)
+   * 핫 스코어 갱신. 참여도가 바뀌는 모든 뮤테이터가 부른다 (배치 없음).
    */
   public void updateHotScore() {
     this.hotScore = calculateHotScore();
@@ -227,7 +233,7 @@ public class Battle extends BaseTimeEntity {
   }
 
   /**
-   * 핫 스코어 계산.
+   * 핫 스코어 계산 — Reddit식 log10(참여도) + 시작시각/상수. 시간이 흘러도 값이 안 변한다.
    *
    * <p>baseScore: 무거운 행위(vote/participant)는 높은 가중치, 가벼운 행위(swipe/view)는 낮은 가중치.
    * SWIPE 배틀은 totalVotes/totalParticipants 대신 totalSwipes로 활동량이 잡힌다.
@@ -239,15 +245,22 @@ public class Battle extends BaseTimeEntity {
    * </pre>
    */
   public double calculateHotScore() {
-    double baseScore = (totalVotes * 2.0)
-        + (totalParticipants * 3.0)
-        + (totalSwipes * 0.1)
-        + (totalViews * 0.1);
+    double engagement = (nz(totalVotes) * 2.0)
+        + (nz(totalParticipants) * 3.0)
+        + (nz(totalSwipes) * 0.1)
+        + (nz(totalViews) * 0.1);
+    LocalDateTime anchor = startDate != null ? startDate : getCreatedAt();
+    return HotScoreFormula.score(engagement, anchor, HotScoreSettings.battleDivisor());
+  }
 
-    long hoursSinceStart = ChronoUnit.HOURS.between(startDate, LocalDateTime.now());
-    double timeDecay = Math.pow(hoursSinceStart + 2, 1.5); // +2는 0으로 나누기 방지
+  /** 저장 시점에 시간 항이 들어간 초기 점수를 갖는다 (참여도 0이어도 새 배틀은 위에서 시작). */
+  @PrePersist
+  void initHotScore() {
+    updateHotScore();
+  }
 
-    return baseScore / timeDecay;
+  private static int nz(Integer v) {
+    return v == null ? 0 : v;
   }
 
   // ========== 투표 타입 판별 ==========
@@ -262,11 +275,13 @@ public class Battle extends BaseTimeEntity {
   /** 새로운 참여자가 투표했을 때 참여자 수 증가 */
   public void incrementTotalParticipants() {
     this.totalParticipants++;
+    updateHotScore();
   }
 
   /** 복수 투표 재투표 시, 기존 참여 기록을 되돌릴 때 참여자 수 감소 */
   public void decrementTotalParticipants() {
     this.totalParticipants = Math.max(0, this.totalParticipants - 1);
+    updateHotScore();
   }
 
   // ========== 투표 수 ==========
@@ -274,11 +289,13 @@ public class Battle extends BaseTimeEntity {
   /** 투표 반영 시 투표 수 증가 (단일: 한 표, 복수: 투표한 아이템 수만큼) */
   public void addTotalVotes(int count) {
     this.totalVotes += count;
+    updateHotScore();
   }
 
   /** 복수 투표 재투표 시, 기존 투표 수를 되돌릴 때 감소 */
   public void subtractTotalVotes(int count) {
     this.totalVotes = Math.max(0, this.totalVotes - count);
+    updateHotScore();
   }
 
   // ========== 점수 ==========
@@ -298,15 +315,18 @@ public class Battle extends BaseTimeEntity {
   /** 배틀 상세 조회 시 조회 수 증가 */
   public void incrementTotalViews() {
     this.totalViews++;
+    updateHotScore();
   }
 
 
 
   public void incrementTotalCommentCount() {
     this.totalCommentCount++;
+    updateHotScore();
   }
 
   public void decrementTotalCommentCount() {
     this.totalCommentCount = Math.max(0, this.totalCommentCount - 1);
+    updateHotScore();
   }
 }

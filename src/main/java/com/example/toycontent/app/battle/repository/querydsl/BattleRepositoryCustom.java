@@ -16,7 +16,6 @@ public interface BattleRepositoryCustom {
   Page<BattleHotList> findHotBattlesWithSearchCondition(Pageable pageable);
   Long countBattlesWithSearchCondition(BattleSearchCondition condition);
 
-  List<Battle> findBattlesNeedingTimeWeightUpdate(LocalDateTime activeThreshold);
 
 
   List<Battle> findActiveAndUpcomingBattles();

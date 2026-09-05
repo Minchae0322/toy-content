@@ -53,6 +53,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ProductService {
 
+    private final ProductPopularityService productPopularityService;
     private final ProductRepository productRepository;
     private final ProductReactionRepository productReactionRepository;
     private final ProductReviewRepository productReviewRepository;
@@ -80,6 +81,7 @@ public class ProductService {
 
         // 신규 제품 엔티티 생성 및 저장
         Product newProduct = productRepository.save(productDto.toEntity(category, userId));
+        productPopularityService.refresh(newProduct.getId());
 
         // 대표 이미지 및 상세 이미지 파일 생성
         createProductAttachmentFiles(
@@ -260,6 +262,7 @@ public class ProductService {
         Product product = getProductByIdAndIsDeletedFalse(productId);
 
         product.updateStatus(request.getStatus(), request.getRejectReason());
+        productPopularityService.refresh(product.getId());
 
         return ProductResponse.ProductUpdate.of(product);
     }

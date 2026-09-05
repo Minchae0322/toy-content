@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ProductReviewService {
 
+    private final ProductPopularityService popularityService;
     private final ProductRepository productRepository;
     private final ProductReviewRepository productReviewRepository;
     private final ProductReviewAttachmentFileRepository productReviewAttachmentFileRepository;
@@ -41,6 +42,7 @@ public class ProductReviewService {
 
         createProductReviewAttachmentFiles(createReviewDto.getAttachmentFileInfos(), productReview);
         recalculateAvgRating(product);
+        popularityService.refresh(product.getId());
 
         return ReviewCreateResponse.of(productReview);
     }
@@ -67,6 +69,8 @@ public class ProductReviewService {
 
         if (request.getRating() != null) {
             recalculateAvgRating(review.getProduct());
+        popularityService.refresh(review.getProduct().getId());
+            popularityService.refresh(review.getProduct().getId());
         }
     }
 
@@ -77,6 +81,7 @@ public class ProductReviewService {
 
         review.delete();
         recalculateAvgRating(review.getProduct());
+        popularityService.refresh(review.getProduct().getId());
     }
 
     /**

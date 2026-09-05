@@ -5,6 +5,8 @@ import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.category.domain.Category;
 import com.example.toycontent.app.common.BaseTimeEntity;
 import com.example.toycontent.app.common.enumuration.FeedReactionType;
+import com.example.toycontent.app.common.hotscore.HotScoreFormula;
+import com.example.toycontent.app.common.hotscore.HotScoreSettings;
 import com.example.toycontent.app.feed.controller.dto.FeedRequest;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -20,6 +22,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -205,7 +208,7 @@ public class Feed extends BaseTimeEntity {
 
   public void incrementViewCount() {
     this.viewCount++;
-
+    refreshHotScore();
   }
 
   /**
@@ -213,6 +216,7 @@ public class Feed extends BaseTimeEntity {
    */
   public void incrementLikeCount() {
     this.likeCount++;
+    refreshHotScore();
   }
 
   /**
@@ -222,23 +226,50 @@ public class Feed extends BaseTimeEntity {
     if (this.likeCount > 0) {
       this.likeCount--;
     }
+    refreshHotScore();
   }
 
-
   /**
-   * 핫 수 증가
+   * 댓글 수 증가
    */
   public void incrementCommentCount() {
     this.commentCount++;
+    refreshHotScore();
   }
 
   /**
-   * 핫 수 증가
+   * 댓글 수 감소
    */
   public void decrementCommentCount() {
     if (this.commentCount > 0) {
       this.commentCount--;
     }
+    refreshHotScore();
+  }
+
+  // ========== 핫 스코어 ==========
+
+  /** 참여도 = 좋아요×5 + 댓글×3 + 조회×0.5 */
+  public double engagement() {
+    return nz(likeCount) * 5.0 + nz(commentCount) * 3.0 + nz(viewCount) * 0.5;
+  }
+
+  /**
+   * 참여도가 바뀔 때마다 이 행의 점수만 다시 쓴다.
+   * Reddit식(log10(참여도) + 작성시각/상수)이라 시간이 흘러도 값이 안 변하므로 배치 재계산이 없다.
+   * 상수(hot-score.feed-time-divisor-seconds)를 바꿨을 때만 관리자 API로 전체 재계산한다.
+   */
+  public void refreshHotScore() {
+    this.hotScore = HotScoreFormula.score(engagement(), getCreatedAt(), HotScoreSettings.feedDivisor());
+  }
+
+  @PrePersist
+  void initHotScore() {
+    refreshHotScore();
+  }
+
+  private static int nz(Integer v) {
+    return v == null ? 0 : v;
   }
 
   /**

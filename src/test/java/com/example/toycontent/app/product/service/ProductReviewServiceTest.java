@@ -35,6 +35,7 @@ class ProductReviewServiceTest {
   private static final String NICKNAME = "민채";
 
   @Mock private ProductRepository productRepository;
+  @Mock private ProductPopularityService popularityService;
   @Mock private ProductReviewRepository productReviewRepository;
   @Mock private ProductReviewAttachmentFileRepository productReviewAttachmentFileRepository;
   @Mock private ExternalUserInfoService externalUserInfoService;

@@ -27,9 +27,19 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
    * 조회수 원자 증가. 엔티티 로드·더티 체킹 없이 단문 UPDATE 하나로 처리한다.
    * 읽기 경로(getFeed)가 readOnly 트랜잭션이 될 수 있도록 쓰기를 여기로 분리했다.
    */
-  @Modifying
-  @Query("UPDATE Feed f SET f.viewCount = f.viewCount + 1 WHERE f.id = :id")
-  int incrementViewCount(@Param("id") Long id);
+  /**
+   * 조회수 +1 과 함께 hot_score를 같은 문장에서 갱신한다.
+   * MySQL은 SET을 왼쪽부터 순서대로 평가하므로 hot_score 계산 시 view_count는 이미 +1 된 값이다.
+   */
+  @Modifying(clearAutomatically = true)
+  @Query(value = """
+    UPDATE tb_feed
+    SET view_count = view_count + 1,
+        hot_score  = LOG10(GREATEST(like_count * 5 + comment_count * 3 + view_count * 0.5, 1))
+                     + UNIX_TIMESTAMP(created_at) / :divisor
+    WHERE id = :id
+    """, nativeQuery = true)
+  int incrementViewCount(@Param("id") Long id, @Param("divisor") long divisor);
 
   /**
    * 검색 조건에 따른 피드 목록 조회 (전체)
@@ -103,58 +113,17 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
 
 
   /**
-   * 피드 핫 스코어 벌크 업데이트 (최근 활동 대상)
-   *
-   * 매시간 실행되며, 최근 일정 시간 내 활동(좋아요, 조회 등)이 있어
-   * updated_at이 갱신된 피드만 대상으로 핫 스코어를 재계산한다.
-   *
-   * <p>핫 스코어 계산식:</p>
-   * <pre>
-   *   hotScore = engagementScore / decayFactor
-   *
-   *   engagementScore = (like_count × 5) + (comment_count × 3) + (view_count × 0.5)
-   *   decayFactor     = POWER(GREATEST(경과시간(h) + 24, 1), :decayExponent)
-   * </pre>
-   *
-   * <p>감쇠 지수(decayExponent)는 스케줄러가 최근 신규 피드 수에 따라 동적으로 결정한다.
-   * 신규 유입이 많으면 큰 값(빠른 감쇠), 적으면 작은 값(완만한 감쇠)을 사용한다.</p>
-   *
-   * @param since 이 시각 이후 updated_at이 갱신된 피드만 대상
-   * @param decayExponent 시간 감쇠 지수
-   * @return 업데이트된 피드 수
+   * 핫 스코어 전체 재계산 (수동 실행 전용).
+   * 시간 상수를 바꾼 뒤 저장된 점수를 새 기준으로 맞출 때만 쓴다. 평상시엔 행 단위로 갱신되므로 배치가 없다.
    */
   @Modifying(clearAutomatically = true)
   @Query(value = """
     UPDATE tb_feed
-    SET hot_score = (like_count * 5 + comment_count * 3 + view_count * 0.5)
-                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 24, 1), :decayExponent)
+    SET hot_score = LOG10(GREATEST(like_count * 5 + comment_count * 3 + view_count * 0.5, 1))
+                    + UNIX_TIMESTAMP(created_at) / :divisor
     WHERE deleted = false
-      AND updated_at >= :since
     """, nativeQuery = true)
-  int bulkUpdateHotScoreRecent(@Param("since") LocalDateTime since,
-                               @Param("decayExponent") double decayExponent);
-
-  /**
-   * 피드 핫 스코어 벌크 업데이트 (전체 재계산)
-   *
-   * 새벽 시간대에 실행되며, 최근 N일 이내 생성된 모든 활성 피드를 대상으로
-   * 시간 감쇠를 반영하여 핫 스코어를 재계산한다.
-   *
-   * @param recentDays 재계산 대상 기간 (일)
-   * @param decayExponent 시간 감쇠 지수
-   * @return 업데이트된 피드 수
-   * @see #bulkUpdateHotScoreRecent(LocalDateTime, double) 핫 스코어 계산식 상세
-   */
-  @Modifying(clearAutomatically = true)
-  @Query(value = """
-    UPDATE tb_feed
-    SET hot_score = (like_count * 5 + comment_count * 3 + view_count * 0.5)
-                    / POWER(GREATEST(TIMESTAMPDIFF(HOUR, created_at, NOW()) + 24, 1), :decayExponent)
-    WHERE deleted = false
-      AND created_at >= DATE_SUB(NOW(), INTERVAL :recentDays DAY)
-    """, nativeQuery = true)
-  int bulkUpdateHotScoreAll(@Param("recentDays") int recentDays,
-                            @Param("decayExponent") double decayExponent);
+  int recalculateAllHotScores(@Param("divisor") long divisor);
 
   /**
    * 최근 N시간 내 생성된 활성 피드 수

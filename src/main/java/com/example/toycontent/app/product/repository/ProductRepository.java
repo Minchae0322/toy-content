@@ -19,16 +19,6 @@ public interface ProductRepository extends JpaRepository<Product, Long>, Product
   Optional<Product> findByIdAndIsDeletedFalse(Long id);
 
 
-  // dirty 상품 조회
-  @Query("""
-        SELECT p FROM Product p
-        WHERE p.popularityDirty = true
-        AND p.status = 'APPROVED'
-        AND p.isDeleted = false
-        ORDER BY p.updatedAt DESC
-        """)
-  List<Product> findByPopularityDirtyTrue(PageRequest of);
-
   /** 승인 완료된 제품 수 조회 (삭제 제외) */
   long countByStatusAndIsDeletedFalse(ProductStatus status);
 
@@ -46,12 +36,4 @@ public interface ProductRepository extends JpaRepository<Product, Long>, Product
         """)
   void updatePopularityScore(@Param("productId") Long productId, @Param("score") Double score);
 
-  // dirty 마킹
-  @Modifying
-  @Query("""
-        UPDATE Product p
-        SET p.popularityDirty = true
-        WHERE p.id = :productId
-        """)
-  void markPopularityDirty(@Param("productId") Long productId);
 }

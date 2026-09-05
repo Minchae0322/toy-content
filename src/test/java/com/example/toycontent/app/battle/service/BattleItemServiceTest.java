@@ -67,6 +67,7 @@ class BattleItemServiceTest {
   @Mock private BattleItemCommentRepository battleItemCommentRepository;
   @Mock private BattleItemEventEntryRepository battleItemEventEntryRepository;
   @Mock private ProductRepository productRepository;
+  @Mock private com.example.toycontent.app.product.service.ProductPopularityService productPopularityService;
   @Mock private ExpGrantService expGrantService;
   @Mock private ExternalUserInfoService externalUserInfoService;
   @Mock private NotificationService notificationService;

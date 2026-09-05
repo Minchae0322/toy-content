@@ -1,5 +1,6 @@
 package com.example.toycontent.app.feed.event;
 
+import com.example.toycontent.app.common.hotscore.HotScoreSettings;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
@@ -42,7 +43,7 @@ public class FeedViewCountEventListener {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void onFeedViewed(FeedViewedEvent event) {
     try {
-      feedRepository.incrementViewCount(event.feedId());
+      feedRepository.incrementViewCount(event.feedId(), HotScoreSettings.feedDivisor());
     } catch (Exception e) {
       Span current = tracer.currentSpan();
       if (current != null) {

@@ -4,11 +4,11 @@ import com.example.toycontent.app.common.annotation.CurrentUserIsAdmin;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.SchedulerErrorCode;
 import com.example.toycontent.app.common.response.ApiResponse;
+import com.example.toycontent.app.battle.service.BattleHotScoreService;
+import com.example.toycontent.app.feed.service.FeedHotScoreService;
+import com.example.toycontent.app.product.service.ProductPopularityService;
 import com.example.toycontent.app.scheduler.BattleDeadlineNotificationScheduler;
-import com.example.toycontent.app.scheduler.BattleHotScoreScheduler;
-import com.example.toycontent.app.scheduler.FeedHotScoreScheduler;
 import com.example.toycontent.app.scheduler.FeedTrendingScheduler;
-import com.example.toycontent.app.scheduler.ProductPopularityScheduler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDateTime;
@@ -25,17 +25,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 스케줄러 수동 실행 (ADMIN 전용).
+ * 배치 작업 수동 실행 (ADMIN 전용).
  *
- * <p>cron을 기다리지 않고 같은 작업을 지금 돌린다. 대량 적재 직후 핫 스코어를 바로 맞추거나,
- * 데이터 양이 바뀐 뒤 각 작업이 얼마나 걸리는지 실측할 때 쓴다.</p>
+ * <p>핫 스코어(피드·배틀·제품)는 참여가 생기는 행에서 바로 갱신되므로 정기 배치가 없다.
+ * 여기의 {@code *.recalculate}는 시간 상수({@code hot-score.*-time-divisor-seconds})를 바꾼 뒤
+ * 저장된 점수를 새 기준으로 맞출 때 한 번 돌리는 도구다.</p>
  *
- * <p>스케줄러 빈의 메서드를 그대로 호출하므로 {@code @SchedulerLock} · {@code @Transactional} ·
- * {@code @CacheEvict}가 cron 실행과 동일하게 적용된다. 따라서 <b>ShedLock이 잡혀 있으면
- * (예: 정각 실행 직후 lockAtLeastFor 안) 본문이 실행되지 않고 즉시 반환된다.</b>
- * 실제로 돌았는지는 응답의 {@code elapsedMs}와 {@code [scheduler] ... 완료} 로그로 확인한다.</p>
+ * <p>트렌딩 스냅샷·배틀 마감 알림은 cron 스케줄러 빈을 그대로 호출하므로 {@code @SchedulerLock}이
+ * 동일하게 적용된다. 락이 잡혀 있으면 본문이 건너뛰어지고 즉시 반환된다.</p>
  */
-@Tag(name = "SchedulerAdminController", description = "스케줄러 수동 실행 (ADMIN 전용)")
+@Tag(name = "SchedulerAdminController", description = "배치 작업 수동 실행 (ADMIN 전용)")
 @RestController
 @Slf4j
 @RequestMapping("/admin/schedulers")
@@ -43,21 +42,18 @@ public class SchedulerAdminController {
 
   private final Map<String, Runnable> jobs;
 
-  public SchedulerAdminController(FeedHotScoreScheduler feedHotScore,
-                                  BattleHotScoreScheduler battleHotScore,
-                                  ProductPopularityScheduler productPopularity,
+  public SchedulerAdminController(FeedHotScoreService feedHotScore,
+                                  BattleHotScoreService battleHotScore,
+                                  ProductPopularityService productPopularity,
                                   FeedTrendingScheduler feedTrending,
                                   BattleDeadlineNotificationScheduler battleDeadline) {
     Map<String, Runnable> map = new LinkedHashMap<>();
-    map.put("feed-hot-score.time-weight", feedHotScore::timeWeightUpdate);      // 매 정각
-    map.put("feed-hot-score.full", feedHotScore::fullRecalculate);              // 매일 03:00
-    map.put("battle-hot-score.time-weight", battleHotScore::timeWeightUpdate);  // 매 정각
-    map.put("battle-hot-score.full", battleHotScore::fullRecalculate);          // 매일 02:00
-    map.put("product-popularity.time-weight", productPopularity::timeWeightUpdate); // 매시 30분
-    map.put("product-popularity.full", productPopularity::fullRecalculate);     // 매일 01:00
-    map.put("feed-trending", feedTrending::updateTrendingAndSnapshot);          // 매일 00:15
-    map.put("battle-deadline.d7", battleDeadline::notifyD7);                    // 매 정각
-    map.put("battle-deadline.end", battleDeadline::notifyEnd);                  // 매 분
+    map.put("feed-hot-score.recalculate", feedHotScore::recalculateAll);          // 상수 변경 후 1회
+    map.put("battle-hot-score.recalculate", battleHotScore::recalculateAll);      // 상수 변경 후 1회
+    map.put("product-popularity.recalculate", productPopularity::recalculateAll); // 상수 변경 후 1회
+    map.put("feed-trending", feedTrending::updateTrendingAndSnapshot);            // 매일 00:15
+    map.put("battle-deadline.d7", battleDeadline::notifyD7);                      // 매 정각
+    map.put("battle-deadline.end", battleDeadline::notifyEnd);                    // 매 분
     this.jobs = Map.copyOf(map);
   }
 
@@ -69,7 +65,7 @@ public class SchedulerAdminController {
   }
 
   @Operation(summary = "스케줄러 작업 즉시 실행",
-      description = "동기로 실행하고 소요 시간을 돌려준다. ShedLock이 잡혀 있으면 본문이 건너뛰어져 elapsedMs가 수 ms로 나온다.")
+      description = "동기로 실행하고 소요 시간을 돌려준다. *.recalculate는 시간 상수 변경 후에만 쓴다. cron 작업은 ShedLock이 잡혀 있으면 본문이 건너뛰어져 elapsedMs가 수 ms로 나온다.")
   @PostMapping("/{job}")
   public ResponseEntity<ApiResponse<RunResult>> run(@PathVariable String job,
                                                     @CurrentUserIsAdmin boolean isAdmin) {

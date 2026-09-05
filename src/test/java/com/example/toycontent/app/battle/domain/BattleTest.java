@@ -1,6 +1,10 @@
 package com.example.toycontent.app.battle.domain;
 
+import com.example.toycontent.app.common.hotscore.HotScoreFormula;
+import com.example.toycontent.app.common.hotscore.HotScoreSettings;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 
 import com.example.toycontent.app.common.enumuration.BattleStatus;
@@ -166,7 +170,7 @@ class BattleTest {
   class HotScoreCalculation {
 
     @Test
-    @DisplayName("투표/참여자/조회수가 모두 0이면 핫 스코어는 0이다")
+    @DisplayName("활동이 없으면 핫 스코어는 시간 항(시작시각/상수)만 남는다 — 새 배틀도 0이 아니라 위에서 시작")
     void hotScore_활동없음() {
       // given
       Battle battle = BattleFixture.active();
@@ -175,7 +179,22 @@ class BattleTest {
       double score = battle.calculateHotScore();
 
       // then
-      assertThat(score).isZero();
+      double timeTermOnly = HotScoreFormula.score(0, battle.getStartDate(), HotScoreSettings.battleDivisor());
+      assertThat(score).isEqualTo(timeTermOnly).isPositive();
+    }
+
+    @Test
+    @DisplayName("참여도 10배는 시간 상수(30일)만큼의 시각 차이와 같다")
+    void hotScore_참여도_10배는_30일() {
+      // given
+      LocalDateTime now = LocalDateTime.now();
+      Battle old = newBattle(now.minusSeconds(HotScoreSettings.battleDivisor()));
+      Battle recent = newBattle(now);
+      old.addTotalVotes(50);      // 참여도 100
+      recent.addTotalVotes(5);    // 참여도 10
+
+      // then
+      assertThat(old.calculateHotScore()).isCloseTo(recent.calculateHotScore(), within(1e-6));
     }
 
     @Test

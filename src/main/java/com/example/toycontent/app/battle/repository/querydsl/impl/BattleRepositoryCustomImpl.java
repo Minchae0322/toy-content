@@ -180,21 +180,6 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
   }
 
   @Override
-  public List<Battle> findBattlesNeedingTimeWeightUpdate(LocalDateTime activeThreshold) {
-
-    return queryFactory
-        .selectFrom(battle)
-        .where(
-            battle.isDeleted.eq(false),
-            battle.status.eq(BattleStatus.NORMAL),
-            battle.status.eq(BattleStatus.NORMAL)
-                .and(battle.hotScoreUpdatedAt.lt(activeThreshold))
-                .or(battle.hotScoreUpdatedAt.isNull())
-        )
-        .fetch();
-  }
-
-  @Override
   public List<Battle> findActiveAndUpcomingBattles() {
     return queryFactory
         .selectFrom(battle)

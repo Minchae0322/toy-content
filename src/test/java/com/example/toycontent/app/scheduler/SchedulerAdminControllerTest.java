@@ -6,7 +6,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.example.toycontent.app.battle.service.BattleHotScoreService;
 import com.example.toycontent.app.common.exception.RestApiException;
+import com.example.toycontent.app.feed.service.FeedHotScoreService;
+import com.example.toycontent.app.product.service.ProductPopularityService;
 import com.example.toycontent.app.scheduler.controller.SchedulerAdminController;
 import com.example.toycontent.app.scheduler.controller.SchedulerAdminController.RunResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,48 +17,49 @@ import org.junit.jupiter.api.Test;
 
 class SchedulerAdminControllerTest {
 
-  private FeedHotScoreScheduler feedHotScore;
-  private BattleHotScoreScheduler battleHotScore;
+  private FeedHotScoreService feedHotScore;
+  private BattleHotScoreService battleHotScore;
   private SchedulerAdminController controller;
 
   @BeforeEach
   void setUp() {
-    feedHotScore = mock(FeedHotScoreScheduler.class);
-    battleHotScore = mock(BattleHotScoreScheduler.class);
+    feedHotScore = mock(FeedHotScoreService.class);
+    battleHotScore = mock(BattleHotScoreService.class);
     controller = new SchedulerAdminController(
         feedHotScore, battleHotScore,
-        mock(ProductPopularityScheduler.class),
+        mock(ProductPopularityService.class),
         mock(FeedTrendingScheduler.class),
         mock(BattleDeadlineNotificationScheduler.class));
   }
 
   @Test
   void 관리자는_작업을_실행하고_소요시간을_받는다() {
-    RunResult result = controller.run("feed-hot-score.full", true).getBody().getData();
+    RunResult result = controller.run("feed-hot-score.recalculate", true).getBody().getData();
 
-    verify(feedHotScore).fullRecalculate();
-    verify(feedHotScore, never()).timeWeightUpdate();
-    assertThat(result.job()).isEqualTo("feed-hot-score.full");
+    verify(feedHotScore).recalculateAll();
+    verify(battleHotScore, never()).recalculateAll();
+    assertThat(result.job()).isEqualTo("feed-hot-score.recalculate");
     assertThat(result.elapsedMs()).isGreaterThanOrEqualTo(0);
   }
 
   @Test
   void 관리자가_아니면_실행되지_않는다() {
-    assertThatThrownBy(() -> controller.run("feed-hot-score.time-weight", false))
+    assertThatThrownBy(() -> controller.run("feed-hot-score.recalculate", false))
         .isInstanceOf(RestApiException.class);
-    verify(feedHotScore, never()).timeWeightUpdate();
+    verify(feedHotScore, never()).recalculateAll();
   }
 
   @Test
-  void 없는_작업이면_404계열_예외다() {
+  void 없는_작업이면_예외다() {
     assertThatThrownBy(() -> controller.run("nope", true))
         .isInstanceOf(RestApiException.class);
   }
 
   @Test
-  void 목록에는_아홉_개_작업이_있다() {
+  void 목록에는_여섯_개_작업이_있다() {
     assertThat(controller.list(true).getBody().getData())
-        .hasSize(9)
-        .contains("feed-hot-score.time-weight", "feed-hot-score.full", "feed-trending");
+        .hasSize(6)
+        .contains("feed-hot-score.recalculate", "battle-hot-score.recalculate",
+            "product-popularity.recalculate", "feed-trending");
   }
 }

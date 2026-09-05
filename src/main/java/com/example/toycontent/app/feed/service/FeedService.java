@@ -55,6 +55,7 @@ import org.springframework.stereotype.Service;
 @Transactional(readOnly = true)
 public class FeedService {
 
+  private final com.example.toycontent.app.product.service.ProductPopularityService productPopularityService;
   private final FeedRepository feedRepository;
   private final FeedQueryService feedQueryService;
   private final CategoryRepository categoryRepository;
@@ -222,6 +223,9 @@ public class FeedService {
     Feed feed = toEntity(request, category, product);
 
     Feed savedFeed = feedRepository.save(feed);
+    if (product != null) {
+      productPopularityService.refresh(product.getId());
+    }
 
     // 피드 첨부파일 추가
     createFeedAttachmentFiles(

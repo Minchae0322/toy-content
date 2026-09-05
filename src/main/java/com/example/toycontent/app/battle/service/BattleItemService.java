@@ -51,6 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class BattleItemService {
 
+  private final com.example.toycontent.app.product.service.ProductPopularityService productPopularityService;
   private final BattleRepository battleRepository;
   private final BattleItemRepository battleItemRepository;
   private final BattleVoteRepository battleVoteRepository;
@@ -212,7 +213,15 @@ public class BattleItemService {
         .map(itemRequest -> createBattleItem(userId, battle, itemRequest, status))
         .toList();
 
-    return battleItemRepository.saveAll(battleItems);
+    List<BattleItem> saved = battleItemRepository.saveAll(battleItems);
+    // 아이템에 연결된 제품은 "배틀 등록"이라는 참여가 생긴 것이므로 그 제품 인기도만 다시 계산
+    battleItems.stream()
+        .map(BattleItem::getProduct)
+        .filter(java.util.Objects::nonNull)
+        .map(Product::getId)
+        .distinct()
+        .forEach(productPopularityService::refresh);
+    return saved;
   }
 
   /**

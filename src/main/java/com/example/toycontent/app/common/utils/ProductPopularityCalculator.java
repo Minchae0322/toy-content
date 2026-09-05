@@ -1,17 +1,18 @@
 package com.example.toycontent.app.common.utils;
 
+import com.example.toycontent.app.common.hotscore.HotScoreFormula;
+import com.example.toycontent.app.common.hotscore.HotScoreSettings;
+
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import com.example.toycontent.app.product.domain.Product;
 import com.example.toycontent.app.product.repository.ProductReviewRepository;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -31,26 +32,19 @@ public class ProductPopularityCalculator {
   private static final double BATTLE_WEIGHT = 6.0;
   private static final double REVIEW_WEIGHT = 7.0;
 
-  // 시간 감쇠 설정
+  // 활동 집계 창(일). 피드·배틀·리뷰는 최근 30일치만 참여도에 넣는다
   private static final int RECENT_DAYS = 30;
-  private static final double DEFAULT_DECAY = 0.5;
 
   /**
-   * 인기도 감쇠 반감기(일). 피드보다 길게 잡아 한번 인기를 끈 상품이 더 오래 노출되도록 함.
-   * 예: 14일이면 Day 14에 50%, Day 30에 약 23%까지 유지.
+   * 상품 인기도 — Reddit식 log10(참여도) + 기준시각/상수(30일).
+   *
+   * <p>기준시각(anchor)은 "마지막으로 참여가 있었던 시각"이다. 리뷰·피드·배틀 등록처럼 참여가 생기는
+   * 순간 {@code now}로 다시 계산하므로, 최근에 활동이 있는 상품이 위로 오고 조용한 상품은 새 활동이
+   * 있는 상품에 밀려 내려간다. 시간이 흘러도 저장된 값은 변하지 않아 배치가 필요 없다.</p>
    */
-  @Value("${product.popularity.decay-half-life-days:14}")
-  private double decayHalfLifeDays;
-
-  /**
-   * 상품의 인기도 점수 계산
-   */
-  public double calculate(Product product) {
-    double baseScore = calculateBaseScore(product);
-    double activityScore = calculateActivityScore(product);
-    double timeDecay = calculateTimeDecay(product);
-
-    return (baseScore + activityScore) * timeDecay;
+  public double calculate(Product product, LocalDateTime anchor) {
+    double engagement = calculateBaseScore(product) + calculateActivityScore(product);
+    return HotScoreFormula.score(engagement, anchor, HotScoreSettings.productDivisor());
   }
 
   /**
@@ -86,8 +80,8 @@ public class ProductPopularityCalculator {
                   FEED_WEIGHT * feedCounts.getOrDefault(productId, 0L)
                   + BATTLE_WEIGHT * battleCounts.getOrDefault(productId, 0L)
                   + REVIEW_WEIGHT * reviewCounts.getOrDefault(productId, 0L);
-              double timeDecay = calculateTimeDecay(product);
-              return (baseScore + activityScore) * timeDecay;
+              return HotScoreFormula.score(baseScore + activityScore,
+                  recalculationAnchor(product), HotScoreSettings.productDivisor());
             }
         ));
   }
@@ -138,20 +132,14 @@ public class ProductPopularityCalculator {
   }
 
   /**
-   * 시간 감쇠 계산 (지수 감쇠)
-   * - 최근 활동일수록 1에 가깝고, 오래될수록 0에 가까워짐
+   * 전체 재계산 때 쓰는 기준시각. 마지막 참여 시각(직전 계산 시각)을 유지해야 상수만 바꿨을 때
+   * 모든 상품의 최근성이 "지금"으로 초기화되지 않는다.
    */
-  private double calculateTimeDecay(Product product) {
-    LocalDateTime lastActivity = getLastActivityTime(product);
-
-    if (lastActivity == null) {
-      return DEFAULT_DECAY;
+  private LocalDateTime recalculationAnchor(Product product) {
+    if (product.getPopularityCalculatedAt() != null) {
+      return product.getPopularityCalculatedAt();
     }
-
-    long daysSinceActivity = ChronoUnit.DAYS.between(lastActivity, LocalDateTime.now());
-    double lambda = Math.log(2) / decayHalfLifeDays;
-
-    return Math.exp(-lambda * daysSinceActivity);
+    return getLastActivityTime(product);
   }
 
   /**
