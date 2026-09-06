@@ -30,7 +30,7 @@ public class BattleHotScoreService {
   public int recalculateAll() {
     StopWatch stopWatch = new StopWatch();
     stopWatch.start();
-    List<Battle> battles = battleRepository.findActiveAndUpcomingBattles();
+    List<Battle> battles = battleRepository.findAllNotDeleted();
     battles.forEach(Battle::updateHotScore);
     stopWatch.stop();
     log.info("[hot-score] 배틀 전체 재계산 완료 - {}건, divisor={}s, {}ms",

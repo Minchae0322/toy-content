@@ -19,4 +19,7 @@ public interface BattleRepositoryCustom {
 
 
   List<Battle> findActiveAndUpcomingBattles();
+
+  /** 핫 스코어 전체 재계산용 — 삭제되지 않은 배틀 전부 (종료된 배틀도 목록 정렬에 쓰이므로 포함) */
+  List<Battle> findAllNotDeleted();
 }

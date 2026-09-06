@@ -128,8 +128,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
   }
 
   @Override
-  public Page<HotFeedResponse> findAllByHotScore(int recentDays, int minViews, Pageable pageable) {
-    LocalDateTime thresholdDate = LocalDateTime.now().minusDays(recentDays);
+  public Page<HotFeedResponse> findAllByHotScore(int minViews, Pageable pageable) {
     BooleanExpression minViewsCond = minViews > 0 ? feed.viewCount.goe(minViews) : null;
 
     List<HotFeedResponse> content = queryFactory
@@ -158,8 +157,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .leftJoin(feedAttachmentFile)
         .on(feedAttachmentFile.feed.id.eq(feed.id)
             .and(feedAttachmentFile.isPrimary.eq(true)))
-        .where(feed.createdAt.goe(thresholdDate),
-            feed.isDeleted.eq(false),
+        .where(feed.isDeleted.eq(false),
             minViewsCond)
         .orderBy(getOrderSpecifier(pageable.getSort()))
         .offset(pageable.getOffset())
@@ -169,8 +167,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
     JPAQuery<Long> countQuery = queryFactory
         .select(feed.count())
         .from(feed)
-        .where(feed.createdAt.goe(thresholdDate),
-            feed.isDeleted.eq(false),
+        .where(feed.isDeleted.eq(false),
             minViewsCond);
 
     return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);

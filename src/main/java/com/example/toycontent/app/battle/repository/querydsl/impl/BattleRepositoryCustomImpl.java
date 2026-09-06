@@ -180,6 +180,14 @@ public class BattleRepositoryCustomImpl implements BattleRepositoryCustom {
   }
 
   @Override
+  public List<Battle> findAllNotDeleted() {
+    return queryFactory
+        .selectFrom(battle)
+        .where(battle.isDeleted.eq(false))
+        .fetch();
+  }
+
+  @Override
   public List<Battle> findActiveAndUpcomingBattles() {
     return queryFactory
         .selectFrom(battle)

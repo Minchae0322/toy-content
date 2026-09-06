@@ -70,7 +70,6 @@ public class FeedService {
   private final UserRewardService userRewardService;
   private final ApplicationEventPublisher eventPublisher;
 
-  private static final int HOT_FEED_RECENT_DAYS = 30;
 
   @Value("${feed.hot.min-views:5}")
   private int hotFeedMinViews;
@@ -174,16 +173,16 @@ public class FeedService {
   /**
    * 핫 피드 목록 조회 (실시간 계산)
    *
-   * 최근 N일 이내 게시물만 대상으로 하여 성능 최적화
+   * 작성일 창 없음 — Reddit식 hot_score 자체가 시간 항을 품고 있어 새 글이 자연히 위로 온다.
+   * 최소 조회수(feed.hot.min-views)만 거른다.
    */
-  // 핫리스트 캐시 (2026-08-23): 사용자 무관 + 핫스코어는 스케줄러가 1시간마다 갱신 - 요청마다
-  // 재계산할 이유가 없다. 캐시 히트 시 트랜잭션·커넥션도 안 탄다 (@Cacheable이 @Transactional보다 먼저).
+  // 핫리스트 캐시 (2026-08-23): 사용자 무관. TTL 5분 + 전체 재계산 시 evict.
+  // 캐시 히트 시 트랜잭션·커넥션도 안 탄다 (@Cacheable이 @Transactional보다 먼저).
   @org.springframework.cache.annotation.Cacheable(
       cacheNames = com.example.toycontent.app.config.CacheConfig.HOT_FEEDS,
       key = "#pageable.toString()")
   public Page<FeedResponse.HotFeedResponse> getHotFeeds(Pageable pageable) {
-    // 실시간 핫 스코어 계산하여 조회
-    return feedRepository.findAllByHotScore(HOT_FEED_RECENT_DAYS, hotFeedMinViews, pageable);
+    return feedRepository.findAllByHotScore(hotFeedMinViews, pageable);
   }
 
 
