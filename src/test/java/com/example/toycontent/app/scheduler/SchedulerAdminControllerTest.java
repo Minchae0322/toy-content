@@ -27,9 +27,7 @@ class SchedulerAdminControllerTest {
     battleHotScore = mock(BattleHotScoreService.class);
     controller = new SchedulerAdminController(
         feedHotScore, battleHotScore,
-        mock(ProductPopularityService.class),
-        mock(FeedTrendingScheduler.class),
-        mock(BattleDeadlineNotificationScheduler.class));
+        mock(ProductPopularityService.class));
   }
 
   @Test
@@ -56,10 +54,9 @@ class SchedulerAdminControllerTest {
   }
 
   @Test
-  void 목록에는_여섯_개_작업이_있다() {
+  void 목록에는_재계산_세_개만_있다() {
     assertThat(controller.list(true).getBody().getData())
-        .hasSize(6)
-        .contains("feed-hot-score.recalculate", "battle-hot-score.recalculate",
-            "product-popularity.recalculate", "feed-trending");
+        .containsExactly("feed-hot-score.recalculate", "battle-hot-score.recalculate",
+            "product-popularity.recalculate");
   }
 }

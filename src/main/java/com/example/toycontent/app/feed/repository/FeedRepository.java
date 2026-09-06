@@ -76,41 +76,6 @@ public interface FeedRepository extends JpaRepository<Feed, Long>, FeedRepositor
   @Query("SELECT f.product.id, COUNT(f) FROM Feed f WHERE f.product.id IN :productIds AND f.createdAt > :since GROUP BY f.product.id")
   List<Object[]> countByProductIdsAndCreatedAtAfter(@Param("productIds") List<Long> productIds, @Param("since") LocalDateTime since);
 
-  /**
-   * 24시간 전 조회수 스냅샷 저장
-   * - 매일 자정 실행
-   * - 현재 조회수를 24시간 전 조회수로 복사
-   */
-  @Modifying
-  @Query(value = "UPDATE tb_feed SET view_count_24h_ago = view_count WHERE deleted = 0",
-      nativeQuery = true)
-  int snapshotViewCount();
-
-  /**
-   * 트렌딩 활성화
-   * - 24시간 내 조회수 증가량이 threshold 이상인 피드
-   */
-  @Modifying
-  @Query(value = "UPDATE tb_feed SET is_trending = 1 " +
-      "WHERE deleted = 0 " +
-      "AND is_trending = 0 " +
-      "AND view_count_24h_ago IS NOT NULL " +
-      "AND (view_count - view_count_24h_ago) >= :threshold",
-      nativeQuery = true)
-  int markTrending(@Param("threshold") int threshold);
-
-  /**
-   * 트렌딩 해제
-   * - 24시간 내 조회수 증가량이 threshold 미만인 피드
-   */
-  @Modifying
-  @Query(value = "UPDATE tb_feed SET is_trending = 0 " +
-      "WHERE deleted = 0 " +
-      "AND is_trending = 1 " +
-      "AND (view_count_24h_ago IS NULL OR (view_count - view_count_24h_ago) < :threshold)",
-      nativeQuery = true)
-  int unmarkTrending(@Param("threshold") int threshold);
-
 
   /**
    * 핫 스코어 전체 재계산 (수동 실행 전용).

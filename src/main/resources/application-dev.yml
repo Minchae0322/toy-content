@@ -152,11 +152,6 @@ jwt:
 # ============================================
 # 스케줄러
 # ============================================
-scheduler:
-  feed-trending:
-    enabled: ${FEED_TRENDING_ENABLE:true}
-    threshold: ${FEED_TRENDING_THRESHOLD:10}
-    cron: "0 15 0 * * *"
 
 springdoc:
   api-docs:

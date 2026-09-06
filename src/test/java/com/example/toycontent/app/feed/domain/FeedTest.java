@@ -13,8 +13,6 @@ import org.junit.jupiter.api.Test;
 class FeedTest {
 
   private static final long ACTOR_USER_ID = 999L;
-  private static final int TRENDING_THRESHOLD = 100;
-
   @Nested
   @DisplayName("좋아요 수 증감")
   class LikeCountChange {
@@ -173,68 +171,4 @@ class FeedTest {
     }
   }
 
-  @Nested
-  @DisplayName("트렌딩 판정")
-  class TrendingCheck {
-
-    @Test
-    @DisplayName("24시간 전 조회수 스냅샷이 없으면 트렌딩이 아니다")
-    void checkTrending_스냅샷_부재() {
-      // given
-      Feed feed = FeedFixture.basic();
-
-      // when
-      boolean trending = feed.checkTrending(TRENDING_THRESHOLD);
-
-      // then
-      assertThat(trending)
-          .as("스냅샷이 없는 피드는 트렌딩으로 분류되지 않는다")
-          .isFalse();
-    }
-
-    @Test
-    @DisplayName("24시간 내 조회수 증가분이 임계값 이상이면 트렌딩이다")
-    void checkTrending_증가분_임계값_이상() {
-      // given — 1000 -> 1150 (증가분 150, 임계 100)
-      Feed feed = FeedFixture.withViewCounts(1150, 1000);
-
-      // when
-      boolean trending = feed.checkTrending(TRENDING_THRESHOLD);
-
-      // then
-      assertThat(trending)
-          .as("증가분이 임계값 이상일 때 트렌딩")
-          .isTrue();
-    }
-
-    @Test
-    @DisplayName("24시간 내 조회수 증가분이 임계값 미만이면 트렌딩이 아니다")
-    void checkTrending_증가분_임계값_미만() {
-      // given — 1000 -> 1050 (증가분 50, 임계 100)
-      Feed feed = FeedFixture.withViewCounts(1050, 1000);
-
-      // when
-      boolean trending = feed.checkTrending(TRENDING_THRESHOLD);
-
-      // then
-      assertThat(trending)
-          .as("증가분이 임계값 미만일 때 비(非)트렌딩")
-          .isFalse();
-    }
-
-    @Test
-    @DisplayName("updateTrendingStatus()는 판정 결과를 isTrending 필드에 반영한다")
-    void updateTrendingStatus_필드_반영() {
-      // given
-      Feed feed = FeedFixture.withViewCounts(1200, 1000);
-
-      // when
-      feed.updateTrendingStatus(TRENDING_THRESHOLD);
-
-      // then
-      assertThat(feed.getIsTrending())
-          .as("트렌딩 상태가 필드에 반영된다")
-          .isTrue();
-    }
-  }
 }

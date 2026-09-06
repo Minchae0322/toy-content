@@ -340,25 +340,4 @@ public class Feed extends BaseTimeEntity {
     return score;
   }
 
-  /**
-   * 트렌딩 여부 계산
-   */
-  public boolean checkTrending(int threshold) {
-    if (viewCount24hAgo == null) return false;
-    return (viewCount - viewCount24hAgo) >= threshold;
-  }
-
-  /**
-   * 트렌딩 상태 갱신
-   */
-  public void updateTrendingStatus(int threshold) {
-    this.isTrending = checkTrending(threshold);
-  }
-
-  /**
-   * 24시간 전 조회수 스냅샷
-   */
-  public void snapshotViewCount() {
-    this.viewCount24hAgo = this.viewCount;
-  }
 }
