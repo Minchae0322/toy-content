@@ -1,5 +1,6 @@
-package com.example.toycontent.app.common.hotscore;
+package com.example.toycontent.app.hotscore.config;
 
+import com.example.toycontent.app.hotscore.domain.HotScoreSettings;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.Setter;

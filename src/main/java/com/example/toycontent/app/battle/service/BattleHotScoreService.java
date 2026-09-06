@@ -2,7 +2,7 @@ package com.example.toycontent.app.battle.service;
 
 import com.example.toycontent.app.battle.domain.Battle;
 import com.example.toycontent.app.battle.repository.BattleRepository;
-import com.example.toycontent.app.common.hotscore.HotScoreSettings;
+import com.example.toycontent.app.hotscore.domain.HotScoreSettings;
 import com.example.toycontent.app.config.CacheConfig;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

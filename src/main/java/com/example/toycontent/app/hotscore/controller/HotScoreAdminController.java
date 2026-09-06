@@ -1,9 +1,12 @@
-package com.example.toycontent.app.common.hotscore;
+package com.example.toycontent.app.hotscore.controller;
 
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.HotScoreErrorCode;
-import com.example.toycontent.app.common.hotscore.HotScoreAdminService.DivisorStatus;
-import com.example.toycontent.app.common.hotscore.HotScoreAdminService.RecalculateResult;
+import com.example.toycontent.app.hotscore.controller.dto.HotScoreRequest;
+import com.example.toycontent.app.hotscore.controller.dto.HotScoreResponse.DivisorStatus;
+import com.example.toycontent.app.hotscore.controller.dto.HotScoreResponse.RecalculateResult;
+import com.example.toycontent.app.hotscore.domain.HotScoreDomain;
+import com.example.toycontent.app.hotscore.service.HotScoreAdminService;
 import com.example.toycontent.app.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -50,7 +53,7 @@ public class HotScoreAdminController {
   @Operation(summary = "시간 상수 변경 + 전체 재계산", description = "단위는 초. 1시간 ~ 1년.")
   @PutMapping("/{domain}")
   public ResponseEntity<ApiResponse<RecalculateResult>> changeDivisor(
-      @PathVariable String domain, @RequestBody ChangeDivisorRequest request) {
+      @PathVariable String domain, @RequestBody HotScoreRequest.ChangeDivisor request) {
     RecalculateResult result = hotScoreAdminService.changeDivisor(parse(domain), request.timeDivisorSeconds());
     return ResponseEntity.ok(ApiResponse.success(result));
   }
@@ -67,8 +70,5 @@ public class HotScoreAdminController {
     } catch (IllegalArgumentException | NullPointerException e) {
       throw new RestApiException(HotScoreErrorCode.DOMAIN_NOT_FOUND);
     }
-  }
-
-  public record ChangeDivisorRequest(Long timeDivisorSeconds) {
   }
 }

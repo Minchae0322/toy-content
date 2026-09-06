@@ -1,4 +1,4 @@
-package com.example.toycontent.app.common.hotscore;
+package com.example.toycontent.app.hotscore.domain;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;

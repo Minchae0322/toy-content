@@ -1,5 +1,8 @@
-package com.example.toycontent.app.common.hotscore;
+package com.example.toycontent.app.hotscore.service;
 
+import com.example.toycontent.app.hotscore.config.HotScoreProperties;
+import com.example.toycontent.app.hotscore.domain.HotScoreDomain;
+import com.example.toycontent.app.hotscore.domain.HotScoreSettings;
 import jakarta.annotation.PostConstruct;
 import java.util.EnumMap;
 import java.util.Map;

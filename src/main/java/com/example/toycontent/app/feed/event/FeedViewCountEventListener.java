@@ -1,6 +1,6 @@
 package com.example.toycontent.app.feed.event;
 
-import com.example.toycontent.app.common.hotscore.HotScoreSettings;
+import com.example.toycontent.app.hotscore.domain.HotScoreSettings;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;

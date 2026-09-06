@@ -1,4 +1,4 @@
-package com.example.toycontent.app.common.hotscore;
+package com.example.toycontent.app.hotscore.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -11,7 +11,8 @@ import static org.mockito.Mockito.when;
 
 import com.example.toycontent.app.battle.service.BattleHotScoreService;
 import com.example.toycontent.app.common.exception.RestApiException;
-import com.example.toycontent.app.common.hotscore.HotScoreAdminService.RecalculateResult;
+import com.example.toycontent.app.hotscore.controller.dto.HotScoreResponse.RecalculateResult;
+import com.example.toycontent.app.hotscore.domain.HotScoreDomain;
 import com.example.toycontent.app.feed.service.FeedHotScoreService;
 import com.example.toycontent.app.product.service.ProductPopularityService;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,7 +1,7 @@
 package com.example.toycontent.app.common.utils;
 
-import com.example.toycontent.app.common.hotscore.HotScoreFormula;
-import com.example.toycontent.app.common.hotscore.HotScoreSettings;
+import com.example.toycontent.app.hotscore.domain.HotScoreFormula;
+import com.example.toycontent.app.hotscore.domain.HotScoreSettings;
 
 import com.example.toycontent.app.battle.repository.BattleItemRepository;
 import com.example.toycontent.app.feed.repository.FeedRepository;

@@ -1,6 +1,6 @@
 package com.example.toycontent.app.feed.service;
 
-import com.example.toycontent.app.common.hotscore.HotScoreSettings;
+import com.example.toycontent.app.hotscore.domain.HotScoreSettings;
 import com.example.toycontent.app.config.CacheConfig;
 import com.example.toycontent.app.feed.repository.FeedRepository;
 import lombok.RequiredArgsConstructor;

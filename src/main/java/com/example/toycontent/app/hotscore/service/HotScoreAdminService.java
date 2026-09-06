@@ -1,10 +1,14 @@
-package com.example.toycontent.app.common.hotscore;
+package com.example.toycontent.app.hotscore.service;
 
 import com.example.toycontent.app.battle.service.BattleHotScoreService;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.HotScoreErrorCode;
 import com.example.toycontent.app.feed.service.FeedHotScoreService;
 import com.example.toycontent.app.product.service.ProductPopularityService;
+import com.example.toycontent.app.hotscore.controller.dto.HotScoreResponse.DivisorStatus;
+import com.example.toycontent.app.hotscore.controller.dto.HotScoreResponse.RecalculateResult;
+import com.example.toycontent.app.hotscore.domain.HotScoreDomain;
+import com.example.toycontent.app.hotscore.domain.HotScoreSettings;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,16 +68,4 @@ public class HotScoreAdminService {
     return result;
   }
 
-  /** @param overridden Redis 저장값이 yml 기본값을 덮어쓰고 있는지 */
-  public record DivisorStatus(String domain, long timeDivisorSeconds, long defaultSeconds, boolean overridden) {
-    public double days() {
-      return timeDivisorSeconds / 86400.0;
-    }
-  }
-
-  public record RecalculateResult(String domain, long timeDivisorSeconds, int recalculated, long elapsedMs) {
-    public double days() {
-      return timeDivisorSeconds / 86400.0;
-    }
-  }
 }

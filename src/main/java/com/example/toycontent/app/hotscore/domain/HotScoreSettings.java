@@ -1,4 +1,6 @@
-package com.example.toycontent.app.common.hotscore;
+package com.example.toycontent.app.hotscore.domain;
+
+import com.example.toycontent.app.hotscore.config.HotScoreProperties;
 
 /**
  * 엔티티 메서드(Feed·Battle)와 계산기가 스프링 빈 없이 시간 상수를 읽는 통로.
@@ -19,7 +21,7 @@ public final class HotScoreSettings {
   private HotScoreSettings() {
   }
 
-  static void registerRefresher(Runnable r) {
+  public static void registerRefresher(Runnable r) {
     refresher = r;
     lastRefreshNanos = System.nanoTime();
   }
@@ -36,13 +38,13 @@ public final class HotScoreSettings {
     }
   }
 
-  static void apply(HotScoreProperties p) {
+  public static void apply(HotScoreProperties p) {
     feedDivisor = p.getFeedTimeDivisorSeconds();
     battleDivisor = p.getBattleTimeDivisorSeconds();
     productDivisor = p.getProductTimeDivisorSeconds();
   }
 
-  static void set(HotScoreDomain domain, long seconds) {
+  public static void set(HotScoreDomain domain, long seconds) {
     switch (domain) {
       case FEED -> feedDivisor = seconds;
       case BATTLE -> battleDivisor = seconds;

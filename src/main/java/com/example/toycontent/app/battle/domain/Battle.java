@@ -9,8 +9,8 @@ import com.example.toycontent.app.common.enumuration.ResultVisibility;
 import com.example.toycontent.app.common.enumuration.VoteType;
 import com.example.toycontent.app.common.exception.RestApiException;
 import com.example.toycontent.app.common.exception.impl.BattleErrorCode;
-import com.example.toycontent.app.common.hotscore.HotScoreFormula;
-import com.example.toycontent.app.common.hotscore.HotScoreSettings;
+import com.example.toycontent.app.hotscore.domain.HotScoreFormula;
+import com.example.toycontent.app.hotscore.domain.HotScoreSettings;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;

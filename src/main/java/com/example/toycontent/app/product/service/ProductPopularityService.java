@@ -1,7 +1,7 @@
 package com.example.toycontent.app.product.service;
 
 import com.example.toycontent.app.common.enumuration.ProductStatus;
-import com.example.toycontent.app.common.hotscore.HotScoreSettings;
+import com.example.toycontent.app.hotscore.domain.HotScoreSettings;
 import com.example.toycontent.app.common.utils.ProductPopularityCalculator;
 import com.example.toycontent.app.config.CacheConfig;
 import com.example.toycontent.app.product.domain.Product;
