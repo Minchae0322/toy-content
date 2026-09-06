@@ -25,6 +25,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
 
+    /** @PreAuthorize 거절. 컨트롤러 프록시 안에서 던져져 catch-all에 잡히면 500이 되므로 먼저 403으로 매핑 */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Object> handleAccessDenied(org.springframework.security.access.AccessDeniedException e) {
+        return handleExceptionInternal(CommonErrorCode.ACCESS_DENIED);
+    }
+
     @ExceptionHandler({Exception.class})
     public ResponseEntity<Object> handleAllException(Exception ex) {
         log.warn("[api-error] handleAllException", ex);
