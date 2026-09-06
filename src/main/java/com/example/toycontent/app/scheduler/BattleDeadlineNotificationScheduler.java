@@ -38,8 +38,8 @@ public class BattleDeadlineNotificationScheduler {
   /**
    * 배틀 D-7 생성자 알림 — 매시간 정각.
    *
-   * <p>윈도우 {@code [now+7d, now+7d+1h)}는 cron 주기(1h)와 폭을 맞춰
-   * 같은 배틀을 중복으로 잡거나 놓치지 않게 한다.
+   * <p>윈도우 {@code [now+7d-1h, now+7d+1h)}. 뒤쪽 1시간이 cron 주기, 앞쪽 1시간은
+   * 리더 장애로 한 회차를 건너뛴 경우를 덮는 여유다. 중복은 sent 테이블로 막는다.
    *
    * <p>D-7 시점은 즉시 액션 유도가 약해 push 피로도만 늘리므로 채널은
    * in-app만 사용한다. 이미 발송된 {@code (battleId, creatorId)} 쌍은
@@ -52,8 +52,10 @@ public class BattleDeadlineNotificationScheduler {
   @Transactional
   public void notifyD7() {
     LocalDateTime now = LocalDateTime.now();
-    LocalDateTime from = now.plusDays(7);
-    LocalDateTime to = from.plusHours(1);
+    // 창 [now+7d-1h, now+7d+1h). 앞쪽 1시간은 리더가 실행 중 죽어 락 만료(10m)까지 쉰 뒤
+    // 다음 정각에 다시 돌 때 그 사이 구간을 덮기 위한 것. 겹치는 배틀은 sent 테이블이 걸러낸다.
+    LocalDateTime from = now.plusDays(7).minusHours(1);
+    LocalDateTime to = now.plusDays(7).plusHours(1);
 
     List<Battle> battles = battleRepository.findByEndDateBetween(from, to);
     if (battles.isEmpty()) {
@@ -75,9 +77,9 @@ public class BattleDeadlineNotificationScheduler {
   /**
    * 배틀 종료 알림 — 매분.
    *
-   * <p>윈도우 {@code [now-1m, now)}는 cron 주기(1m)와 일치. 사용자 체감상
-   * "종료 시점"에 발송되도록 분 단위로 자주 돌며, 더 짧은 주기는 부하만
-   * 늘리고 체감 차이는 없다.
+   * <p>윈도우 {@code [now-6m, now)}. 1분이 cron 주기, 나머지 5분이 lockAtMostFor 만큼의
+   * 리더 장애 여유다. 사용자 체감상 "종료 시점"에 발송되도록 분 단위로 자주 돌며,
+   * 더 짧은 주기는 부하만 늘리고 체감 차이는 없다. 중복은 sent 테이블로 막는다.
    *
    * <p>대상은 생성자 + 투표자(로그인 유저만, 게스트 제외). 생성자가 본인
    * 배틀에 투표한 경우 {@code Set}으로 1건 dedup. {@link BattleNotificationSent}로
@@ -90,7 +92,10 @@ public class BattleDeadlineNotificationScheduler {
   @Transactional
   public void notifyEnd() {
     LocalDateTime now = LocalDateTime.now();
-    LocalDateTime from = now.minusMinutes(1);
+    // 창 [now-6m, now). 주기 1분 + lockAtMostFor 5분. 리더가 실행 중 죽으면 락이 풀릴 때까지
+    // 전원이 쉬는데, 창이 주기와 같으면 그 사이 종료된 배틀은 어떤 창에도 안 들어가 누락된다.
+    // 창을 락 최대 시간보다 넓히면 지연으로 바뀌고, 겹치는 배틀은 sent 테이블이 걸러낸다.
+    LocalDateTime from = now.minusMinutes(6);
 
     List<Battle> battles = battleRepository.findByEndDateBetween(from, now);
     if (battles.isEmpty()) {

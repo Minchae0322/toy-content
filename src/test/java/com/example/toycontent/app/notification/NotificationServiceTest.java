@@ -3,12 +3,15 @@ package com.example.toycontent.app.notification;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
 import com.example.toycontent.app.common.enumuration.NotificationChannel;
 import com.example.toycontent.app.common.enumuration.NotificationType;
 import com.example.toycontent.app.kafka.dto.KafkaNotificationDto;
+import com.example.toycontent.app.notification.outbox.NotificationOutboxStore;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -31,6 +34,7 @@ class NotificationServiceTest {
   private static final String FEED_TITLE = "피드 제목";
 
   @Mock private ApplicationEventPublisher eventPublisher;
+  @Mock private NotificationOutboxStore outboxStore;
 
   @InjectMocks private NotificationService notificationService;
 
@@ -216,6 +220,71 @@ class NotificationServiceTest {
         softly.assertThat(sent.getChannels())
             .containsExactlyInAnyOrder(NotificationChannel.IN_APP, NotificationChannel.PUSH);
       });
+    }
+  }
+
+  @Nested
+  @DisplayName("전달 등급 - sendSafely 분기")
+  class DeliveryGuaranteeBranch {
+
+    @Test
+    @DisplayName("BEST_EFFORT(피드 좋아요)는 outbox를 거치지 않고 이벤트만 등록한다")
+    void best_effort는_outbox_미사용() {
+      // when
+      notificationService.notifyFeedLike(
+          FEED_OWNER_ID, ACTOR_ID, ACTOR_NICKNAME, ACTOR_PROFILE_URL, FEED_ID, FEED_TITLE);
+
+      // then
+      then(outboxStore).should(never()).enqueue(any(), any());
+      ArgumentCaptor<NotificationEvent> captor = ArgumentCaptor.forClass(NotificationEvent.class);
+      then(eventPublisher).should().publishEvent(captor.capture());
+      assertThat(captor.getValue().outboxId()).as("BEST_EFFORT 이벤트에는 outboxId가 없다").isNull();
+    }
+
+    @Test
+    @DisplayName("GUARANTEED(배틀 결과)는 같은 트랜잭션에 outbox 행을 남기고 그 id를 이벤트에 싣는다")
+    void guaranteed는_outbox_행_후_이벤트() {
+      // given
+      given(outboxStore.enqueue(eq(NotificationType.BATTLE_RESULT), any())).willReturn(77L);
+
+      // when
+      notificationService.notifyBattleResult(FEED_OWNER_ID, 5L, "배틀");
+
+      // then
+      ArgumentCaptor<NotificationEvent> captor = ArgumentCaptor.forClass(NotificationEvent.class);
+      then(eventPublisher).should().publishEvent(captor.capture());
+      NotificationEvent event = captor.getValue();
+      assertSoftly(softly -> {
+        softly.assertThat(event.outboxId()).isEqualTo(77L);
+        softly.assertThat(event.isGuaranteed()).isTrue();
+        softly.assertThat(event.payload().getType()).isEqualTo(NotificationType.BATTLE_RESULT);
+        softly.assertThat(event.payload().getUserId()).isEqualTo(FEED_OWNER_ID);
+      });
+    }
+
+    @Test
+    @DisplayName("승인 요청은 요청 경로에서 나가는 유일한 GUARANTEED 타입이다")
+    void 승인_요청은_guaranteed() {
+      // given
+      given(outboxStore.enqueue(eq(NotificationType.BATTLE_ITEM_APPROVAL_REQUEST), any())).willReturn(1L);
+
+      // when
+      notificationService.notifyBattleItemApprovalRequest(
+          FEED_OWNER_ID, ACTOR_ID, ACTOR_NICKNAME, ACTOR_PROFILE_URL, 5L, "배틀", 9L, "아이템", 0);
+
+      // then
+      then(outboxStore).should().enqueue(eq(NotificationType.BATTLE_ITEM_APPROVAL_REQUEST), any());
+    }
+
+    @Test
+    @DisplayName("아이템 추가(승인 불필요)는 BEST_EFFORT다 - 목록에 바로 노출되므로")
+    void 아이템_추가는_best_effort() {
+      // when
+      notificationService.notifyBattleItemAdded(
+          FEED_OWNER_ID, ACTOR_ID, ACTOR_NICKNAME, ACTOR_PROFILE_URL, 5L, "배틀", 9L, "아이템", 0);
+
+      // then
+      then(outboxStore).should(never()).enqueue(any(), any());
     }
   }
 }

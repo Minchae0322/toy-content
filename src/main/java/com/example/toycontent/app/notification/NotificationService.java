@@ -4,6 +4,7 @@ import com.example.toycontent.app.common.enumuration.NotificationChannel;
 import com.example.toycontent.app.common.enumuration.NotificationReferenceType;
 import com.example.toycontent.app.common.enumuration.NotificationType;
 import com.example.toycontent.app.kafka.dto.KafkaNotificationDto;
+import com.example.toycontent.app.notification.outbox.NotificationOutboxStore;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 public class NotificationService {
 
   private final ApplicationEventPublisher eventPublisher;
+  private final NotificationOutboxStore outboxStore;
 
   // ============================
   // 피드
@@ -292,13 +294,18 @@ public class NotificationService {
   // ============================
 
   /**
-   * 실제 Kafka 발행을 직접 호출하지 않고 이벤트만 등록한다.
+   * 실제 Kafka 발행을 직접 호출하지 않고 이벤트만 등록한다. 발행 진입점은 이 메서드 하나다.
    *
    * <p>이 메서드는 호출자의 트랜잭션 스레드에서 동기로 실행되므로, 트랜잭션이 살아 있으면
    * {@link NotificationEventListener}가 커밋 이후(AFTER_COMMIT)에 발행을 수행한다.
    * 롤백 시 이벤트는 폐기되어 유령 알림이 생기지 않는다.
+   *
+   * <p>등급이 {@code GUARANTEED}면 같은 트랜잭션에 outbox 행을 먼저 남기고 그 id를 이벤트에 싣는다.
+   * 롤백이면 행도 함께 사라지고, 커밋이면 리스너가 ack를 받아 SENT로 바꾼다. 리스너가 실패하거나
+   * 파드가 죽어 PENDING으로 남은 행은 릴레이가 다시 보낸다. 호출자는 등급을 모른다.
    */
   private void sendSafely(NotificationType type, KafkaNotificationDto dto) {
-    eventPublisher.publishEvent(new NotificationEvent(dto));
+    Long outboxId = type.isGuaranteed() ? outboxStore.enqueue(type, dto) : null;
+    eventPublisher.publishEvent(new NotificationEvent(dto, outboxId));
   }
 }
