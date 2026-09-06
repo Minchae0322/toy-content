@@ -53,8 +53,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     @Index(name = "idx_product_id", columnList = "product_id"),
     @Index(name = "idx_feed_cursor", columnList = "deleted, id DESC"),
     // /feeds/scroll 최신순 키셋 커서 (created_at DESC, id DESC). 기존 idx_feed_cursor는 다른
-    // 경로(팔로잉·상품별 피드)가 id 커서로 아직 쓴다. ddl-auto update는 기존 인덱스를 고치지
-    // 않으므로 운영 DB에는 ALTER TABLE로 직접 추가한다.
+    // 경로(팔로잉·상품별 피드)가 id 커서로 아직 쓴다.
+    // ddl-auto=update 동작 (2026-09-07 로컬 MySQL 8 실측): 이름이 없는 인덱스는 기동 시 만들어 주고,
+    // 이름이 같은 기존 인덱스는 컬럼이 달라도 고치지 않는다. 새 이름이라 배포 기동 시 자동 생성된다.
+    // 1,200만 행이라 첫 기동의 CREATE INDEX가 수 분 걸릴 수 있어 readiness 지연을 감안한다.
     @Index(name = "idx_feed_created_cursor", columnList = "deleted, created_at DESC, id DESC"),
     @Index(name = "idx_feed_category_cursor", columnList = "deleted, category_id, id DESC"),
     @Index(name = "idx_feed_user_cursor", columnList = "deleted, user_id, id DESC"),
