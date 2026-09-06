@@ -3,6 +3,7 @@ package com.example.toycontent.app.feed.service;
 import com.example.toycontent.app.common.dto.CursorResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
+import com.example.toycontent.app.feed.controller.dto.FeedCursor;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.FeedCursorResponse;
 import com.example.toycontent.app.feed.domain.FeedReaction;
 import com.example.toycontent.app.feed.event.FeedViewedEvent;
@@ -100,7 +101,8 @@ public class FeedService {
     IntStream.range(0, feedResponses.size())
         .forEach(i -> feedResponses.get(i).setUserInfo(userInfoMap.get(loaded.creatorIds().get(i))));
 
-    return CursorResponse.of(feedResponses, requestSize, FeedResponse.ListView::getFeedId);
+    return CursorResponse.of(feedResponses, requestSize,
+        v -> FeedCursor.encode(v.getCreatedAt(), v.getFeedId()));
   }
 
   private Map<Long, List<FeedReaction>> getUserReactionsByFeedId(List<Feed> feeds, Long userId) {
@@ -178,10 +180,12 @@ public class FeedService {
    */
   // 핫리스트 캐시 (2026-08-23): 사용자 무관. TTL 5분 + 전체 재계산 시 evict.
   // 캐시 히트 시 트랜잭션·커넥션도 안 탄다 (@Cacheable이 @Transactional보다 먼저).
+  // 키의 'v2:' 접두사: 반환형이 Page → List로 바뀌어(count 쿼리 제거) 배포 직후 TTL 안에 남은
+  // 구 Page 엔트리를 List로 캐스팅하다 깨지지 않도록 키 공간을 분리한다.
   @org.springframework.cache.annotation.Cacheable(
       cacheNames = com.example.toycontent.app.config.CacheConfig.HOT_FEEDS,
-      key = "#pageable.toString()")
-  public Page<FeedResponse.HotFeedResponse> getHotFeeds(Pageable pageable) {
+      key = "'v2:' + #pageable.toString()")
+  public List<FeedResponse.HotFeedResponse> getHotFeeds(Pageable pageable) {
     return feedRepository.findAllByHotScore(hotFeedMinViews, pageable);
   }
 

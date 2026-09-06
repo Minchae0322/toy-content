@@ -21,10 +21,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -89,10 +89,10 @@ public class FeedController {
           """
   )
   @GetMapping("/hot")
-  public ResponseEntity<ApiResponse<Page<HotFeedResponse>>> getHotFeeds(
+  public ResponseEntity<ApiResponse<List<HotFeedResponse>>> getHotFeeds(
       @ParameterObject @PageableDefault(sort = "hotScore", direction = Sort.Direction.DESC) Pageable pageable) {
 
-    Page<FeedResponse.HotFeedResponse> feeds = feedService.getHotFeeds(pageable);
+    List<FeedResponse.HotFeedResponse> feeds = feedService.getHotFeeds(pageable);
     return ResponseEntity.ok(ApiResponse.success(feeds));
   }
 

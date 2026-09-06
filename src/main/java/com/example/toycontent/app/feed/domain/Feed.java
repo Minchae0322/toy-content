@@ -52,6 +52,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     @Index(name = "idx_user_id", columnList = "user_id"),
     @Index(name = "idx_product_id", columnList = "product_id"),
     @Index(name = "idx_feed_cursor", columnList = "deleted, id DESC"),
+    // /feeds/scroll 최신순 키셋 커서 (created_at DESC, id DESC). 기존 idx_feed_cursor는 다른
+    // 경로(팔로잉·상품별 피드)가 id 커서로 아직 쓴다. ddl-auto update는 기존 인덱스를 고치지
+    // 않으므로 운영 DB에는 ALTER TABLE로 직접 추가한다.
+    @Index(name = "idx_feed_created_cursor", columnList = "deleted, created_at DESC, id DESC"),
     @Index(name = "idx_feed_category_cursor", columnList = "deleted, category_id, id DESC"),
     @Index(name = "idx_feed_user_cursor", columnList = "deleted, user_id, id DESC"),
 

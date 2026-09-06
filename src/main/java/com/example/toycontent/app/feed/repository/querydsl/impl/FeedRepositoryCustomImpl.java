@@ -4,6 +4,7 @@ import static com.example.toycontent.app.feed.domain.QFeed.feed;
 import static com.example.toycontent.app.feed.domain.QFeedAttachmentFile.feedAttachmentFile;
 
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Following;
+import com.example.toycontent.app.feed.controller.dto.FeedCursor;
 import com.example.toycontent.app.feed.controller.dto.FeedResponse.HotFeedResponse;
 import com.example.toycontent.app.feed.controller.dto.FeedCondition.Search;
 import com.example.toycontent.app.feed.domain.Feed;
@@ -17,7 +18,6 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,10 +25,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -39,17 +37,19 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
 
   @Override
   public List<Feed> findFeedsWithCursor(Search condition) {
-    //Feed만 조회 (limit 정확하게 적용)
+    // 최신순 = created_at DESC, id DESC (id는 같은 시각의 동점 처리). 커서도 같은 두 값.
+    // id 단독 정렬은 id 순서 = 작성일 순서를 전제하는데, 적재 데이터에서 그 전제가 깨졌다.
+    // 인덱스: idx_feed_created_cursor(deleted, created_at DESC, id DESC)
     List<Feed> feeds = queryFactory
         .selectFrom(feed)
         .distinct()
         .where(
-            cursorIdLt(condition.getCursor()),
+            createdBefore(FeedCursor.parse(condition.getCursor())),
             categoryEq(condition.getCategoryId(), condition.getCategoryDepth()),
             creatorIdEq(condition.getCreatorId()),
             feed.isDeleted.isFalse()
         )
-        .orderBy(feed.id.desc())
+        .orderBy(feed.createdAt.desc(), feed.id.desc())
         .limit(condition.getSize())
         .fetch();
 
@@ -128,10 +128,10 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
   }
 
   @Override
-  public Page<HotFeedResponse> findAllByHotScore(int minViews, Pageable pageable) {
+  public List<HotFeedResponse> findAllByHotScore(int minViews, Pageable pageable) {
     BooleanExpression minViewsCond = minViews > 0 ? feed.viewCount.goe(minViews) : null;
 
-    List<HotFeedResponse> content = queryFactory
+    return queryFactory
         .select(Projections.fields(
             HotFeedResponse.class,
             feed.id.as("feedId"),
@@ -163,14 +163,6 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize())
         .fetch();
-
-    JPAQuery<Long> countQuery = queryFactory
-        .select(feed.count())
-        .from(feed)
-        .where(feed.isDeleted.eq(false),
-            minViewsCond);
-
-    return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
   }
 
   /**
@@ -212,6 +204,15 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
     return Optional.ofNullable(cursor)
         .map(feed.id::lt)
         .orElse(null);
+  }
+
+  /** 키셋 커서: created_at < c OR (created_at = c AND id < cid). null이면 첫 페이지. */
+  private BooleanExpression createdBefore(FeedCursor cursor) {
+    if (cursor == null) {
+      return null;
+    }
+    return feed.createdAt.lt(cursor.createdAt())
+        .or(feed.createdAt.eq(cursor.createdAt()).and(feed.id.lt(cursor.id())));
   }
 
   private BooleanExpression categoryEq(Long categoryId, Integer depth) {

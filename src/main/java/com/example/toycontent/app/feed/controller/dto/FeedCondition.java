@@ -39,8 +39,8 @@ public abstract class FeedCondition {
     @Parameter(description = "피드 작성자 ID")
     private Long creatorId;
 
-    @Parameter(description = "커서 (마지막 조회한 피드 ID)")
-    private Long cursor;
+    @Parameter(description = "커서 — 이전 응답의 nextCursor를 그대로 전달 (형식: <createdAt>_<feedId>)")
+    private String cursor;
 
     // 기본값 없으면 size 미지정 요청에서 FeedService가 null 언박싱 → NPE(500). Following.size와 동일하게 기본 20.
     @Parameter(description = "조회 개수")
